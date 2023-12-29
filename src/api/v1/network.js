@@ -7,7 +7,7 @@ class NetworkAPI extends BaseAPI {
     }
 
     getAllNodesData(start, total) {
-        return v1.get('/network/nodes/data')
+        return v1.get('/network/nodes/data?start=' + start + '&total=' + total)
     }
 }
 

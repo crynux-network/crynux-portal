@@ -40,7 +40,7 @@ class V1Client {
       (response) => {
         if (response.status === 200) {
           // Normal response
-          return Promise.resolve(response.data)
+          return Promise.resolve(response.data.data)
         } else {
           return Promise.reject(new ApiError(ApiError.Type.Unknown))
         }

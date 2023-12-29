@@ -1,6 +1,7 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { Grid } from 'ant-design-vue'
+import networkAPI from '@/api/v1/network'
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -16,57 +17,105 @@ const topRowClasses = computed(() => {
     return classes
 })
 
+const allNodeNumbers = reactive({
+    allNodes: 0,
+    availableNodes: 0
+});
+
+const nodeList = ref([]);
+const nodeListPageSize = 20;
+const nodeListCurrentPage = 0;
+const nodeListTotalPages = computed(() => {
+    return Math.floor(nodeList.value.length / nodeListPageSize);
+});
+
+const loadNetworkInfo = async () => {
+    const nodeNums = await networkAPI.getAllNodesNumber();
+    allNodeNumbers.allNodes = nodeNums.all_nodes;
+    allNodeNumbers.availableNodes = nodeNums.available_nodes;
+
+    if (allNodeNumbers.allNodes !== 0) {
+        await loadNodeList(0, nodeListPageSize);
+    }
+};
+
+const loadNodeList = async (page, pageSize) => {
+    nodeList.value = await networkAPI.getAllNodesData(page * pageSize, pageSize);
+};
+
+const nodeListColumns = [
+    {
+        title: 'Address',
+        key: 'address',
+    },
+    {
+        title: 'Card Model',
+        key: 'card_model',
+    },
+    {
+        title: 'VRAM',
+        key: 'vram',
+    },
+    {
+        title: 'CNX Balance',
+        key:'cnx_balance'
+    }
+];
+
 onMounted(async () => {
-
-})
-
-onBeforeUnmount(() => {
-
+    await loadNetworkInfo();
 })
 </script>
 
 <template>
   <a-row :class="topRowClasses"> </a-row>
   <a-row :gutter="[16, 16]">
-    <a-col
-      :xs="{ span: 24, offset: 0, order: 1 }"
-      :sm="{ span: 12, offset: 0, order: 1 }"
-      :md="{ span: 12, offset: 0, order: 1 }"
-      :lg="{ span: 5, offset: 0, order: 1 }"
-      :xl="{ span: 5, offset: 1, order: 1 }"
-      :xxl="{ span: 4, offset: 3, order: 1 }"
-    >
-      <a-card title="Node Status" :bordered="false" style="height: 100%; opacity: 0.9">
-
-      </a-card>
-    </a-col>
-
-    <a-col
-      :xs="{ span: 24, order: 3 }"
-      :sm="{ span: 24, order: 3 }"
-      :md="{ span: 24, order: 3 }"
-      :lg="{ span: 12, order: 2 }"
-      :xl="{ span: 11, order: 2 }"
-      :xxl="{ span: 9, order: 2 }"
-    >
-      <a-card title="Wallet" :bordered="false" style="height: 100%; opacity: 0.9">
-
-      </a-card>
-    </a-col>
-
-    <a-col
-      :xs="{ span: 24, order: 2 }"
-      :sm="{ span: 12, order: 2 }"
-      :md="{ span: 12, order: 2 }"
-      :lg="{ span: 7, order: 3 }"
-      :xl="{ span: 6, order: 3 }"
-      :xxl="{ span: 5, order: 3 }"
-    >
-      <a-card title="Task Execution" :bordered="false" style="height: 100%; opacity: 0.9">
-
+    <a-col :span="20" :offset="2">
+      <a-card title="Crynux Network Statistics" :bordered="false" style="height: 100%; opacity: 0.9">
+          <a-row :gutter="[8, 8]">
+              <a-col :span="8">
+                  <a-statistic :value="allNodeNumbers.allNodes" :value-style="{'text-align':'center'}">
+                      <template #title>
+                          <div style="text-align: center">Total Nodes</div>
+                      </template>
+                  </a-statistic>
+              </a-col>
+              <a-col :span="8">
+                  <a-statistic :value="allNodeNumbers.availableNodes" :value-style="{'text-align':'center'}">
+                      <template #title>
+                          <div style="text-align: center">Available Nodes</div>
+                      </template>
+                  </a-statistic>
+              </a-col>
+              <a-col :span="8">
+                  <a-statistic :value="allNodeNumbers.allNodes - allNodeNumbers.availableNodes" :value-style="{'text-align':'center'}">
+                      <template #title>
+                          <div style="text-align: center">Busy Nodes</div>
+                      </template>
+                  </a-statistic>
+              </a-col>
+          </a-row>
       </a-card>
     </a-col>
   </a-row>
+
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="20" :offset="2">
+            <a-card title="Crynux Node List" :bordered="false" style="height: 100%; opacity: 0.9">
+                <a-empty v-if="nodeList.length === 0"></a-empty>
+                <a-table v-if="nodeList.length !== 0" :columns="nodeListColumns" :data-source="nodeList">
+
+                </a-table>
+                <a-pagination
+                    v-if="nodeListTotalPages > 1"
+                    v-model:current="nodeListCurrentPage"
+                    :total="nodeList.length"
+                    :page-size="nodeListPageSize"
+                    @change="loadNodeList"
+                />
+            </a-card>
+        </a-col>
+    </a-row>
 
   <div class="bottom-bar">
     <a-space class="footer-links">
