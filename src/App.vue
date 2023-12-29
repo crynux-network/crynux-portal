@@ -46,4 +46,8 @@ onBeforeUnmount(() => {
     position relative
     width 100%
     height 100%
+
+#content-container
+    overflow-y auto
+    overflow-x hidden
 </style>

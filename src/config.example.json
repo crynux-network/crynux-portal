@@ -1,3 +1,4 @@
 {
-    "base_url": "https://relay.h.crynux.ai"
+    "base_url": "https://relay.h.crynux.ai",
+    "block_explorer": "https://block-explorer.crynux.ai"
 }

@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import {computed, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
 import { Grid } from 'ant-design-vue'
 import networkAPI from '@/api/v1/network'
+import config from '@/config.json'
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -24,10 +25,7 @@ const allNodeNumbers = reactive({
 
 const nodeList = ref([]);
 const nodeListPageSize = 20;
-const nodeListCurrentPage = 0;
-const nodeListTotalPages = computed(() => {
-    return Math.floor(nodeList.value.length / nodeListPageSize);
-});
+const nodeListCurrentPage = ref(0);
 
 const loadNetworkInfo = async () => {
     const nodeNums = await networkAPI.getAllNodesNumber();
@@ -54,13 +52,29 @@ const nodeListColumns = [
     },
     {
         title: 'VRAM',
-        key: 'vram',
+        key: 'v_ram',
     },
     {
         title: 'CNX Balance',
         key:'cnx_balance'
+    },
+    {
+        title: 'Collateral',
+        key: 'collateral'
     }
 ];
+
+const toEtherValue = (bigNum) => {
+    if (bigNum === 0) return 0
+
+    const decimals = (bigNum / BigInt(1e18)).toString()
+
+    let fractions = ((bigNum / BigInt(1e16)) % 100n).toString()
+
+    if (fractions.length === 1) fractions += '0'
+
+    return decimals + '.' + fractions
+}
 
 onMounted(async () => {
     await loadNetworkInfo();
@@ -101,23 +115,49 @@ onMounted(async () => {
 
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="20" :offset="2">
-            <a-card title="Crynux Node List" :bordered="false" style="height: 100%; opacity: 0.9">
+            <a-card title="Crynux Node List" :bordered="false" style="height: 100%; opacity: 0.9; padding-bottom: 32px">
                 <a-empty v-if="nodeList.length === 0"></a-empty>
-                <a-table v-if="nodeList.length !== 0" :columns="nodeListColumns" :data-source="nodeList">
-
+                <a-table
+                    v-if="nodeList.length !== 0"
+                    :columns="nodeListColumns"
+                    :data-source="nodeList"
+                    :pagination="{
+                        'hideOnSinglePage': true,
+                        'v-model:current': nodeListCurrentPage + 1,
+                        'pageSize': nodeListPageSize,
+                        'total': allNodeNumbers.allNodes,
+                        'change': loadNodeList
+                    }">
+                    <template #bodyCell="{ column, record }">
+                        <template v-if="column.key === 'address'">
+                            <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
+                              {{ record.address }}
+                            </a-typography-link>
+                        </template>
+                        <template v-else-if="column.key === 'card_model'">
+                            <span>{{ record.card_model }}</span>
+                        </template>
+                        <template v-else-if="column.key === 'v_ram'">
+                            <span>{{ record.v_ram }} GB</span>
+                        </template>
+                        <template v-else-if="column.key === 'cnx_balance'">
+                            <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
+                                CNX {{ toEtherValue(record.cnx_balance) }}
+                            </a-typography-link>
+                        </template>
+                        <template v-else-if="column.key === 'collateral'">
+                            <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
+                                CNX 400.00
+                            </a-typography-link>
+                        </template>
+                    </template>
                 </a-table>
-                <a-pagination
-                    v-if="nodeListTotalPages > 1"
-                    v-model:current="nodeListCurrentPage"
-                    :total="nodeList.length"
-                    :page-size="nodeListPageSize"
-                    @change="loadNodeList"
-                />
             </a-card>
         </a-col>
     </a-row>
-
-  <div class="bottom-bar">
+    <a-row style="margin-top: 16px">
+        <a-col :span="20" :offset="2">
+            <div class="bottom-bar">
     <a-space class="footer-links">
       <a-typography-link href="https://crynux.ai" target="_blank">Home</a-typography-link>
       &nbsp;|&nbsp;
@@ -139,6 +179,10 @@ onMounted(async () => {
     </a-space>
     <img class="footer-logo" src="./logo-full-white.png" width="140" alt="Crynux logo" />
   </div>
+        </a-col>
+    </a-row>
+
+
 </template>
 
 <style lang="stylus">
@@ -148,7 +192,6 @@ onMounted(async () => {
 </style>
 <style scoped lang="stylus">
 .bottom-bar
-    position fixed
     width 100%
     height 60px
     bottom 0
