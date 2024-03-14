@@ -9,6 +9,10 @@ class NetworkAPI extends BaseAPI {
     getAllNodesData(start, total) {
         return v1.get('/network/nodes/data?start=' + start + '&total=' + total)
     }
+
+    getAllTasksNumber() {
+        return v1.get('/network/tasks/number')
+    }
 }
 
 const networkAPI = new NetworkAPI()

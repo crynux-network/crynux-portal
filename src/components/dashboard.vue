@@ -19,8 +19,14 @@ const topRowClasses = computed(() => {
 })
 
 const allNodeNumbers = reactive({
-    allNodes: 0,
-    availableNodes: 0
+    totalNodes: 0,
+    busyNodes: 0
+});
+
+const allTaskNumbers = reactive({
+    totalTasks: 0,
+    runningTasks: 0,
+    queuedTasks: 0
 });
 
 const nodeList = ref([]);
@@ -29,10 +35,16 @@ const nodeListCurrentPage = ref(0);
 
 const loadNetworkInfo = async () => {
     const nodeNums = await networkAPI.getAllNodesNumber();
-    allNodeNumbers.allNodes = nodeNums.all_nodes;
-    allNodeNumbers.availableNodes = nodeNums.available_nodes;
+    allNodeNumbers.totalNodes = nodeNums.total_nodes;
+    allNodeNumbers.busyNodes = nodeNums.busy_nodes;
 
-    if (allNodeNumbers.allNodes !== 0) {
+    const taskNums = await networkAPI.getAllTasksNumber();
+
+    allTaskNumbers.totalTasks = taskNums.total_tasks;
+    allTaskNumbers.runningTasks = taskNums.running_tasks;
+    allTaskNumbers.queuedTasks = taskNums.queued_tasks;
+
+    if (allNodeNumbers.totalNodes !== 0) {
         await loadNodeList(0, nodeListPageSize);
     }
 };
@@ -87,28 +99,44 @@ onMounted(async () => {
     <a-col :span="20" :offset="2">
       <a-card title="Crynux Network Statistics" :bordered="false" style="height: 100%; opacity: 0.9">
           <a-row :gutter="[8, 8]">
-              <a-col :span="8">
-                  <a-statistic :value="allNodeNumbers.allNodes" :value-style="{'text-align':'center'}">
+            <a-col :span="4" :offset="2">
+                  <a-statistic :value="allNodeNumbers.totalNodes" :value-style="{'text-align':'center'}">
                       <template #title>
                           <div style="text-align: center">Total Nodes</div>
                       </template>
                   </a-statistic>
               </a-col>
-              <a-col :span="8">
-                  <a-statistic :value="allNodeNumbers.availableNodes" :value-style="{'text-align':'center'}">
+              <a-col :span="4">
+                  <a-statistic :value="allTaskNumbers.totalTasks" :value-style="{'text-align':'center'}">
                       <template #title>
-                          <div style="text-align: center">Available Nodes</div>
+                          <div style="text-align: center">Total Tasks</div>
                       </template>
                   </a-statistic>
               </a-col>
-              <a-col :span="8">
-                  <a-statistic :value="allNodeNumbers.allNodes - allNodeNumbers.availableNodes" :value-style="{'text-align':'center'}">
+              <a-col :span="4">
+                  <a-statistic :value="allTaskNumbers.queuedTasks" :value-style="{'text-align':'center'}">
+                      <template #title>
+                          <div style="text-align: center">Queued Tasks</div>
+                      </template>
+                  </a-statistic>
+              </a-col>
+              <a-col :span="4">
+                  <a-statistic :value="allNodeNumbers.busyNodes" :value-style="{'text-align':'center'}">
                       <template #title>
                           <div style="text-align: center">Busy Nodes</div>
                       </template>
                   </a-statistic>
               </a-col>
+              <a-col :span="4">
+                  <a-statistic :value="allTaskNumbers.runningTasks" :value-style="{'text-align':'center'}">
+                      <template #title>
+                          <div style="text-align: center">Running Tasks</div>
+                      </template>
+                  </a-statistic>
+              </a-col>
+
           </a-row>
+
       </a-card>
     </a-col>
   </a-row>
