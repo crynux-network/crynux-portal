@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onBeforeUnmount, onMounted, reactive, ref, watch} from 'vue'
+import {computed, onMounted, reactive, ref} from 'vue'
 import { Grid } from 'ant-design-vue'
 import networkAPI from '@/api/v1/network'
 import config from '@/config.json'
@@ -30,12 +30,12 @@ const allTaskNumbers = reactive({
 });
 
 const nodeList = ref([]);
-const nodeListPageSize = 20;
-const nodeListCurrentPage = ref(0);
+const nodeListPageSize = 100;
+const nodeListCurrentPage = ref(1);
 
 const loadNetworkInfo = async () => {
     const nodeNums = await networkAPI.getAllNodesNumber();
-    allNodeNumbers.totalNodes = nodeNums.total_nodes;
+    allNodeNumbers.totalNodes = nodeNums.all_nodes;
     allNodeNumbers.busyNodes = nodeNums.busy_nodes;
 
     const taskNums = await networkAPI.getAllTasksNumber();
@@ -45,12 +45,12 @@ const loadNetworkInfo = async () => {
     allTaskNumbers.queuedTasks = taskNums.queued_tasks;
 
     if (allNodeNumbers.totalNodes !== 0) {
-        await loadNodeList(0, nodeListPageSize);
+        await loadNodeList(1, nodeListPageSize);
     }
 };
 
 const loadNodeList = async (page, pageSize) => {
-    nodeList.value = await networkAPI.getAllNodesData(page * pageSize, pageSize);
+    nodeList.value = await networkAPI.getAllNodesData((page-1) * pageSize, pageSize);
 };
 
 const nodeListColumns = [
@@ -71,8 +71,8 @@ const nodeListColumns = [
         key:'cnx_balance'
     },
     {
-        title: 'Collateral',
-        key: 'collateral'
+        title: 'Staking',
+        key: 'staking'
     }
 ];
 
@@ -145,41 +145,50 @@ onMounted(async () => {
         <a-col :span="20" :offset="2">
             <a-card title="Crynux Node List" :bordered="false" style="height: 100%; opacity: 0.9; padding-bottom: 32px">
                 <a-empty v-if="nodeList.length === 0"></a-empty>
-                <a-table
+                <a-space
                     v-if="nodeList.length !== 0"
-                    :columns="nodeListColumns"
-                    :data-source="nodeList"
-                    :pagination="{
-                        'hideOnSinglePage': true,
-                        'v-model:current': nodeListCurrentPage + 1,
-                        'pageSize': nodeListPageSize,
-                        'total': allNodeNumbers.allNodes,
-                        'change': loadNodeList
-                    }">
-                    <template #bodyCell="{ column, record }">
-                        <template v-if="column.key === 'address'">
-                            <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
-                              {{ record.address }}
-                            </a-typography-link>
+                    direction="vertical"
+                    :style="{'width': '100%'}"
+                    size="large"
+                    >
+                    <a-table
+                        :columns="nodeListColumns"
+                        :data-source="nodeList"
+                        :pagination="false">
+                        <template #bodyCell="{ column, record }">
+                            <template v-if="column.key === 'address'">
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
+                                {{ record.address }}
+                                </a-typography-link>
+                            </template>
+                            <template v-else-if="column.key === 'card_model'">
+                                <span>{{ record.card_model }}</span>
+                            </template>
+                            <template v-else-if="column.key === 'v_ram'">
+                                <span>{{ record.v_ram }} GB</span>
+                            </template>
+                            <template v-else-if="column.key === 'cnx_balance'">
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
+                                    CNX {{ toEtherValue(record.cnx_balance) }}
+                                </a-typography-link>
+                            </template>
+                            <template v-else-if="column.key === 'staking'">
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
+                                    CNX 400.00
+                                </a-typography-link>
+                            </template>
                         </template>
-                        <template v-else-if="column.key === 'card_model'">
-                            <span>{{ record.card_model }}</span>
-                        </template>
-                        <template v-else-if="column.key === 'v_ram'">
-                            <span>{{ record.v_ram }} GB</span>
-                        </template>
-                        <template v-else-if="column.key === 'cnx_balance'">
-                            <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
-                                CNX {{ toEtherValue(record.cnx_balance) }}
-                            </a-typography-link>
-                        </template>
-                        <template v-else-if="column.key === 'collateral'">
-                            <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
-                                CNX 400.00
-                            </a-typography-link>
-                        </template>
-                    </template>
-                </a-table>
+                    </a-table>
+                    <a-pagination
+                        :hide-on-single-page="true"
+                        v-model:current="nodeListCurrentPage"
+                        :pageSize="nodeListPageSize"
+                        :total="allNodeNumbers.totalNodes"
+                        :showSizeChanger="false"
+                        @change="loadNodeList"
+                        :style="{'float':'right'}"
+                    ></a-pagination>
+                </a-space>
             </a-card>
         </a-col>
     </a-row>
