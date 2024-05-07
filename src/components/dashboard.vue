@@ -3,6 +3,7 @@ import {computed, onMounted, reactive, ref} from 'vue'
 import { Grid } from 'ant-design-vue'
 import networkAPI from '@/api/v1/network'
 import config from '@/config.json'
+import GithubButton from 'vue-github-button'
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -68,7 +69,7 @@ const nodeListColumns = [
     },
     {
         title: 'CNX Balance',
-        key:'cnx_balance'
+        key:'balance'
     },
     {
         title: 'Staking',
@@ -167,13 +168,13 @@ onMounted(async () => {
                             <template v-else-if="column.key === 'v_ram'">
                                 <span>{{ record.v_ram }} GB</span>
                             </template>
-                            <template v-else-if="column.key === 'cnx_balance'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
-                                    CNX {{ toEtherValue(record.cnx_balance) }}
+                            <template v-else-if="column.key === 'balance'">
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
+                                    CNX {{ toEtherValue(record.balance) }}
                                 </a-typography-link>
                             </template>
                             <template v-else-if="column.key === 'staking'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address + '/tokens'" target="_blank">
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
                                     CNX 400.00
                                 </a-typography-link>
                             </template>
@@ -200,10 +201,6 @@ onMounted(async () => {
       &nbsp;|&nbsp;
       <a-typography-link href="https://docs.crynux.ai" target="_blank">Docs</a-typography-link>
       &nbsp;|&nbsp;
-      <a-typography-link href="https://github.com/crynux-ai" target="_blank"
-        >GitHub</a-typography-link
-      >
-      &nbsp;|&nbsp;
       <a-typography-link href="https://blog.crynux.ai" target="_blank">Blog</a-typography-link>
       &nbsp;|&nbsp;
       <a-typography-link href="https://twitter.com/crynuxai" target="_blank"
@@ -213,6 +210,14 @@ onMounted(async () => {
       <a-typography-link href="https://discord.gg/Ug2AHUbrrm" target="_blank"
         >Discord</a-typography-link
       >
+        &nbsp;|&nbsp;
+        <!-- Place this tag where you want the button to render. -->
+        <github-button
+            href="https://github.com/crynux-ai/crynux-node"
+            data-color-scheme="no-preference: light; light: light; dark: light;"
+            data-show-count="true" aria-label="Star Crynux Node on GitHub"
+            :style="{'position': 'relative', 'top': '4px'}"
+        >Star</github-button>
     </a-space>
     <img class="footer-logo" src="./logo-full-white.png" width="140" alt="Crynux logo" />
   </div>

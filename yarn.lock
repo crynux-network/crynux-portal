@@ -1418,6 +1418,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"github-buttons@npm:^2.22.0":
+  version: 2.28.0
+  resolution: "github-buttons@npm:2.28.0"
+  checksum: edf829c54b006c811a81f0b6fc852492f81429ef1f147c746a76e52cc41b6e9866b4711c800ca9834c19248ba5fdaee78219c3e81cd63ae2611fc6925cfcfd75
+  languageName: node
+  linkType: hard
+
 "glob-parent@npm:^6.0.2":
   version: 6.0.2
   resolution: "glob-parent@npm:6.0.2"
@@ -1981,6 +1988,7 @@ __metadata:
     stylus: ^0.60.0
     vite: ^4.4.9
     vue: ^3.3.4
+    vue-github-button: ^3.1.0
     vue-router: ^4.2.4
   languageName: unknown
   linkType: soft
@@ -2624,6 +2632,15 @@ __metadata:
   peerDependencies:
     eslint: ">=6.0.0"
   checksum: f55056fcd94b6c9d4e940616294f72fb20ae9561a23bc2d7f32499307db7af128dc84d8c43cb8c1a267e0c5d34fc61a9215656a5ea7413df4f58eec81175c6ad
+  languageName: node
+  linkType: hard
+
+"vue-github-button@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "vue-github-button@npm:3.1.0"
+  dependencies:
+    github-buttons: ^2.22.0
+  checksum: 557f98c5f4ae61dd9c9c4c575758d894ff82aa69f3cf77ffa6509fc960c06796fd3b95674521f610e3423505ab6972ca8d088a6eb5a2245d73cf70aa0dd7b800
   languageName: node
   linkType: hard
 
