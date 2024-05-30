@@ -1,6 +1,7 @@
 <script setup>
 import {computed, onMounted, reactive, ref} from 'vue'
-import { Grid } from 'ant-design-vue'
+import {Grid} from 'ant-design-vue'
+import {ArrowUpOutlined, CopyOutlined} from "@ant-design/icons-vue";
 import networkAPI from '@/api/v1/network'
 import config from '@/config.json'
 import GithubButton from 'vue-github-button'
@@ -33,8 +34,13 @@ const allTaskNumbers = reactive({
 const nodeList = ref([]);
 const nodeListPageSize = 100;
 const nodeListCurrentPage = ref(1);
+const totalComputingPower = ref(0);
 
 const loadNetworkInfo = async () => {
+
+    const netInfo = await networkAPI.getNetworkInfo();
+    totalComputingPower.value = netInfo.tflops;
+
     const nodeNums = await networkAPI.getAllNodesNumber();
     allNodeNumbers.totalNodes = nodeNums.all_nodes;
     allNodeNumbers.busyNodes = nodeNums.busy_nodes;
@@ -51,7 +57,7 @@ const loadNetworkInfo = async () => {
 };
 
 const loadNodeList = async (page, pageSize) => {
-    nodeList.value = await networkAPI.getAllNodesData((page-1) * pageSize, pageSize);
+    nodeList.value = await networkAPI.getAllNodesData((page - 1) * pageSize, pageSize);
 };
 
 const nodeListColumns = [
@@ -69,7 +75,7 @@ const nodeListColumns = [
     },
     {
         title: 'CNX Balance',
-        key:'balance'
+        key: 'balance'
     },
     {
         title: 'Staking',
@@ -92,55 +98,105 @@ const toEtherValue = (bigNum) => {
 onMounted(async () => {
     await loadNetworkInfo();
 })
+
+const copyText = async (text) => {
+    return navigator.clipboard.writeText(text)
+}
 </script>
 
 <template>
-  <a-row :class="topRowClasses"> </a-row>
-  <a-row :gutter="[16, 16]">
-    <a-col :span="20" :offset="2">
-      <a-card title="Crynux Network Statistics" :bordered="false" style="height: 100%; opacity: 0.9">
-          <a-row :gutter="[8, 8]">
-            <a-col :span="4" :offset="2">
-                  <a-statistic :value="allNodeNumbers.totalNodes" :value-style="{'text-align':'center'}">
-                      <template #title>
-                          <div style="text-align: center">Total Nodes</div>
-                      </template>
-                  </a-statistic>
-              </a-col>
-              <a-col :span="4">
-                  <a-statistic :value="allTaskNumbers.totalTasks" :value-style="{'text-align':'center'}">
-                      <template #title>
-                          <div style="text-align: center">Total Tasks</div>
-                      </template>
-                  </a-statistic>
-              </a-col>
-              <a-col :span="4">
-                  <a-statistic :value="allTaskNumbers.queuedTasks" :value-style="{'text-align':'center'}">
-                      <template #title>
-                          <div style="text-align: center">Queued Tasks</div>
-                      </template>
-                  </a-statistic>
-              </a-col>
-              <a-col :span="4">
-                  <a-statistic :value="allNodeNumbers.busyNodes" :value-style="{'text-align':'center'}">
-                      <template #title>
-                          <div style="text-align: center">Busy Nodes</div>
-                      </template>
-                  </a-statistic>
-              </a-col>
-              <a-col :span="4">
-                  <a-statistic :value="allTaskNumbers.runningTasks" :value-style="{'text-align':'center'}">
-                      <template #title>
-                          <div style="text-align: center">Running Tasks</div>
-                      </template>
-                  </a-statistic>
-              </a-col>
+    <a-row :class="topRowClasses"></a-row>
+    <a-row :gutter="[16, 16]">
+        <a-col :span="6" :offset="2">
+            <a-card title="Total Computing Power" :bordered="false" style="height: 100%; opacity: 0.9">
+                <a-statistic
+                    :value="totalComputingPower"
+                    :precision="0"
+                    class="demo-class"
+                    :value-style="{ color: '#1677ff', 'font-size': '56px', 'text-align': 'center', 'margin-top': '30px' }"
+                >
+                    <template #suffix>
+                        <span style="margin-left:6px; color: #666666; font-size: 20px">TFLOPS</span>
+                    </template>
+                </a-statistic>
+            </a-card>
+        </a-col>
+        <a-col :span="14">
+            <a-card title="Crynux Network Info" :bordered="false" style="height: 100%; opacity: 0.9">
+                <a-descriptions
+                    :column="3"
+                    bordered
+                    :label-style="{'width': '160px'}"
+                >
+                    <a-descriptions-item label="Network Name" :span="3">Crynux Helium Network</a-descriptions-item>
+                    <a-descriptions-item label="Block Explorer" :span="3">
+                        <a-typography-link :href="config.block_explorer" target="_blank">{{
+                                config.block_explorer
+                            }}
+                        </a-typography-link>
+                    </a-descriptions-item>
+                    <a-descriptions-item label="JSON RPC" :span="3">
+                        <a-input-group compact>
+                            <a-input :default-value="config.json_rpc" style="width: calc(100% - 200px)"/>
+                            <a-tooltip title="Copy URL">
+                                <a-button @click="copyText(config.json_rpc)">
+                                    <template #icon>
+                                        <CopyOutlined/>
+                                    </template>
+                                </a-button>
+                            </a-tooltip>
+                        </a-input-group>
+                    </a-descriptions-item>
+                </a-descriptions>
+            </a-card>
+        </a-col>
 
-          </a-row>
+    </a-row>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="20" :offset="2">
+            <a-card title="Nodes and Tasks" :bordered="false" style="height: 100%; opacity: 0.9">
+                <a-row :gutter="[8, 8]">
+                    <a-col :span="4" :offset="2">
+                        <a-statistic :value="allNodeNumbers.totalNodes" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Total Nodes</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
+                    <a-col :span="4">
+                        <a-statistic :value="allTaskNumbers.totalTasks" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Total Tasks</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
+                    <a-col :span="4">
+                        <a-statistic :value="allTaskNumbers.queuedTasks" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Queued Tasks</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
+                    <a-col :span="4">
+                        <a-statistic :value="allNodeNumbers.busyNodes" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Busy Nodes</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
+                    <a-col :span="4">
+                        <a-statistic :value="allTaskNumbers.runningTasks" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Running Tasks</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
 
-      </a-card>
-    </a-col>
-  </a-row>
+                </a-row>
+
+            </a-card>
+        </a-col>
+    </a-row>
 
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="20" :offset="2">
@@ -151,15 +207,16 @@ onMounted(async () => {
                     direction="vertical"
                     :style="{'width': '100%'}"
                     size="large"
-                    >
+                >
                     <a-table
                         :columns="nodeListColumns"
                         :data-source="nodeList"
                         :pagination="false">
                         <template #bodyCell="{ column, record }">
                             <template v-if="column.key === 'address'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
-                                {{ record.address }}
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address"
+                                                   target="_blank">
+                                    {{ record.address }}
                                 </a-typography-link>
                             </template>
                             <template v-else-if="column.key === 'card_model'">
@@ -169,12 +226,14 @@ onMounted(async () => {
                                 <span>{{ record.v_ram }} GB</span>
                             </template>
                             <template v-else-if="column.key === 'balance'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address"
+                                                   target="_blank">
                                     CNX {{ toEtherValue(record.balance) }}
                                 </a-typography-link>
                             </template>
                             <template v-else-if="column.key === 'staking'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address" target="_blank">
+                                <a-typography-link :href="config.block_explorer + '/address/' + record.address"
+                                                   target="_blank">
                                     CNX 400.00
                                 </a-typography-link>
                             </template>
@@ -196,31 +255,34 @@ onMounted(async () => {
     <a-row style="margin-top: 16px">
         <a-col :span="20" :offset="2">
             <div class="bottom-bar">
-    <a-space class="footer-links">
-      <a-typography-link href="https://crynux.ai" target="_blank">Home</a-typography-link>
-      &nbsp;|&nbsp;
-      <a-typography-link href="https://docs.crynux.ai" target="_blank">Docs</a-typography-link>
-      &nbsp;|&nbsp;
-      <a-typography-link href="https://blog.crynux.ai" target="_blank">Blog</a-typography-link>
-      &nbsp;|&nbsp;
-      <a-typography-link href="https://twitter.com/crynuxai" target="_blank"
-        >Twitter</a-typography-link
-      >
-      &nbsp;|&nbsp;
-      <a-typography-link href="https://discord.gg/Ug2AHUbrrm" target="_blank"
-        >Discord</a-typography-link
-      >
-        &nbsp;|&nbsp;
-        <!-- Place this tag where you want the button to render. -->
-        <github-button
-            href="https://github.com/crynux-ai/crynux-node"
-            data-color-scheme="no-preference: light; light: light; dark: light;"
-            data-show-count="true" aria-label="Star Crynux Node on GitHub"
-            :style="{'position': 'relative', 'top': '4px'}"
-        >Star</github-button>
-    </a-space>
-    <img class="footer-logo" src="./logo-full-white.png" width="140" alt="Crynux logo" />
-  </div>
+                <a-space class="footer-links">
+                    <a-typography-link href="https://crynux.ai" target="_blank">Home</a-typography-link>
+                    &nbsp;|&nbsp;
+                    <a-typography-link href="https://docs.crynux.ai" target="_blank">Docs</a-typography-link>
+                    &nbsp;|&nbsp;
+                    <a-typography-link href="https://blog.crynux.ai" target="_blank">Blog</a-typography-link>
+                    &nbsp;|&nbsp;
+                    <a-typography-link href="https://twitter.com/crynuxai" target="_blank"
+                    >Twitter
+                    </a-typography-link
+                    >
+                    &nbsp;|&nbsp;
+                    <a-typography-link href="https://discord.gg/Ug2AHUbrrm" target="_blank"
+                    >Discord
+                    </a-typography-link
+                    >
+                    &nbsp;|&nbsp;
+                    <!-- Place this tag where you want the button to render. -->
+                    <github-button
+                        href="https://github.com/crynux-ai/crynux-node"
+                        data-color-scheme="no-preference: light; light: light; dark: light;"
+                        data-show-count="true" aria-label="Star Crynux Node on GitHub"
+                        :style="{'position': 'relative', 'top': '4px'}"
+                    >Star
+                    </github-button>
+                </a-space>
+                <img class="footer-logo" src="./logo-full-white.png" width="140" alt="Crynux logo"/>
+            </div>
         </a-col>
     </a-row>
 
@@ -229,8 +291,8 @@ onMounted(async () => {
 
 <style lang="stylus">
 .ant-row
-    margin-left 0!important
-    margin-right 0!important
+    margin-left 0 !important
+    margin-right 0 !important
 </style>
 <style scoped lang="stylus">
 .bottom-bar
@@ -247,6 +309,7 @@ onMounted(async () => {
 
     a
         color #fff
+
         &:hover
             text-decoration underline
 
@@ -257,14 +320,19 @@ onMounted(async () => {
 .top-row
     &.xs
         height 16px
+
     &.sm
         height 20px
+
     &.md
         height 40px
+
     &.lg
         height 40px
+
     &.xl
         height 80px
+
     &.xxl
         height 100px
 </style>

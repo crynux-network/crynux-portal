@@ -1,4 +1,5 @@
 {
     "base_url": "https://dy.relay.crynux.ai",
-    "block_explorer": "https://bb.dym.fyi/r/dev-crynux"
+    "block_explorer": "https://bb.dym.fyi/r/dev-crynux",
+    "json_rpc": "https://json-rpc.crynux.evm.ra.blumbus.noisnemyd.xyz/"
 }
