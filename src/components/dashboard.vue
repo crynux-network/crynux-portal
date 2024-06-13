@@ -22,7 +22,8 @@ const topRowClasses = computed(() => {
 
 const allNodeNumbers = reactive({
     totalNodes: 0,
-    busyNodes: 0
+    activeNodes: 0,
+    busyNodes: 0,
 });
 
 const allTaskNumbers = reactive({
@@ -43,6 +44,7 @@ const loadNetworkInfo = async () => {
 
     const nodeNums = await networkAPI.getAllNodesNumber();
     allNodeNumbers.totalNodes = nodeNums.all_nodes;
+    allNodeNumbers.activeNodes = nodeNums.active_nodes;
     allNodeNumbers.busyNodes = nodeNums.busy_nodes;
 
     const taskNums = await networkAPI.getAllTasksNumber();
@@ -150,16 +152,22 @@ const copyText = async (text) => {
                 </a-descriptions>
             </a-card>
         </a-col>
-
     </a-row>
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="20" :offset="2">
             <a-card title="Nodes and Tasks" :bordered="false" style="height: 100%; opacity: 0.9">
                 <a-row :gutter="[8, 8]">
-                    <a-col :span="4" :offset="2">
+                    <a-col :span="4">
                         <a-statistic :value="allNodeNumbers.totalNodes" :value-style="{'text-align':'center'}">
                             <template #title>
                                 <div style="text-align: center">Total Nodes</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
+                    <a-col :span="4">
+                        <a-statistic :value="allNodeNumbers.activeNodes" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Active Nodes</div>
                             </template>
                         </a-statistic>
                     </a-col>
