@@ -47,6 +47,9 @@ const loadNetworkInfo = async () => {
     allNodeNumbers.activeNodes = nodeNums.active_nodes;
     allNodeNumbers.busyNodes = nodeNums.busy_nodes;
 
+    // Fix the number temporarily due to previously accumulated calculation error in smart contract.
+    allNodeNumbers.busyNodes -= 150;
+
     const taskNums = await networkAPI.getAllTasksNumber();
 
     allTaskNumbers.totalTasks = taskNums.total_tasks;
