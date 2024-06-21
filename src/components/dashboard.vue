@@ -129,20 +129,21 @@ const copyText = async (text) => {
         <a-col :span="14">
             <a-card title="Crynux Network Info" :bordered="false" style="height: 100%; opacity: 0.9">
                 <a-descriptions
-                    :column="3"
+                    :column="5"
                     bordered
                     :label-style="{'width': '160px'}"
                 >
                     <a-descriptions-item label="Network Name" :span="3">Crynux Helium Network</a-descriptions-item>
-                    <a-descriptions-item label="Block Explorer" :span="3">
+                    <a-descriptions-item label="Network ID" :span="2">crynux_10000-1</a-descriptions-item>
+                    <a-descriptions-item label="Block Explorer" :span="5">
                         <a-typography-link :href="config.block_explorer" target="_blank">{{
                                 config.block_explorer
                             }}
                         </a-typography-link>
                     </a-descriptions-item>
-                    <a-descriptions-item label="JSON RPC" :span="3">
+                    <a-descriptions-item label="JSON RPC" :span="5">
                         <a-input-group compact>
-                            <a-input :default-value="config.json_rpc" style="width: calc(100% - 200px)"/>
+                            <a-input :default-value="config.json_rpc" style="width: calc(100% - 50px)"/>
                             <a-tooltip title="Copy URL">
                                 <a-button @click="copyText(config.json_rpc)">
                                     <template #icon>
