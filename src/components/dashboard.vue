@@ -134,7 +134,7 @@ const copyText = async (text) => {
                     :label-style="{'width': '160px'}"
                 >
                     <a-descriptions-item label="Network Name" :span="3">Crynux Helium Network</a-descriptions-item>
-                    <a-descriptions-item label="Network ID" :span="2">crynux_10000-1</a-descriptions-item>
+                    <a-descriptions-item label="Chain ID" :span="2">crynux_10000-1</a-descriptions-item>
                     <a-descriptions-item label="Block Explorer" :span="5">
                         <a-typography-link :href="config.block_explorer" target="_blank">{{
                                 config.block_explorer
