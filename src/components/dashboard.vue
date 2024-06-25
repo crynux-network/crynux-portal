@@ -113,7 +113,7 @@ const copyText = async (text) => {
     <a-row :class="topRowClasses"></a-row>
     <a-row :gutter="[16, 16]">
         <a-col :span="6" :offset="2">
-            <a-card title="Total Computing Power" :bordered="false" style="height: 100%; opacity: 0.9">
+            <a-card title="Active Computing Power" :bordered="false" style="height: 100%; opacity: 0.9">
                 <a-statistic
                     :value="totalComputingPower"
                     :precision="0"
@@ -161,14 +161,21 @@ const copyText = async (text) => {
         <a-col :span="20" :offset="2">
             <a-card title="Nodes and Tasks" :bordered="false" style="height: 100%; opacity: 0.9">
                 <a-row :gutter="[8, 8]">
-                    <a-col :span="4">
+                    <a-col :span="5">
                         <a-statistic :value="allNodeNumbers.totalNodes" :value-style="{'text-align':'center'}">
                             <template #title>
                                 <div style="text-align: center">Total Nodes</div>
                             </template>
                         </a-statistic>
                     </a-col>
-                    <a-col :span="4">
+                    <a-col :span="5">
+                        <a-statistic :value="allTaskNumbers.totalTasks" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Total Tasks</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
+                    <a-col :span="5">
                         <a-statistic :value="allNodeNumbers.activeNodes" :value-style="{'text-align':'center'}">
                             <template #title>
                                 <div style="text-align: center">Active Nodes</div>
@@ -176,23 +183,9 @@ const copyText = async (text) => {
                         </a-statistic>
                     </a-col>
                     <a-col :span="4">
-                        <a-statistic :value="allTaskNumbers.totalTasks" :value-style="{'text-align':'center'}">
-                            <template #title>
-                                <div style="text-align: center">Total Tasks</div>
-                            </template>
-                        </a-statistic>
-                    </a-col>
-                    <a-col :span="4">
                         <a-statistic :value="allTaskNumbers.queuedTasks" :value-style="{'text-align':'center'}">
                             <template #title>
                                 <div style="text-align: center">Queued Tasks</div>
-                            </template>
-                        </a-statistic>
-                    </a-col>
-                    <a-col :span="4">
-                        <a-statistic :value="allNodeNumbers.busyNodes" :value-style="{'text-align':'center'}">
-                            <template #title>
-                                <div style="text-align: center">Busy Nodes</div>
                             </template>
                         </a-statistic>
                     </a-col>
