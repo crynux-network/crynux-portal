@@ -7,6 +7,7 @@ import config from '@/config.json'
 import GithubButton from 'vue-github-button'
 import TaskDurationHistogram from "@/components/task-duration-histogram.vue";
 import TaskNumberLineChart from "@/components/task-number-line-chart.vue";
+import TaskSuccessRateLineChart from "@/components/task-success-rate-line-chart.vue";
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -214,6 +215,11 @@ const copyText = async (text) => {
         <a-col :span="6">
             <a-card title="Task Duration" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-duration-histogram></task-duration-histogram>
+            </a-card>
+        </a-col>
+        <a-col :span="7">
+            <a-card title="Task Success Rate" :bordered="false" style="height: 100%; opacity: 0.9">
+                <task-success-rate-line-chart></task-success-rate-line-chart>
             </a-card>
         </a-col>
     </a-row>
