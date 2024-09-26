@@ -1,11 +1,12 @@
 <script setup>
 import {computed, onMounted, reactive, ref} from 'vue'
 import {Grid} from 'ant-design-vue'
-import {ArrowUpOutlined, CopyOutlined} from "@ant-design/icons-vue";
+import {CopyOutlined} from "@ant-design/icons-vue";
 import networkAPI from '@/api/v1/network'
 import config from '@/config.json'
 import GithubButton from 'vue-github-button'
 import TaskDurationHistogram from "@/components/task-duration-histogram.vue";
+import TaskNumberLineChart from "@/components/task-number-line-chart.vue";
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -205,7 +206,12 @@ const copyText = async (text) => {
     </a-row>
 
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
-        <a-col :span="6" :offset="2">
+        <a-col :span="7" :offset="2">
+            <a-card title="Task Count" :bordered="false" style="height: 100%; opacity: 0.9">
+                <task-number-line-chart></task-number-line-chart>
+            </a-card>
+        </a-col>
+        <a-col :span="6">
             <a-card title="Task Duration" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-duration-histogram></task-duration-histogram>
             </a-card>

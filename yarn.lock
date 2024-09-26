@@ -1950,6 +1950,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"moment@npm:^2.30.1":
+  version: 2.30.1
+  resolution: "moment@npm:2.30.1"
+  checksum: 859236bab1e88c3e5802afcf797fc801acdbd0ee509d34ea3df6eea21eb6bcc2abd4ae4e4e64aa7c986aa6cba563c6e62806218e6412a765010712e5fa121ba6
+  languageName: node
+  linkType: hard
+
 "ms@npm:2.1.2":
   version: 2.1.2
   resolution: "ms@npm:2.1.2"
@@ -2001,6 +2008,7 @@ __metadata:
     eslint: ^8.46.0
     eslint-plugin-vue: ^9.16.1
     json-bigint: "https://github.com/sidorares/json-bigint"
+    moment: ^2.30.1
     prettier: ^3.0.0
     stylus: ^0.60.0
     vite: ^4.4.9

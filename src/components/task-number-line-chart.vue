@@ -10,7 +10,7 @@
     <div class="loading" v-if="loading">
         <loading-outlined />
     </div>
-    <bar :data="chartData" :options="chartOptions" />
+  <Line :data="data" :options="options" />
 </template>
 <style scoped>
 .loading {
@@ -28,11 +28,11 @@
 }
 </style>
 <script setup>
-import {ref, onMounted, reactive, watch} from 'vue';
-import 'chart.js/auto';
-import { Bar } from 'vue-chartjs';
-import statsAPI from "@/api/v1/stats";
+import { Line } from 'vue-chartjs'
 import { LoadingOutlined } from "@ant-design/icons-vue";
+import {onMounted, reactive, ref, watch} from "vue";
+import statsAPI from "@/api/v1/stats";
+import moment from "moment";
 
 const loading = ref(true);
 
@@ -42,14 +42,25 @@ const periodSelected = ref(periodOptions[0]);
 const taskTypeOptions = reactive(['All', 'Image', 'Text'])
 const taskTypeSelected = ref(taskTypeOptions[0]);
 
-const chartData = ref({
+const data = ref({
     labels: [],
-    datasets: []
+    datasets: [
+    {
+      label: 'Task Count',
+      backgroundColor: 'rgba(54, 162, 235, 0.5)',
+      data: []
+    }
+  ]
 });
 
-const chartOptions = {
-  responsive: true,
-  scales: {
+const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+          display: false
+      }
+    },
+    scales: {
     y: {
       beginAtZero: true,
         title: {
@@ -57,18 +68,7 @@ const chartOptions = {
           text: 'No.Tasks'
         }
 
-    },
-      x: {
-        title: {
-            display: true,
-            text: 'Seconds'
-        }
-      }
-  },
-    plugins: {
-      legend: {
-          display: false
-      }
+    }
     }
 };
 
@@ -80,22 +80,27 @@ const fetchData = async () => {
 
     loading.value = true;
   try {
-    const data = await statsAPI.getTaskDuration(taskTypeSelected.value, periodSelected.value);
+    const resp = await statsAPI.getTaskNumber(taskTypeSelected.value, periodSelected.value);
 
-    const labels = data.execution_times;
-    const quantities = data.task_count;
-    chartData.value = {
-      labels,
-      datasets: [
-        {
-          label: 'No. Tasks',
-          data: quantities,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1,
-        }
-      ]
-    };
+    data.value = {
+        labels: resp.timestamps.map((item) => {
+            const date = moment.unix(item);
+
+            if (periodSelected.value === "Hour") {
+                return date.format("HH:mm")
+            } else if (periodSelected.value === "Day") {
+                return date.format("DD MMM")
+            } else {
+                return date.format("wo")
+            }
+        }),
+    datasets: [
+    {
+      label: 'Task Count',
+      backgroundColor: 'rgba(54, 162, 235, 0.5)',
+      data: resp.counts
+    }]
+    }
 
   } catch (error) {
     console.error("Error fetching data: ", error);
