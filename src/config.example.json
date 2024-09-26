@@ -1,5 +1,6 @@
 {
     "base_url": "https://dy.relay.crynux.ai",
     "block_explorer": "https://bb.dym.fyi/r/dev-crynux",
-    "json_rpc": "https://json-rpc.crynux.evm.ra.blumbus.noisnemyd.xyz/"
+    "json_rpc": "https://crynux-testnet.public.blastapi.io",
+    "chain_id": "10000"
 }

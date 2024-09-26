@@ -365,6 +365,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@kurkle/color@npm:^0.3.0":
+  version: 0.3.2
+  resolution: "@kurkle/color@npm:0.3.2"
+  checksum: 79e97b31f8f6efb28c69d373f94b0c7480226fe8ec95221f518ac998e156444a496727ce47de6d728eb5c3369288e794cba82cae34253deb0d472d3bfe080e49
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -825,6 +832,15 @@ __metadata:
     ansi-styles: ^4.1.0
     supports-color: ^7.1.0
   checksum: fe75c9d5c76a7a98d45495b91b2172fa3b7a09e0cc9370e5c8feb1c567b85c4288e2b3fded7cfdd7359ac28d6b3844feb8b82b8686842e93d23c827c417e83fc
+  languageName: node
+  linkType: hard
+
+"chart.js@npm:^4.4.4":
+  version: 4.4.4
+  resolution: "chart.js@npm:4.4.4"
+  dependencies:
+    "@kurkle/color": ^0.3.0
+  checksum: cbca10d97e2fcdff3d718e8ac770d382bc0e84bc2939a0d0e33868761ac39940f77a2a90da69c399006e8c3684ffdab3c6fafa5be306ff767290d5c11cf770fb
   languageName: node
   linkType: hard
 
@@ -1981,6 +1997,7 @@ __metadata:
     "@vue/eslint-config-prettier": ^8.0.0
     ant-design-vue: 4.x
     axios: ^1.5.0
+    chart.js: ^4.4.4
     eslint: ^8.46.0
     eslint-plugin-vue: ^9.16.1
     json-bigint: "https://github.com/sidorares/json-bigint"
@@ -1988,6 +2005,7 @@ __metadata:
     stylus: ^0.60.0
     vite: ^4.4.9
     vue: ^3.3.4
+    vue-chartjs: ^5.3.1
     vue-github-button: ^3.1.0
     vue-router: ^4.2.4
   languageName: unknown
@@ -2615,6 +2633,16 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 72b3584b3d3b8d14e8a37f0248e47fb8b4d02ab35de5b5a8e5ca8ae55c3be2aab73760dc36edac4fa722de182f78cc492eb44888fcb4a9a0712c4605dad644f9
+  languageName: node
+  linkType: hard
+
+"vue-chartjs@npm:^5.3.1":
+  version: 5.3.1
+  resolution: "vue-chartjs@npm:5.3.1"
+  peerDependencies:
+    chart.js: ^4.1.1
+    vue: ^3.0.0-0 || ^2.7.0
+  checksum: e1775411bc9fa33c428327e6b32a73b5e7211a98f742ab2c3ab5f7bf32adb5853ecf58f2c9079d0e2106b00c14bae288bcfab4bf9296e1ca2a63924e35b55f9e
   languageName: node
   linkType: hard
 

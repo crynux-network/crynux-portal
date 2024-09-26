@@ -5,6 +5,7 @@ import {ArrowUpOutlined, CopyOutlined} from "@ant-design/icons-vue";
 import networkAPI from '@/api/v1/network'
 import config from '@/config.json'
 import GithubButton from 'vue-github-button'
+import TaskDurationHistogram from "@/components/task-duration-histogram.vue";
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -113,7 +114,7 @@ const copyText = async (text) => {
     <a-row :class="topRowClasses"></a-row>
     <a-row :gutter="[16, 16]">
         <a-col :span="6" :offset="2">
-            <a-card title="Active Computing Power" :bordered="false" style="height: 100%; opacity: 0.9">
+            <a-card title="Total Computing Power" :bordered="false" style="height: 100%; opacity: 0.9">
                 <a-statistic
                     :value="totalComputingPower"
                     :precision="0"
@@ -134,7 +135,7 @@ const copyText = async (text) => {
                     :label-style="{'width': '160px'}"
                 >
                     <a-descriptions-item label="Network Name" :span="3">Crynux Helium Network</a-descriptions-item>
-                    <a-descriptions-item label="Chain ID" :span="2">crynux_10000-1</a-descriptions-item>
+                    <a-descriptions-item label="Chain ID" :span="2">{{config.chain_id}}</a-descriptions-item>
                     <a-descriptions-item label="Block Explorer" :span="5">
                         <a-typography-link :href="config.block_explorer" target="_blank">{{
                                 config.block_explorer
@@ -199,6 +200,14 @@ const copyText = async (text) => {
 
                 </a-row>
 
+            </a-card>
+        </a-col>
+    </a-row>
+
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="6" :offset="2">
+            <a-card title="Task Duration" :bordered="false" style="height: 100%; opacity: 0.9">
+                <task-duration-histogram></task-duration-histogram>
             </a-card>
         </a-col>
     </a-row>
