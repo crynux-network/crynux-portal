@@ -72,8 +72,8 @@ const chartOptions = {
     }
 };
 
-watch([periodSelected, taskTypeSelected], () => {
-    fetchData()
+watch([periodSelected, taskTypeSelected], async () => {
+    await fetchData()
 });
 
 const fetchData = async () => {
@@ -104,7 +104,7 @@ const fetchData = async () => {
   }
 };
 
-onMounted(() => {
-  fetchData();
+onMounted(async () => {
+  await fetchData();
 });
 </script>

@@ -3,11 +3,13 @@ import {computed, onMounted, reactive, ref} from 'vue'
 import {Grid} from 'ant-design-vue'
 import {CopyOutlined} from "@ant-design/icons-vue";
 import networkAPI from '@/api/v1/network'
+import incentivesAPI from "@/api/v1/incentives";
 import config from '@/config.json'
 import GithubButton from 'vue-github-button'
 import TaskDurationHistogram from "@/components/task-duration-histogram.vue";
 import TaskNumberLineChart from "@/components/task-number-line-chart.vue";
 import TaskSuccessRateLineChart from "@/components/task-success-rate-line-chart.vue";
+import NodeIncentivesChart from "@/components/node-incentives-chart.vue";
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -103,8 +105,13 @@ const toEtherValue = (bigNum) => {
     return decimals + '.' + fractions
 }
 
+let totalIncentives = ref(0)
+let todayIncentives = ref(0)
+
 onMounted(async () => {
     await loadNetworkInfo();
+    totalIncentives.value = await incentivesAPI.getIncentivesTotal();
+    todayIncentives.value = await incentivesAPI.getIncentivesToday();
 })
 
 const copyText = async (text) => {
@@ -164,21 +171,28 @@ const copyText = async (text) => {
         <a-col :span="20" :offset="2">
             <a-card title="Nodes and Tasks" :bordered="false" style="height: 100%; opacity: 0.9">
                 <a-row :gutter="[8, 8]">
-                    <a-col :span="5">
+                    <a-col :span="4">
                         <a-statistic :value="allNodeNumbers.totalNodes" :value-style="{'text-align':'center'}">
                             <template #title>
                                 <div style="text-align: center">Total Nodes</div>
                             </template>
                         </a-statistic>
                     </a-col>
-                    <a-col :span="5">
+                    <a-col :span="4">
                         <a-statistic :value="allTaskNumbers.totalTasks" :value-style="{'text-align':'center'}">
                             <template #title>
                                 <div style="text-align: center">Total Tasks</div>
                             </template>
                         </a-statistic>
                     </a-col>
-                    <a-col :span="5">
+                    <a-col :span="4">
+                        <a-statistic :precision="0" :value="totalIncentives" :value-style="{'text-align':'center'}">
+                            <template #title>
+                                <div style="text-align: center">Total Incentives</div>
+                            </template>
+                        </a-statistic>
+                    </a-col>
+                    <a-col :span="4">
                         <a-statistic :value="allNodeNumbers.activeNodes" :value-style="{'text-align':'center'}">
                             <template #title>
                                 <div style="text-align: center">Active Nodes</div>
@@ -207,12 +221,12 @@ const copyText = async (text) => {
     </a-row>
 
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
-        <a-col :span="7" :offset="2">
+        <a-col :span="6" :offset="2">
             <a-card title="Task Count" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-number-line-chart></task-number-line-chart>
             </a-card>
         </a-col>
-        <a-col :span="6">
+        <a-col :span="7">
             <a-card title="Task Duration" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-duration-histogram></task-duration-histogram>
             </a-card>
@@ -220,6 +234,18 @@ const copyText = async (text) => {
         <a-col :span="7">
             <a-card title="Task Success Rate" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-success-rate-line-chart></task-success-rate-line-chart>
+            </a-card>
+        </a-col>
+    </a-row>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="13" :offset="2">
+            <a-card title="Top Incentivized Nodes" :bordered="false" style="height: 100%; opacity: 0.9">
+                <node-incentives-chart></node-incentives-chart>
+            </a-card>
+        </a-col>
+        <a-col :span="7">
+            <a-card title="Network Incentives" :bordered="false" style="height: 100%; opacity: 0.9">
+
             </a-card>
         </a-col>
     </a-row>
