@@ -13,6 +13,10 @@ class StatsAPI extends BaseAPI {
     getTaskSuccessRate(taskType, period) {
         return v1.get('/stats/line_chart/task_success_rate?task_type=' + taskType + '&period=' + period)
     }
+
+    getTaskPrice(taskType) {
+        return v1.get('/stats/histogram/task_fee?task_type=' + taskType)
+    }
 }
 
 const statsAPI = new StatsAPI()

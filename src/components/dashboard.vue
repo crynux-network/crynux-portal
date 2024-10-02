@@ -6,10 +6,13 @@ import networkAPI from '@/api/v1/network'
 import incentivesAPI from "@/api/v1/incentives";
 import config from '@/config.json'
 import GithubButton from 'vue-github-button'
-import TaskDurationHistogram from "@/components/task-duration-histogram.vue";
+import NetworkIncentivesLineChart from "@/components/network-incentives-line-chart.vue";
 import TaskNumberLineChart from "@/components/task-number-line-chart.vue";
 import TaskSuccessRateLineChart from "@/components/task-success-rate-line-chart.vue";
 import NodeIncentivesChart from "@/components/node-incentives-chart.vue";
+
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -106,12 +109,10 @@ const toEtherValue = (bigNum) => {
 }
 
 let totalIncentives = ref(0)
-let todayIncentives = ref(0)
 
 onMounted(async () => {
     await loadNetworkInfo();
     totalIncentives.value = await incentivesAPI.getIncentivesTotal();
-    todayIncentives.value = await incentivesAPI.getIncentivesToday();
 })
 
 const copyText = async (text) => {
@@ -227,25 +228,20 @@ const copyText = async (text) => {
             </a-card>
         </a-col>
         <a-col :span="7">
-            <a-card title="Task Duration" :bordered="false" style="height: 100%; opacity: 0.9">
-                <task-duration-histogram></task-duration-histogram>
-            </a-card>
-        </a-col>
-        <a-col :span="7">
             <a-card title="Task Success Rate" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-success-rate-line-chart></task-success-rate-line-chart>
             </a-card>
         </a-col>
-    </a-row>
-    <a-row :gutter="[16, 16]" style="margin-top: 16px">
-        <a-col :span="13" :offset="2">
-            <a-card title="Top Incentivized Nodes" :bordered="false" style="height: 100%; opacity: 0.9">
-                <node-incentives-chart></node-incentives-chart>
-            </a-card>
-        </a-col>
         <a-col :span="7">
             <a-card title="Network Incentives" :bordered="false" style="height: 100%; opacity: 0.9">
-
+                <network-incentives-line-chart></network-incentives-line-chart>
+            </a-card>
+        </a-col>
+    </a-row>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="20" :offset="2">
+            <a-card title="Top Incentivized Nodes" :bordered="false" style="height: 100%; opacity: 0.9">
+                <node-incentives-chart></node-incentives-chart>
             </a-card>
         </a-col>
     </a-row>
