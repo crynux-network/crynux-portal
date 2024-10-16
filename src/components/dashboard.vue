@@ -222,17 +222,12 @@ const copyText = async (text) => {
     </a-row>
 
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
-        <a-col :span="6" :offset="2">
+        <a-col :span="10" :offset="2">
             <a-card title="Task Count" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-number-line-chart></task-number-line-chart>
             </a-card>
         </a-col>
-        <a-col :span="7">
-            <a-card title="Task Success Rate" :bordered="false" style="height: 100%; opacity: 0.9">
-                <task-success-rate-line-chart></task-success-rate-line-chart>
-            </a-card>
-        </a-col>
-        <a-col :span="7">
+        <a-col :span="10">
             <a-card title="Network Incentives" :bordered="false" style="height: 100%; opacity: 0.9">
                 <network-incentives-line-chart></network-incentives-line-chart>
             </a-card>

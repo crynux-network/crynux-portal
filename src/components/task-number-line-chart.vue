@@ -3,9 +3,6 @@
         <div style="float: left">
             <a-segmented v-model:value="periodSelected" :options="periodOptions" size="small"/>
         </div>
-        <div style="float: right">
-            <a-segmented v-model:value="taskTypeSelected" :options="taskTypeOptions" size="small" />
-        </div>
     </div>
     <div class="loading" v-if="loading">
         <loading-outlined />
