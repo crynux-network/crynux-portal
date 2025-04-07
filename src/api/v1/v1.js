@@ -74,6 +74,7 @@ class V1Client {
   setBaseURL(baseURL) {
     this.baseURL = baseURL
     this.v1BaseURL = baseURL + '/v1'
+    this.httpClient.defaults.baseURL = this.v1BaseURL
   }
 
   post(url, data, config) {
