@@ -31,6 +31,13 @@ import {onMounted, reactive, ref, watch} from "vue";
 import statsAPI from "@/api/v1/stats";
 import moment from "moment";
 
+const props = defineProps({
+    network: {
+        type: String,
+        required: true
+    }
+})
+
 const loading = ref(true);
 
 const periodOptions = reactive(['Hour', "Day", "Week"]);
@@ -69,44 +76,43 @@ const options = {
     }
 };
 
-watch([periodSelected, taskTypeSelected], async () => {
+watch([periodSelected, taskTypeSelected, () => props.network], async () => {
     await fetchData()
 });
 
 const fetchData = async () => {
-
     loading.value = true;
-  try {
-    const resp = await statsAPI.getTaskNumber(taskTypeSelected.value, periodSelected.value);
+    try {
+        const resp = await statsAPI.getTaskNumber(taskTypeSelected.value, periodSelected.value);
 
-    data.value = {
-        labels: resp.timestamps.map((item) => {
-            const date = moment.unix(item);
+        data.value = {
+            labels: resp.timestamps.map((item) => {
+                const date = moment.unix(item);
 
-            if (periodSelected.value === "Hour") {
-                return date.format("HH:mm")
-            } else if (periodSelected.value === "Day") {
-                return date.format("DD MMM")
-            } else {
-                return date.format("wo")
-            }
-        }),
-    datasets: [
-    {
-      label: 'Task Count',
-      backgroundColor: 'rgba(54, 162, 235, 0.5)',
-      data: resp.counts
-    }]
+                if (periodSelected.value === "Hour") {
+                    return date.format("HH:mm")
+                } else if (periodSelected.value === "Day") {
+                    return date.format("DD MMM")
+                } else {
+                    return date.format("wo")
+                }
+            }),
+            datasets: [
+                {
+                    label: 'Task Count',
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    data: resp.counts
+                }
+            ]
+        }
+    } catch (error) {
+        console.error("Error fetching data: ", error);
+    } finally {
+        loading.value = false;
     }
-
-  } catch (error) {
-    console.error("Error fetching data: ", error);
-  } finally {
-      loading.value = false;
-  }
 };
 
 onMounted(async () => {
-  await fetchData();
+    await fetchData();
 });
 </script>

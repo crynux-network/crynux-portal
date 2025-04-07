@@ -23,9 +23,9 @@ const networks = [
 ]
 
 const handleNetworkChange = async (value) => {
-    selectedNetwork.value = value
 
     v1.setBaseURL(config.base_url[value])
+    selectedNetwork.value = value
 
     await loadNetworkInfo()
     totalIncentives.value = await incentivesAPI.getIncentivesTotal();
@@ -258,12 +258,12 @@ onMounted(async () => {
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="10" :offset="2">
             <a-card title="Task Count" :bordered="false" style="height: 100%; opacity: 0.9">
-                <task-number-line-chart></task-number-line-chart>
+                <task-number-line-chart :network="selectedNetwork"></task-number-line-chart>
             </a-card>
         </a-col>
         <a-col :span="10">
             <a-card title="Network Incentives" :bordered="false" style="height: 100%; opacity: 0.9">
-                <network-incentives-line-chart></network-incentives-line-chart>
+                <network-incentives-line-chart :network="selectedNetwork"></network-incentives-line-chart>
             </a-card>
         </a-col>
     </a-row>

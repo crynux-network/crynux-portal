@@ -31,6 +31,13 @@ import {onMounted, reactive, ref, watch} from "vue";
 import incentivesAPI from "@/api/v1/incentives";
 import moment from "moment";
 
+const props = defineProps({
+    network: {
+        type: String,
+        required: true
+    }
+})
+
 const loading = ref(true);
 
 const periodOptions = reactive(['Day', "Week", "Month"]);
@@ -66,44 +73,43 @@ const options = {
     }
 };
 
-watch(periodSelected, async () => {
+watch([periodSelected, () => props.network], async () => {
     await fetchData()
 });
 
 const fetchData = async () => {
-
     loading.value = true;
-  try {
-    const resp = await incentivesAPI.getIncentives(periodSelected.value);
+    try {
+        const resp = await incentivesAPI.getIncentives(periodSelected.value);
 
-    data.value = {
-        labels: resp.timestamps.map((item) => {
-            const date = moment.unix(item);
+        data.value = {
+            labels: resp.timestamps.map((item) => {
+                const date = moment.unix(item);
 
-            if (periodSelected.value === "Day") {
-                return date.format("Do")
-            } else if (periodSelected.value === "Week") {
-                return date.format("wo")
-            } else {
-                return date.format("MMM")
-            }
-        }),
-    datasets: [
-    {
-      label: 'Incentives',
-      backgroundColor: 'rgba(54, 162, 235, 0.5)',
-      data: resp.incentives
-    }]
+                if (periodSelected.value === "Day") {
+                    return date.format("Do")
+                } else if (periodSelected.value === "Week") {
+                    return date.format("wo")
+                } else {
+                    return date.format("MMM")
+                }
+            }),
+            datasets: [
+                {
+                    label: 'Incentives',
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    data: resp.incentives
+                }
+            ]
+        }
+    } catch (error) {
+        console.error("Error fetching data: ", error);
+    } finally {
+        loading.value = false;
     }
-
-  } catch (error) {
-    console.error("Error fetching data: ", error);
-  } finally {
-      loading.value = false;
-  }
 };
 
 onMounted(async () => {
-  await fetchData();
+    await fetchData();
 });
 </script>
