@@ -1,21 +1,35 @@
 <script setup>
 import {computed, onMounted, reactive, ref} from 'vue'
 import {Grid} from 'ant-design-vue'
-import {CopyOutlined} from "@ant-design/icons-vue";
 import networkAPI from '@/api/v1/network'
 import incentivesAPI from "@/api/v1/incentives";
-import config from '@/config.json'
 import GithubButton from 'vue-github-button'
 import NetworkIncentivesLineChart from "@/components/network-incentives-line-chart.vue";
 import TaskNumberLineChart from "@/components/task-number-line-chart.vue";
-import TaskSuccessRateLineChart from "@/components/task-success-rate-line-chart.vue";
 import NodeIncentivesChart from "@/components/node-incentives-chart.vue";
+import v1 from '@/api/v1/v1'
+import config from '@/config.json'
 
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
+
+const selectedNetwork = ref('dymension')
+const networks = [
+    { value: 'dymension', logo: '/dymension.png' },
+    { value: 'near', logo: '/near.png' }
+]
+
+const handleNetworkChange = async (value) => {
+    selectedNetwork.value = value
+
+    v1.setBaseURL(config.base_url[value])
+
+    await loadNetworkInfo()
+    totalIncentives.value = await incentivesAPI.getIncentivesTotal();
+}
 
 const topRowClasses = computed(() => {
     let classes = ['top-row']
@@ -114,10 +128,6 @@ onMounted(async () => {
     await loadNetworkInfo();
     totalIncentives.value = await incentivesAPI.getIncentivesTotal();
 })
-
-const copyText = async (text) => {
-    return navigator.clipboard.writeText(text)
-}
 </script>
 
 <template>
@@ -144,26 +154,10 @@ const copyText = async (text) => {
                     bordered
                     :label-style="{'width': '160px'}"
                 >
-                    <a-descriptions-item label="Network Name" :span="3">Crynux Helium Network</a-descriptions-item>
-                    <a-descriptions-item label="Chain ID" :span="2">{{config.chain_id}}</a-descriptions-item>
-                    <a-descriptions-item label="Block Explorer" :span="5">
-                        <a-typography-link :href="config.block_explorer" target="_blank">{{
-                                config.block_explorer
-                            }}
-                        </a-typography-link>
-                    </a-descriptions-item>
-                    <a-descriptions-item label="JSON RPC" :span="5">
-                        <a-input-group compact>
-                            <a-input :default-value="config.json_rpc" style="width: calc(100% - 50px)"/>
-                            <a-tooltip title="Copy URL">
-                                <a-button @click="copyText(config.json_rpc)">
-                                    <template #icon>
-                                        <CopyOutlined/>
-                                    </template>
-                                </a-button>
-                            </a-tooltip>
-                        </a-input-group>
-                    </a-descriptions-item>
+                    <a-descriptions-item label="Network Name" :span="3">Crynux Network</a-descriptions-item>
+                    <a-descriptions-item label="Blockchain" :span="2">Dymension</a-descriptions-item>
+                    <a-descriptions-item label="Network Version" :span="5">Helium (Incentivized Testnet)</a-descriptions-item>
+                    <a-descriptions-item label="Node Version" :span="5">v2.5.0</a-descriptions-item>
                 </a-descriptions>
             </a-card>
         </a-col>
@@ -257,10 +251,7 @@ const copyText = async (text) => {
                         :pagination="false">
                         <template #bodyCell="{ column, record }">
                             <template v-if="column.key === 'address'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address"
-                                                   target="_blank">
                                     {{ record.address }}
-                                </a-typography-link>
                             </template>
                             <template v-else-if="column.key === 'card_model'">
                                 <span>{{ record.card_model }}</span>
@@ -269,16 +260,10 @@ const copyText = async (text) => {
                                 <span>{{ record.v_ram }} GB</span>
                             </template>
                             <template v-else-if="column.key === 'balance'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address"
-                                                   target="_blank">
                                     CNX {{ toEtherValue(record.balance) }}
-                                </a-typography-link>
                             </template>
                             <template v-else-if="column.key === 'staking'">
-                                <a-typography-link :href="config.block_explorer + '/address/' + record.address"
-                                                   target="_blank">
                                     CNX 400.00
-                                </a-typography-link>
                             </template>
                         </template>
                     </a-table>

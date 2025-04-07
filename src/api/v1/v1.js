@@ -71,6 +71,11 @@ class V1Client {
     return this.v1BaseURL
   }
 
+  setBaseURL(baseURL) {
+    this.baseURL = baseURL
+    this.v1BaseURL = baseURL + '/v1'
+  }
+
   post(url, data, config) {
     return this.httpClient.post(url, data, config)
   }
@@ -115,6 +120,6 @@ class V1Client {
   }
 }
 
-const v1 = new V1Client(config.base_url)
+const v1 = new V1Client(config.base_url.dymension)
 
 export default v1
