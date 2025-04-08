@@ -1,6 +1,7 @@
 <script setup>
 import {computed, onMounted, reactive, ref} from 'vue'
 import {Grid} from 'ant-design-vue'
+import { useRouter, useRoute } from 'vue-router'
 import networkAPI from '@/api/v1/network'
 import incentivesAPI from "@/api/v1/incentives";
 import GithubButton from 'vue-github-button'
@@ -16,6 +17,9 @@ Chart.register(...registerables);
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
 
+const router = useRouter()
+const route = useRoute()
+
 const selectedNetwork = ref('dymension')
 const networks = [
     { value: 'dymension', logo: '/dymension.png' },
@@ -23,9 +27,9 @@ const networks = [
 ]
 
 const handleNetworkChange = async (value) => {
-
     v1.setBaseURL(config.base_url[value])
     selectedNetwork.value = value
+    router.push({ name: 'network', params: { network: value } })
 
     await loadNetworkInfo()
     totalIncentives.value = await incentivesAPI.getIncentivesTotal();
@@ -147,8 +151,14 @@ const toEtherValue = (bigNum) => {
 let totalIncentives = ref(0)
 
 onMounted(async () => {
-    await loadNetworkInfo()
-    totalIncentives.value = await incentivesAPI.getIncentivesTotal()
+    // Set initial network from route parameter if present
+    const network = route.params.network
+    if (network && networks.some(n => n.value === network)) {
+        await handleNetworkChange(network)
+    } else {
+        await loadNetworkInfo()
+        totalIncentives.value = await incentivesAPI.getIncentivesTotal()
+    }
     document.addEventListener('click', closeDropdown)
 })
 </script>
