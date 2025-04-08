@@ -270,7 +270,7 @@ onMounted(async () => {
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="20" :offset="2">
             <a-card title="Top Incentivized Nodes" :bordered="false" style="height: 100%; opacity: 0.9">
-                <node-incentives-chart></node-incentives-chart>
+                <node-incentives-chart :network="selectedNetwork"></node-incentives-chart>
             </a-card>
         </a-col>
     </a-row>

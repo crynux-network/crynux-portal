@@ -2,7 +2,13 @@
 import incentivesAPI from "@/api/v1/incentives";
 import {onMounted, reactive, ref, watch} from "vue";
 
-import config from "@/config.json";
+const props = defineProps({
+    network: {
+        type: String,
+        required: true
+    }
+});
+
 const loading = ref(true);
 const periodOptions = reactive(['Day', "Week", "Month"]);
 const periodSelected = ref(periodOptions[0]);
@@ -37,7 +43,7 @@ const columns = [
     }
 ];
 
-watch(periodSelected, async () => {
+watch([periodSelected, () => props.network], async () => {
     await fetchData()
 });
 
@@ -75,16 +81,10 @@ const fetchData = async () => {
     >
         <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'node_address'">
-                <a-typography-link :href="config.block_explorer + '/address/' + record.node_address"
-                                   target="_blank">
                     {{ record.node_address.substring(0, 10) }}...{{ record.node_address.substring(record.node_address.length - 10, record.node_address.length) }}
-                </a-typography-link>
             </template>
             <template v-else-if="column.key === 'incentive'">
-                <a-typography-link :href="config.block_explorer + '/address/' + record.node_address"
-                                   target="_blank">
                     CNX {{ record.incentive.toFixed(2) }}
-                </a-typography-link>
             </template>
         </template>
     </a-table>
