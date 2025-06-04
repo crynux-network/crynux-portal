@@ -105,13 +105,24 @@ const loadNetworkInfo = async () => {
     allTaskNumbers.runningTasks = taskNums.running_tasks;
     allTaskNumbers.queuedTasks = taskNums.queued_tasks;
 
-    if (allNodeNumbers.totalNodes !== 0) {
+    if (allNodeNumbers.totalNodes === 0) {
+        nodeList.value = []; // Clear node list directly if no nodes
+    } else {
+        // Only call loadNodeList if there are nodes to fetch
         await loadNodeList(1, nodeListPageSize);
     }
 };
 
 const loadNodeList = async (page, pageSize) => {
-    nodeList.value = await networkAPI.getAllNodesData((page - 1) * pageSize, pageSize);
+    const nodesData = await networkAPI.getAllNodesData((page - 1) * pageSize, pageSize);
+    if (Array.isArray(nodesData)) {
+        nodeList.value = nodesData;
+    } else {
+        // If nodesData is not an array (e.g., null, or an object like {nodes: null}),
+        // set nodeList to an empty array to ensure the table updates correctly
+        // and the empty state can be shown.
+        nodeList.value = [];
+    }
 };
 
 const nodeListColumns = [
