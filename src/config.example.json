@@ -1,6 +1,7 @@
 {
     "base_url": {
         "dymension": "https://dy.relay.crynux.ai",
-        "near": "https://near.relay.crynux.ai"
+        "near": "https://near.relay.crynux.ai",
+        "kasplex": "https://kasplex.relay.crynux.ai"
     }
 }

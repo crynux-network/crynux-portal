@@ -23,7 +23,8 @@ const route = useRoute()
 const selectedNetwork = ref('dymension')
 const networks = [
     { value: 'dymension', logo: '/dymension.png' },
-    { value: 'near', logo: '/near.png' }
+    { value: 'near', logo: '/near.png' },
+    { value: 'kasplex', logo: '/kasplex.png' }
 ]
 
 const handleNetworkChange = async (value) => {
@@ -42,8 +43,8 @@ const toggleNetworkDropdown = () => {
 }
 
 const selectNetwork = async (network) => {
-    await handleNetworkChange(network.value)
     showNetworkDropdown.value = false
+    await handleNetworkChange(network.value)
 }
 
 // Get the current network logo with fallback
