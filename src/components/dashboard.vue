@@ -346,11 +346,11 @@ onMounted(async () => {
         <a-col :span="20" :offset="2">
             <div class="bottom-bar">
                 <a-space class="footer-links">
-                    <a-typography-link href="https://crynux.ai" target="_blank">Home</a-typography-link>
+                    <a-typography-link href="https://crynux.io" target="_blank">Home</a-typography-link>
                     &nbsp;|&nbsp;
-                    <a-typography-link href="https://docs.crynux.ai" target="_blank">Docs</a-typography-link>
+                    <a-typography-link href="https://docs.crynux.io" target="_blank">Docs</a-typography-link>
                     &nbsp;|&nbsp;
-                    <a-typography-link href="https://blog.crynux.ai" target="_blank">Blog</a-typography-link>
+                    <a-typography-link href="https://blog.crynux.io" target="_blank">Blog</a-typography-link>
                     &nbsp;|&nbsp;
                     <a-typography-link href="https://twitter.com/crynuxai" target="_blank"
                     >Twitter
