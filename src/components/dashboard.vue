@@ -352,7 +352,7 @@ onMounted(async () => {
                     &nbsp;|&nbsp;
                     <a-typography-link href="https://blog.crynux.io" target="_blank">Blog</a-typography-link>
                     &nbsp;|&nbsp;
-                    <a-typography-link href="https://twitter.com/crynuxai" target="_blank"
+                    <a-typography-link href="https://x.com/crynuxio" target="_blank"
                     >Twitter
                     </a-typography-link
                     >
