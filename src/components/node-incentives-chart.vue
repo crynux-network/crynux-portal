@@ -1,5 +1,5 @@
 <script setup>
-import incentivesAPI from "@/api/v1/incentives";
+import v2IncentivesAPI from "@/api/v2/incentives";
 import {onMounted, reactive, ref, watch} from "vue";
 
 const props = defineProps({
@@ -32,9 +32,24 @@ const columns = [
         key: 'task_count'
     },
     {
+        title: 'Staking Score',
+        dataIndex: 'staking_score',
+        key: 'staking_score'
+    },
+    {
         title: 'QoS Score',
-        dataIndex: 'qos',
-        key: 'qos'
+        dataIndex: 'qos_score',
+        key: 'qos_score'
+    },
+    {
+        title: 'Prob Weight',
+        dataIndex: 'prob_weight',
+        key: 'prob_weight'
+    },
+    {
+        title: 'Staking',
+        dataIndex: 'staking',
+        key: 'staking'
     },
     {
         title: 'Incentives',
@@ -42,6 +57,18 @@ const columns = [
         key: 'incentive'
     }
 ];
+
+const toEtherValue = (bigNum) => {
+    if (!bigNum || bigNum === "0") return 0
+
+    const bn = BigInt(bigNum)
+
+    const decimals = (bn / BigInt(1e18)).toString()
+    let fractions = ((bn / BigInt(1e16)) % 100n).toString()
+    if (fractions.length === 1) fractions += '0'
+
+    return decimals + '.' + fractions
+}
 
 watch([periodSelected, () => props.network], async () => {
     await fetchData()
@@ -54,7 +81,7 @@ onMounted(async () => {
 const fetchData = async () => {
     loading.value = true;
     try {
-         const resp = await incentivesAPI.getNodes(periodSelected.value);
+         const resp = await v2IncentivesAPI.getNodes(periodSelected.value);
          nodeList.value = resp.nodes;
     } catch (e) {
         console.error(e);
@@ -65,6 +92,15 @@ const fetchData = async () => {
 </script>
 
 <template>
+    <a-alert
+        type="info"
+        show-icon
+        style="margin-bottom: 16px"
+    >
+        <template #description>
+            The values for card, staking and scores are real-time and can change dynamically, they may differ from the values at the time the incentives were earned.
+        </template>
+    </a-alert>
     <div style="height:40px">
         <div style="float: left">
             <a-segmented v-model:value="periodSelected" :options="periodOptions" size="small"/>
@@ -81,10 +117,31 @@ const fetchData = async () => {
     >
         <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'node_address'">
-                    {{ record.node_address.substring(0, 10) }}...{{ record.node_address.substring(record.node_address.length - 10, record.node_address.length) }}
+                    {{ record.node_address.substring(0, 5) }}...{{ record.node_address.substring(record.node_address.length - 5, record.node_address.length) }}
             </template>
             <template v-else-if="column.key === 'incentive'">
                     CNX {{ record.incentive.toFixed(2) }}
+            </template>
+            <template v-else-if="column.key === 'card_model'">
+                <div style="display: flex; align-items: center">
+                    <span>{{ record.card_model.split('+')[0] }}</span>
+                    <a-tag v-if="record.card_model.includes('+docker')" color="blue" style="margin-left: 8px;">Docker</a-tag>
+                    <a-tag v-else-if="record.card_model.includes('+windows')" color="green" style="margin-left: 8px;">Windows</a-tag>
+                    <a-tag v-else-if="record.card_model.includes('+Darwin')" color="purple" style="margin-left: 8px;">Mac</a-tag>
+                    <a-tag v-else-if="record.card_model.includes('+Linux')" color="orange" style="margin-left: 8px;">Linux</a-tag>
+                </div>
+            </template>
+            <template v-else-if="column.key === 'staking'">
+                CNX {{ toEtherValue(record.staking) }}
+            </template>
+            <template v-else-if="column.key === 'staking_score'">
+                {{ (record.staking_score * 100).toFixed(2) }}%
+            </template>
+            <template v-else-if="column.key === 'qos_score'">
+                {{ (record.qos_score * 100).toFixed(2) }}%
+            </template>
+            <template v-else-if="column.key === 'prob_weight'">
+                {{ (record.prob_weight * 100).toFixed(2) }}%
             </template>
         </template>
     </a-table>

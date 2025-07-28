@@ -4,11 +4,13 @@ import {Grid} from 'ant-design-vue'
 import { useRouter, useRoute } from 'vue-router'
 import networkAPI from '@/api/v1/network'
 import incentivesAPI from "@/api/v1/incentives";
+import v2NetworkAPI from '@/api/v2/network'
 import GithubButton from 'vue-github-button'
 import NetworkIncentivesLineChart from "@/components/network-incentives-line-chart.vue";
 import TaskNumberLineChart from "@/components/task-number-line-chart.vue";
 import NodeIncentivesChart from "@/components/node-incentives-chart.vue";
 import v1 from '@/api/v1/v1'
+import v2 from '@/api/v2/v2'
 import config from '@/config.json'
 
 import { Chart, registerables } from 'chart.js';
@@ -29,6 +31,7 @@ const networks = [
 
 const handleNetworkChange = async (value) => {
     v1.setBaseURL(config.base_url[value])
+    v2.setBaseURL(config.base_url[value])
     selectedNetwork.value = value
     router.push({ name: 'network', params: { network: value } })
 
@@ -114,7 +117,7 @@ const loadNetworkInfo = async () => {
 };
 
 const loadNodeList = async (page, pageSize) => {
-    const nodesData = await networkAPI.getAllNodesData((page - 1) * pageSize, pageSize);
+    const nodesData = await v2NetworkAPI.getAllNodesData((page - 1) * pageSize, pageSize);
     if (Array.isArray(nodesData)) {
         nodeList.value = nodesData;
     } else {
@@ -139,7 +142,7 @@ const nodeListColumns = [
         key: 'v_ram',
     },
     {
-        title: 'CNX Balance',
+        title: 'Balance',
         key: 'balance'
     },
     {
@@ -316,16 +319,16 @@ onMounted(async () => {
                                     {{ record.address }}
                             </template>
                             <template v-else-if="column.key === 'card_model'">
-                                <span>{{ record.card_model }}</span>
+                                <span>{{ record.card_model.split('+')[0] }}</span>
                             </template>
                             <template v-else-if="column.key === 'v_ram'">
                                 <span>{{ record.v_ram }} GB</span>
                             </template>
                             <template v-else-if="column.key === 'balance'">
-                                    CNX {{ toEtherValue(record.balance) }}
+                                    CNX {{ toEtherValue(BigInt(record.balance)) }}
                             </template>
                             <template v-else-if="column.key === 'staking'">
-                                    CNX 400.00
+                                    CNX {{ toEtherValue(BigInt(record.staking)) }}
                             </template>
                         </template>
                     </a-table>
