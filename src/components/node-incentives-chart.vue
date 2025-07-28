@@ -98,7 +98,7 @@ const fetchData = async () => {
         style="margin-bottom: 16px"
     >
         <template #description>
-            The values for card, staking and scores are real-time and can change dynamically, they may differ from the values at the time the incentives were earned.
+            The values for card, staking, and scores are real-time and change dynamically, so they may differ from what they were when the incentives were earned.
         </template>
     </a-alert>
     <div style="height:40px">
