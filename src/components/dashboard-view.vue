@@ -222,7 +222,7 @@ onMounted(async () => {
                     <a-descriptions-item label="Network Name" :span="3">Crynux Network</a-descriptions-item>
                     <a-descriptions-item label="Blockchain" :span="2">{{ selectedNetwork.charAt(0).toUpperCase() + selectedNetwork.slice(1) }}</a-descriptions-item>
                     <a-descriptions-item label="Network Version" :span="5">Helium (Incentivized Testnet)</a-descriptions-item>
-                    <a-descriptions-item label="Node Version" :span="5">v2.5.0</a-descriptions-item>
+                    <a-descriptions-item label="Node Version" :span="5">v2.6.0</a-descriptions-item>
                 </a-descriptions>
             </a-card>
         </a-col>
