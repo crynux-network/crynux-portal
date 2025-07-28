@@ -141,7 +141,7 @@ const fetchData = async () => {
                 {{ (record.qos_score * 100).toFixed(2) }}%
             </template>
             <template v-else-if="column.key === 'prob_weight'">
-                {{ (record.prob_weight * 100).toFixed(2) }}%
+                {{ (record.prob_weight * 2 * 100).toFixed(2) }}%
             </template>
         </template>
     </a-table>
