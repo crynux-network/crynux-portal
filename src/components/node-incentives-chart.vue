@@ -126,7 +126,7 @@ const fetchData = async () => {
                 <div style="display: flex; align-items: center">
                     <span>{{ record.card_model.split('+')[0] }}</span>
                     <a-tag v-if="record.card_model.includes('+docker')" color="blue" style="margin-left: 8px;">Docker</a-tag>
-                    <a-tag v-else-if="record.card_model.includes('+windows')" color="green" style="margin-left: 8px;">Windows</a-tag>
+                    <a-tag v-else-if="record.card_model.includes('+Windows')" color="green" style="margin-left: 8px;">Windows</a-tag>
                     <a-tag v-else-if="record.card_model.includes('+Darwin')" color="purple" style="margin-left: 8px;">Mac</a-tag>
                     <a-tag v-else-if="record.card_model.includes('+Linux')" color="orange" style="margin-left: 8px;">Linux</a-tag>
                 </div>
