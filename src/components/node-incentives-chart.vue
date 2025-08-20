@@ -111,7 +111,7 @@ const fetchData = async () => {
         :columns="columns"
         :loading="loading"
         :pagination="{
-            'pageSize': 5
+            'pageSize': 10
         }"
         size="small"
     >
@@ -125,10 +125,11 @@ const fetchData = async () => {
             <template v-else-if="column.key === 'card_model'">
                 <div style="display: flex; align-items: center">
                     <span>{{ record.card_model.split('+')[0] }}</span>
-                    <a-tag v-if="record.card_model.includes('+docker')" color="blue" style="margin-left: 8px;">Docker</a-tag>
-                    <a-tag v-else-if="record.card_model.includes('+Windows')" color="green" style="margin-left: 8px;">Windows</a-tag>
-                    <a-tag v-else-if="record.card_model.includes('+Darwin')" color="purple" style="margin-left: 8px;">Mac</a-tag>
-                    <a-tag v-else-if="record.card_model.includes('+Linux')" color="orange" style="margin-left: 8px;">Linux</a-tag>
+                    <a-tag v-if="record.vram" color="cyan" style="margin-left: 4px;">{{ record.vram }}GB</a-tag>
+                    <a-tag v-if="record.card_model.includes('+docker')" color="blue">Docker</a-tag>
+                    <a-tag v-else-if="record.card_model.includes('+Windows')" color="green">Windows</a-tag>
+                    <a-tag v-else-if="record.card_model.includes('+Darwin')" color="purple">Mac</a-tag>
+                    <a-tag v-else-if="record.card_model.includes('+Linux')" color="orange">Linux</a-tag>
                 </div>
             </template>
             <template v-else-if="column.key === 'staking'">
