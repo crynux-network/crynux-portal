@@ -3,5 +3,38 @@
         "dymension": "https://dy.relay.crynux.ai",
         "near": "https://near.relay.crynux.ai",
         "kasplex": "https://kasplex.relay.crynux.ai"
-    }
+    },
+    "networks": {
+        "dymension": {
+            "chainId": "10000",
+            "chainName": "Crynux on Dymension",
+            "rpcUrls": [
+                "https://json-rpc.testnet.crynux.io"
+            ],
+            "nativeCurrency": {
+                "name": "Crynux",
+                "symbol": "CNX",
+                "decimals": 18
+            },
+            "blockExplorerUrls": [
+                ""
+            ]
+        },
+        "near": {
+            "chainId": "1313161574",
+            "chainName": "Crynux on Near",
+            "rpcUrls": [
+                "https://rpc-0x4e454166.aurora-cloud.dev"
+            ],
+            "nativeCurrency": {
+                "name": "Crynux",
+                "symbol": "CNX",
+                "decimals": 18
+            },
+            "blockExplorerUrls": [
+                ""
+            ]
+        }
+    },
+    "default_network": "dymension"
 }
