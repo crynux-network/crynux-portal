@@ -354,7 +354,7 @@ onBeforeUnmount(() => {
   background rgba(0, 0, 0, 0.75)
   border 1px solid rgba(255, 255, 255, 0.18)
   border-radius 10px
-  min-width 180px
+  min-width 240px
   padding 6px
   z-index 1000
   box-shadow 0 6px 20px rgba(0,0,0,0.3)
@@ -366,6 +366,7 @@ onBeforeUnmount(() => {
   padding 10px 10px
   border-radius 8px
   transition background-color 0.2s
+  white-space nowrap
 
   &:hover
     background-color rgba(255, 255, 255, 0.12)
@@ -379,4 +380,9 @@ onBeforeUnmount(() => {
 .network-option-name
   font-size 13px
   color #fff
+  white-space nowrap
+  overflow hidden
+  text-overflow ellipsis
+  flex 1
+  min-width 0
 </style>

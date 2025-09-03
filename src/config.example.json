@@ -18,7 +18,8 @@
             },
             "blockExplorerUrls": [
                 ""
-            ]
+            ],
+            "benefitContractAddress": ""
         },
         "near": {
             "chainId": "1313161574",
@@ -33,7 +34,8 @@
             },
             "blockExplorerUrls": [
                 ""
-            ]
+            ],
+            "benefitContractAddress": ""
         }
     },
     "default_network": "dymension"
