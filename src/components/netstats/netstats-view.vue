@@ -6,9 +6,9 @@ import networkAPI from '@/api/v1/network'
 import incentivesAPI from "@/api/v1/incentives";
 import v2NetworkAPI from '@/api/v2/network'
 import GithubButton from 'vue-github-button'
-import NetworkIncentivesLineChart from "@/components/network-incentives-line-chart.vue";
-import TaskNumberLineChart from "@/components/task-number-line-chart.vue";
-import NodeIncentivesChart from "@/components/node-incentives-chart.vue";
+import NetworkIncentivesLineChart from "./network-incentives-line-chart.vue";
+import TaskNumberLineChart from "./task-number-line-chart.vue";
+import NodeIncentivesChart from "./node-incentives-chart.vue";
 import v1 from '@/api/v1/v1'
 import v2 from '@/api/v2/v2'
 import config from '@/config.json'
@@ -180,7 +180,7 @@ onMounted(async () => {
 
 <template>
     <a-row :class="topRowClasses">
-        <div class="network-selector-container">
+        <!-- <div class="network-selector-container">
             <div class="network-selector" @click.stop="toggleNetworkDropdown">
                 <img :src="currentNetworkLogo" alt="Network Logo" class="network-logo">
                 <div class="dropdown-arrow">▼</div>
@@ -195,7 +195,7 @@ onMounted(async () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
     </a-row>
     <a-row :gutter="[16, 16]">
         <a-col :span="6" :offset="2">
@@ -345,39 +345,6 @@ onMounted(async () => {
             </a-card>
         </a-col>
     </a-row>
-    <a-row style="margin-top: 16px">
-        <a-col :span="20" :offset="2">
-            <div class="bottom-bar">
-                <a-space class="footer-links">
-                    <a-typography-link href="https://crynux.io" target="_blank">Home</a-typography-link>
-                    &nbsp;|&nbsp;
-                    <a-typography-link href="https://docs.crynux.io" target="_blank">Docs</a-typography-link>
-                    &nbsp;|&nbsp;
-                    <a-typography-link href="https://blog.crynux.io" target="_blank">Blog</a-typography-link>
-                    &nbsp;|&nbsp;
-                    <a-typography-link href="https://x.com/crynuxio" target="_blank"
-                    >Twitter
-                    </a-typography-link
-                    >
-                    &nbsp;|&nbsp;
-                    <a-typography-link href="https://discord.gg/Ug2AHUbrrm" target="_blank"
-                    >Discord
-                    </a-typography-link
-                    >
-                    &nbsp;|&nbsp;
-                    <!-- Place this tag where you want the button to render. -->
-                    <github-button
-                        href="https://github.com/crynux-network/crynux-node"
-                        data-color-scheme="no-preference: light; light: light; dark: light;"
-                        data-show-count="true" aria-label="Star Crynux Node on GitHub"
-                        :style="{'position': 'relative', 'top': '4px'}"
-                    >Star
-                    </github-button>
-                </a-space>
-                <img class="footer-logo" src="./logo-full-white.png" width="140" alt="Crynux logo"/>
-            </div>
-        </a-col>
-    </a-row>
 
 
 </template>
@@ -438,29 +405,7 @@ onMounted(async () => {
     height 30px
     display block
 
-.bottom-bar
-    width 100%
-    height 60px
-    bottom 0
-    left 0
-    padding 0 32px
-
-.footer-links
-    color #fff
-    opacity 0.8
-    line-height 60px
-
-    a
-        color #fff
-
-        &:hover
-            text-decoration underline
-
-.footer-logo
-    opacity 0.8
-    float right
-
 .top-row
     position relative
-    height 80px
+    height 20px
 </style>

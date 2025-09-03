@@ -1,18 +1,18 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import Dashboard from '@/components/dashboard-view.vue'
+import NetstatsView from '@/components/netstats/netstats-view.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     {
       path: '/',
-      name: 'dashboard',
-      component: Dashboard
+      name: 'netstats',
+      component: NetstatsView
     },
     {
       path: '/:network',
       name: 'network',
-      component: Dashboard
+      component: NetstatsView
     }
   ]
 })
