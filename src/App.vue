@@ -2,10 +2,11 @@
 /* global VANTA */
 import { RouterView, useRouter } from 'vue-router'
 import v1 from './api/v1/v1'
-import walletAPI from '@/api/v1/wallet'
+import { walletAPI } from '@/api/v1/wallet'
 import config from '@/config.json'
 import { useAuthStore } from '@/stores/auth'
 import { useWalletStore } from '@/stores/wallet'
+import { ethers } from 'ethers'
 import {
   message,
   Button as AButton,
@@ -115,7 +116,7 @@ async function connect() {
   if (!provider) return
   try {
     const accounts = await provider.request({ method: 'eth_requestAccounts' })
-    const address = accounts[0]
+    const address = ethers.getAddress(accounts[0])
     wallet.setAccount(address)
 
     const timestamp = Math.floor(Date.now() / 1000)
@@ -143,9 +144,21 @@ async function changeNetwork(val) {
   await refreshAccountAndBalance()
 }
 
-function signOut() {
-  auth.clearSession()
-  wallet.setAccount(null)
+async function signOut() {
+  const provider = window.ethereum
+  if (provider && provider.request) {
+    try {
+      await provider.request({
+        method: 'wallet_revokePermissions',
+        params: [{ eth_accounts: {} }]
+      })
+    } catch (e) {
+      console.error('Failed to revoke permissions:', e)
+      messageApi.error('Could not disconnect from wallet. Please switch accounts in MetaMask manually.')
+    }
+  }
+  auth.$reset()
+  wallet.$reset()
   router.push('/')
 }
 

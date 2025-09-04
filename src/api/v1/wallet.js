@@ -1,15 +1,28 @@
 import BaseAPI from '../base-api'
+import v1 from './v1'
 
 class WalletAPI extends BaseAPI {
 	connectWallet(payload) {
-		return new Promise((resolve) => {
-			const now = Math.floor(Date.now() / 1000)
-			const tokenSuffix = payload && payload.address ? String(payload.address).slice(-6) : 'key'
-			resolve({ token: `fake-session-key-${tokenSuffix}`, expires_at: now + 3600 })
-		})
+		return v1.post('/client/connect_wallet', payload)
 	}
+
+    getRelayAccount(address) {
+        return v1.get('/balance/' + address)
+    }
+
+    async getTxs(address, page, pageSize) {
+        return await this.get("/wallet/" + address + "/txs", {
+            page: page,
+            page_size: pageSize
+        });
+    }
+
+    async getWithdrawals(address, page, pageSize) {
+        return await this.get(`/client/${address}/withdraw/list`, {
+            page: page,
+            page_size: pageSize,
+        });
+    }
 }
 
-const walletAPI = new WalletAPI()
-
-export default walletAPI
+export const walletAPI = new WalletAPI();

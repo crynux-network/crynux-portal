@@ -3,10 +3,20 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useWalletStore } from '@/stores/wallet'
 import config from '@/config.json'
 import { ethers } from 'ethers'
-import { QuestionCircleOutlined, CopyOutlined } from '@ant-design/icons-vue'
+import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import { walletAPI } from '@/api/v1/wallet'
 
 const wallet = useWalletStore()
+
+const checksummedAddress = computed(() => {
+	if (!wallet.address) return ''
+	try {
+		return ethers.getAddress(wallet.address)
+	} catch {
+		return wallet.address
+	}
+})
 
 const networkName = computed(() => {
 	const key = wallet.selectedNetworkKey
@@ -66,13 +76,84 @@ const isModalOpen = ref(false)
 const inputBenefitAddress = ref('')
 const isSubmitting = ref(false)
 const benefitError = ref('')
-const relayBalance = ref(parseFloat((((Math.random() * 9) + 1) * 1000000000).toFixed(6)))
-const recentWithdrawals = ref([
-    { status: 'Success', time: '2025-09-03 10:12:45 UTC', amount: '25.123456', hash: '0x5e1b3a9f8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f' },
-    { status: 'Pending', time: '2025-09-03 09:55:10 UTC', amount: '4.000000', hash: '' },
-    { status: 'Failed', time: '2025-09-02 17:21:03 UTC', amount: '1.500000', hash: '' },
-    { status: 'Processing', time: '2025-09-01 08:00:00 UTC', amount: '100.000000', hash: '' }
-])
+const relayBalance = ref(0)
+
+const withdrawals = ref([])
+const withdrawalsPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
+const withdrawalsLoading = ref(false)
+const withdrawalColumns = [
+  {
+    title: "ID",
+    dataIndex: "id",
+    key: "id",
+  },
+    {
+        title: "Amount",
+        dataIndex: "amount",
+        key: "amount",
+    },
+    {
+        title: "Network",
+        dataIndex: "network",
+        key: "network",
+    },
+    {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+    },
+    {
+        title: "Benefit Address",
+        dataIndex: "benefit_address",
+        key: "benefit_address",
+    },
+]
+
+const getWithdrawals = async (page = 1, pageSize = 10) => {
+  if (!wallet.address) {
+    return;
+  }
+  withdrawalsLoading.value = true;
+  try {
+    const res = await walletAPI.getWithdrawals(wallet.address, page, pageSize);
+    withdrawals.value = res.data.withdraw_records.map((record) => {
+      return {
+        ...record,
+        amount: ethers.formatEther(record.amount) + " CNX"
+      }
+    });
+    withdrawalsPagination.value.total = res.data.total;
+    withdrawalsPagination.value.current = page;
+  } catch (e) {
+    message.error(e.message);
+  } finally {
+    withdrawalsLoading.value = false;
+  }
+}
+
+const handleWithdrawalsTableChange = (pagination) => {
+  getWithdrawals(pagination.current, pagination.pageSize);
+}
+
+
+const fetchRelayBalance = async () => {
+    if (!wallet.address) {
+        relayBalance.value = 0
+        return
+    }
+    try {
+        const balanceInWei = await walletAPI.getRelayAccount(wallet.address)
+        relayBalance.value = parseFloat(ethers.formatEther(balanceInWei || '0'))
+    } catch (e) {
+        console.error(e)
+        relayBalance.value = 0
+        message.error('Failed to fetch relay account balance')
+    }
+}
 
 const isZeroAddress = (addr) => {
 	if (!addr) return true
@@ -98,6 +179,7 @@ const fetchBenefitAddress = async () => {
 		const addr = await contract.getBenefitAddress(wallet.address)
 		benefitAddress.value = addr
 	} catch (e) {
+		console.error(e)
 		benefitAddress.value = ''
 		benefitError.value = 'Failed to load. Please refresh the page.'
 	} finally {
@@ -145,49 +227,19 @@ const withdrawRelay = async () => {
     message.info('Withdraw pending integration')
 }
 
-const explorerBase = computed(() => {
-    const base = currentNetwork.value?.blockExplorerUrls?.[0] || ''
-    return base || ''
-})
-
-const txUrlFor = (hash) => {
-    const base = explorerBase.value?.trim()
-    if (!base) return ''
-    const normalized = base.replace(/\/+$/, '')
-    return `${normalized}/tx/${hash}`
-}
-
-const tagColor = (status) => {
-    if (status === 'Success') return 'success'
-    if (status === 'Pending') return 'warning'
-    if (status === 'Failed') return 'error'
-    if (status === 'Processing') return 'processing'
-    return 'default'
-}
-
-const copyTx = async (hash) => {
-    try {
-        await navigator.clipboard.writeText(hash)
-        message.success('Tx hash copied')
-    } catch {
-        message.error('Copy failed')
-    }
-}
-
-const shortenHash = (hash) => {
-    if (!hash) return ''
-    return `${hash.slice(0, 10)}...${hash.slice(-8)}`
-}
-
 onMounted(async () => {
 	if (wallet.address) {
 		await wallet.fetchBalance()
 	}
 	await fetchBenefitAddress()
+    await fetchRelayBalance()
+    await getWithdrawals()
 })
 
 watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], async () => {
 	await fetchBenefitAddress()
+    await fetchRelayBalance()
+    await getWithdrawals()
 })
 </script>
 
@@ -200,7 +252,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
 						<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }">
 							<a-descriptions-item label="Network">{{ networkName }}</a-descriptions-item>
-							<a-descriptions-item label="Address">{{ wallet.address }}</a-descriptions-item>
+							<a-descriptions-item label="Address">{{ checksummedAddress }}</a-descriptions-item>
 							<a-descriptions-item label="Balance">{{ tokenSymbol }} {{ formattedBalance }}</a-descriptions-item>
 							<a-descriptions-item>
 								<template #label>
@@ -210,6 +262,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 											<template #content>
 												<div style="max-width: 300px;">
 													<div>The beneficial address is a dedicated wallet for safely receiving your funds. For security, your operational address should not hold funds. All withdrawals, unstaking payouts, and emissions will be sent to this address. Choose a wallet you control and plan to keep using. Once set, this address is permanent and cannot be changed.</div>
+													<div style="margin-top: 8px">If not set, the operational address will be used for payouts.</div>
 												</div>
 											</template>
 											<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
@@ -251,35 +304,16 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 		<a-col :span="20" :offset="2">
 			<a-row :gutter="[16, 16]">
 				<a-col :span="24">
-					<a-card :title="`Recent Withdrawals`" :bordered="false" style="opacity: 0.9">
-						<a-table v-if="recentWithdrawals.length > 0" :data-source="recentWithdrawals" :pagination="false" row-key="hash" size="small">
-							<a-table-column key="status" title="Status">
-								<template #default="{ record }">
-									<a-tag :color="tagColor(record.status)">{{ record.status }}</a-tag>
-								</template>
-							</a-table-column>
-							<a-table-column key="time" title="Time" data-index="time" />
-							<a-table-column key="amount" title="Amount">
-								<template #default="{ record }">
-									{{ record.amount }} {{ tokenSymbol }}
-								</template>
-							</a-table-column>
-							<a-table-column key="hash" title="Tx Hash">
-								<template #default="{ record }">
-									<template v-if="record.status === 'Success' && record.hash">
-										<a-space>
-											<span>{{ shortenHash(record.hash) }}</span>
-											<a-button size="small" type="text" shape="circle" @click="copyTx(record.hash)">
-												<template #icon><CopyOutlined /></template>
-											</a-button>
-											<a-button size="small" type="link" :href="txUrlFor(record.hash)" target="_blank" v-if="txUrlFor(record.hash)">View</a-button>
-										</a-space>
-									</template>
-									<template v-else>-</template>
-								</template>
-							</a-table-column>
-						</a-table>
-						<a-empty v-else description="No withdrawals yet" />
+					<a-card :title="`Withdrawals`" :bordered="false" style="opacity: 0.9">
+						<a-table
+                            :columns="withdrawalColumns"
+                            :data-source="withdrawals"
+                            :loading="withdrawalsLoading"
+                            :pagination="withdrawalsPagination"
+                            @change="handleWithdrawalsTableChange"
+                            row-key="id"
+                        >
+                        </a-table>
 					</a-card>
 				</a-col>
 			</a-row>
