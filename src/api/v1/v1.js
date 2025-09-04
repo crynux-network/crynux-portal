@@ -121,6 +121,6 @@ class V1Client {
   }
 }
 
-const v1 = new V1Client(config.base_url.dymension)
+const v1 = new V1Client(config.relay_url)
 
 export default v1

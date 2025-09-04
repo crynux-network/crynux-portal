@@ -31,12 +31,7 @@ import {onMounted, reactive, ref, watch} from "vue";
 import incentivesAPI from "@/api/v1/incentives";
 import moment from "moment";
 
-const props = defineProps({
-    network: {
-        type: String,
-        required: true
-    }
-})
+
 
 const loading = ref(true);
 
@@ -73,7 +68,7 @@ const options = {
     }
 };
 
-watch([periodSelected, () => props.network], async () => {
+watch([periodSelected], async () => {
     await fetchData()
 });
 

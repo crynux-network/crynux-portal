@@ -31,12 +31,7 @@ import {onMounted, reactive, ref, watch} from "vue";
 import statsAPI from "@/api/v1/stats";
 import moment from "moment";
 
-const props = defineProps({
-    network: {
-        type: String,
-        required: true
-    }
-})
+
 
 const loading = ref(true);
 
@@ -76,7 +71,7 @@ const options = {
     }
 };
 
-watch([periodSelected, taskTypeSelected, () => props.network], async () => {
+watch([periodSelected, taskTypeSelected], async () => {
     await fetchData()
 });
 

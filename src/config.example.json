@@ -1,9 +1,5 @@
 {
-    "base_url": {
-        "dymension": "https://dy.relay.crynux.ai",
-        "near": "https://near.relay.crynux.ai",
-        "kasplex": "https://kasplex.relay.crynux.ai"
-    },
+    "relay_url": "https://staging.relay.crynux.io",
     "networks": {
         "dymension": {
             "chainId": "10000",
@@ -19,7 +15,7 @@
             "blockExplorerUrls": [
                 ""
             ],
-            "benefitContractAddress": ""
+            "benefitContractAddress": "0xAe4557929E1c707470E956E822EaA81204c766dB"
         },
         "near": {
             "chainId": "1313161574",

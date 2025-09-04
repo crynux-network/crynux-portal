@@ -2,12 +2,7 @@
 import v2IncentivesAPI from "@/api/v2/incentives";
 import {onMounted, reactive, ref, watch} from "vue";
 
-const props = defineProps({
-    network: {
-        type: String,
-        required: true
-    }
-});
+
 
 const loading = ref(true);
 const periodOptions = reactive(['Day', "Week", "Month"]);
@@ -70,7 +65,7 @@ const toEtherValue = (bigNum) => {
     return decimals + '.' + fractions
 }
 
-watch([periodSelected, () => props.network], async () => {
+watch([periodSelected], async () => {
     await fetchData()
 });
 
