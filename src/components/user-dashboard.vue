@@ -192,6 +192,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 </script>
 
 <template>
+    <a-row class="top-row"></a-row>
 	<a-row :gutter="[16, 16]">
 		<a-col :span="20" :offset="2">
 			<a-card :title="`On-chain Wallet`" :bordered="false" style="height: 100%; opacity: 0.9">
@@ -292,3 +293,8 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 		</div>
 	</a-modal>
 </template>
+
+<style scoped lang="stylus">
+.top-row
+    height 20px
+</style>

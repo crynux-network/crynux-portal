@@ -16,6 +16,7 @@ import {
   Row as ARow,
   Col as ACol,
   Space as ASpace,
+  TypographyText as ATypographyText,
   TypographyLink as ATypographyLink,
   Dropdown as ADropdown,
   Menu as AMenu,
@@ -56,8 +57,8 @@ const auth = useAuthStore()
 const wallet = useWalletStore()
 
 const networks = [
-  { key: 'dymension', name: config.networks.dymension.chainName, logo: '/dymension.png' },
-  { key: 'near', name: config.networks.near.chainName, logo: '/near.png' }
+  { key: 'dymension', name: config.networks.dymension.chainName, logo: '/dymension-square.png' },
+  { key: 'near', name: config.networks.near.chainName, logo: '/near-square.png' }
 ]
 
 const selectedNetworkKey = computed({
@@ -179,11 +180,14 @@ onBeforeUnmount(() => {
         >
           <a-row justify="space-between" align="middle" style="height: 100%">
             <a-col>
-              <img
-                src="@/components/logo-full-white.png"
-                alt="Crynux Logo"
-                style="height: 50px; display: block"
-              />
+              <a-space align="center" size="middle">
+                <img
+                  src="/logo-graphic-white.png"
+                  alt="Crynux Logo"
+                  style="height: 50px; display: block"
+                />
+                <a-typography-text class="brand-text" style="color: #fff; font-size: 20px">Crynux Portal</a-typography-text>
+              </a-space>
             </a-col>
             <a-col>
               <a-space size="large" align="center">
@@ -264,7 +268,7 @@ onBeforeUnmount(() => {
                 </a-space>
                 <img
                   class="footer-logo"
-                  src="@/components/logo-full-white.png"
+                  src="/logo-full-white.png"
                   width="140"
                   alt="Crynux logo"
                 />
@@ -309,6 +313,12 @@ onBeforeUnmount(() => {
 .footer-logo
   opacity 0.8
 
+.brand-text
+  font-family -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif
+  font-weight 600
+  letter-spacing 0.2px
+  line-height 1
+
 .connect-button-ghost:hover,
 .connect-button-ghost:focus
   background rgba(255, 255, 255, 0.2) !important
@@ -317,12 +327,13 @@ onBeforeUnmount(() => {
 
 .network-selector
   position relative
+  top 1px
   cursor pointer
   background-color rgba(0, 0, 0, 0.3)
   border none
   border-radius 10px
   padding 0 12px
-  height 40px
+  height 32px
   line-height normal
   display inline-flex
   align-items center
