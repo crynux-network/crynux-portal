@@ -66,7 +66,7 @@ const isModalOpen = ref(false)
 const inputBenefitAddress = ref('')
 const isSubmitting = ref(false)
 const benefitError = ref('')
-const relayBalance = ref(1234.567891)
+const relayBalance = ref(parseFloat((((Math.random() * 9) + 1) * 1000000000).toFixed(6)))
 const recentWithdrawals = ref([
     { status: 'Success', time: '2025-09-03 10:12:45 UTC', amount: '25.123456', hash: '0x5e1b3a9f8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f' },
     { status: 'Pending', time: '2025-09-03 09:55:10 UTC', amount: '4.000000', hash: '' },
@@ -195,85 +195,94 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
     <a-row class="top-row"></a-row>
 	<a-row :gutter="[16, 16]">
 		<a-col :span="20" :offset="2">
-			<a-card :title="`On-chain Wallet`" :bordered="false" style="height: 100%; opacity: 0.9">
-				<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }">
-					<a-descriptions-item label="Network">{{ networkName }}</a-descriptions-item>
-					<a-descriptions-item label="Address">{{ wallet.address }}</a-descriptions-item>
-					<a-descriptions-item label="Balance">{{ tokenSymbol }} {{ formattedBalance }}</a-descriptions-item>
-					<a-descriptions-item>
-						<template #label>
-							<span style="display: inline-flex; align-items: center; white-space: nowrap;">
-								<span>Beneficial Address</span>
-								<a-popover placement="right">
-									<template #content>
-										<div style="max-width: 300px;">
-											<div>The beneficial address is a dedicated wallet for safely receiving your funds. For security, your operational address should not hold funds. All withdrawals, unstaking payouts, and emissions will be sent to this address. Choose a wallet you control and plan to keep using. Once set, this address is permanent and cannot be changed.</div>
-										</div>
+			<a-row :gutter="[16, 16]" align="stretch">
+				<a-col :span="16" style="display: flex; flex-direction: column">
+					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
+						<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }">
+							<a-descriptions-item label="Network">{{ networkName }}</a-descriptions-item>
+							<a-descriptions-item label="Address">{{ wallet.address }}</a-descriptions-item>
+							<a-descriptions-item label="Balance">{{ tokenSymbol }} {{ formattedBalance }}</a-descriptions-item>
+							<a-descriptions-item>
+								<template #label>
+									<span style="display: inline-flex; align-items: center; white-space: nowrap;">
+										<span>Beneficial Address</span>
+										<a-popover placement="right">
+											<template #content>
+												<div style="max-width: 300px;">
+													<div>The beneficial address is a dedicated wallet for safely receiving your funds. For security, your operational address should not hold funds. All withdrawals, unstaking payouts, and emissions will be sent to this address. Choose a wallet you control and plan to keep using. Once set, this address is permanent and cannot be changed.</div>
+												</div>
+											</template>
+											<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+										</a-popover>
+									</span>
+								</template>
+								<div>
+									<span v-if="isFetchingBenefit">Loading...</span>
+									<template v-else>
+										<span v-if="benefitError" style="color: #d4380d;">{{ benefitError }}</span>
+										<span v-else-if="benefitAddress && !isZeroAddress(benefitAddress)">{{ benefitAddress }}</span>
+										<span v-else>
+											<span style="margin-right: 8px;">Not set</span>
+											<a-button type="primary" size="small" @click="openSetModal">Set Beneficial Address</a-button>
+										</span>
 									</template>
-									<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
-								</a-popover>
-							</span>
-						</template>
-						<div>
-							<span v-if="isFetchingBenefit">Loading...</span>
-							<template v-else>
-								<span v-if="benefitError" style="color: #d4380d;">{{ benefitError }}</span>
-								<span v-else-if="benefitAddress && !isZeroAddress(benefitAddress)">{{ benefitAddress }}</span>
-								<span v-else>
-									<span style="margin-right: 8px;">Not set</span>
-									<a-button type="primary" size="small" @click="openSetModal">Set Beneficial Address</a-button>
-								</span>
-							</template>
+								</div>
+							</a-descriptions-item>
+						</a-descriptions>
+					</a-card>
+				</a-col>
+				<a-col :span="8" style="display: flex; flex-direction: column">
+					<a-card :title="`Relay Account`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1; display: flex; flex-direction: column" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, paddingBottom: '32px' }">
+						<a-row justify="center" style="margin-top: 24px;">
+							<a-col>
+								<a-statistic title="Balance" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
+							</a-col>
+						</a-row>
+						<div style="margin-top: auto; text-align: center;">
+							<a-button type="primary" size="large" @click="withdrawRelay" style="height: 48px; padding: 0 36px; font-size: 16px;">Withdraw</a-button>
 						</div>
-					</a-descriptions-item>
-				</a-descriptions>
-			</a-card>
+					</a-card>
+				</a-col>
+			</a-row>
 		</a-col>
 	</a-row>
 
-	<a-row :gutter="[16, 16]" style="margin-top: 8px;">
+	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
 		<a-col :span="20" :offset="2">
-			<a-card :title="`Relay Account`" :bordered="false">
-				<a-row justify="space-between" align="middle">
-					<a-col>
-						<a-statistic title="Balance" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" />
-					</a-col>
-					<a-col>
-						<a-space>
-							<a-button type="primary" @click="withdrawRelay">Withdraw</a-button>
-						</a-space>
-					</a-col>
-				</a-row>
-				<a-divider orientation="left" style="margin-top: 24px;">Recent Withdrawals</a-divider>
-				<a-table v-if="recentWithdrawals.length > 0" :data-source="recentWithdrawals" :pagination="false" row-key="hash" size="small">
-					<a-table-column key="status" title="Status">
-						<template #default="{ record }">
-							<a-tag :color="tagColor(record.status)">{{ record.status }}</a-tag>
-						</template>
-					</a-table-column>
-					<a-table-column key="time" title="Time" data-index="time" />
-					<a-table-column key="amount" title="Amount">
-						<template #default="{ record }">
-							{{ record.amount }} {{ tokenSymbol }}
-						</template>
-					</a-table-column>
-					<a-table-column key="hash" title="Tx Hash">
-						<template #default="{ record }">
-							<template v-if="record.status === 'Success' && record.hash">
-								<a-space>
-									<span>{{ shortenHash(record.hash) }}</span>
-									<a-button size="small" type="text" shape="circle" @click="copyTx(record.hash)">
-										<template #icon><CopyOutlined /></template>
-									</a-button>
-									<a-button size="small" type="link" :href="txUrlFor(record.hash)" target="_blank" v-if="txUrlFor(record.hash)">View</a-button>
-								</a-space>
-							</template>
-							<template v-else>-</template>
-						</template>
-					</a-table-column>
-				</a-table>
-				<a-empty v-else description="No withdrawals yet" />
-			</a-card>
+			<a-row :gutter="[16, 16]">
+				<a-col :span="24">
+					<a-card :title="`Recent Withdrawals`" :bordered="false" style="opacity: 0.9">
+						<a-table v-if="recentWithdrawals.length > 0" :data-source="recentWithdrawals" :pagination="false" row-key="hash" size="small">
+							<a-table-column key="status" title="Status">
+								<template #default="{ record }">
+									<a-tag :color="tagColor(record.status)">{{ record.status }}</a-tag>
+								</template>
+							</a-table-column>
+							<a-table-column key="time" title="Time" data-index="time" />
+							<a-table-column key="amount" title="Amount">
+								<template #default="{ record }">
+									{{ record.amount }} {{ tokenSymbol }}
+								</template>
+							</a-table-column>
+							<a-table-column key="hash" title="Tx Hash">
+								<template #default="{ record }">
+									<template v-if="record.status === 'Success' && record.hash">
+										<a-space>
+											<span>{{ shortenHash(record.hash) }}</span>
+											<a-button size="small" type="text" shape="circle" @click="copyTx(record.hash)">
+												<template #icon><CopyOutlined /></template>
+											</a-button>
+											<a-button size="small" type="link" :href="txUrlFor(record.hash)" target="_blank" v-if="txUrlFor(record.hash)">View</a-button>
+										</a-space>
+									</template>
+									<template v-else>-</template>
+								</template>
+							</a-table-column>
+						</a-table>
+						<a-empty v-else description="No withdrawals yet" />
+					</a-card>
+				</a-col>
+			</a-row>
 		</a-col>
 	</a-row>
 
