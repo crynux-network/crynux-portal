@@ -10,17 +10,12 @@ class WalletAPI extends BaseAPI {
         return v1.get('/balance/' + address)
     }
 
-    async getTxs(address, page, pageSize) {
-        return await this.get("/wallet/" + address + "/txs", {
-            page: page,
-            page_size: pageSize
-        });
-    }
-
-    async getWithdrawals(address, page, pageSize) {
-        return await this.get(`/client/${address}/withdraw/list`, {
-            page: page,
-            page_size: pageSize,
+    getWithdrawals(address, page, pageSize) {
+        return v1.get(`/client/${address}/withdraw/list`, {
+            params: {
+                page: page,
+                page_size: pageSize,
+            },
         });
     }
 }

@@ -15,7 +15,7 @@
             "blockExplorerUrls": [
                 ""
             ],
-            "benefitContractAddress": "0xAe4557929E1c707470E956E822EaA81204c766dB"
+            "benefitContractAddress": "0x3ec8130af8f71C134F3f59702E58BC6F8F0e9099"
         },
         "near": {
             "chainId": "1313161574",

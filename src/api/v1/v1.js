@@ -36,6 +36,17 @@ class V1Client {
       ]
     })
 
+    this._getAuthToken = () => null
+
+    this.httpClient.interceptors.request.use((cfg) => {
+      const token = this._getAuthToken && this._getAuthToken()
+      if (token) {
+        cfg.headers = cfg.headers || {}
+        cfg.headers['Authorization'] = `Bearer ${token}`
+      }
+      return cfg
+    })
+
     this.httpClient.interceptors.response.use(
       (response) => {
         if (response.status === 200) {
@@ -118,6 +129,10 @@ class V1Client {
 
       return Promise.reject(new ApiError(ApiError.Type.Unknown))
     }
+  }
+
+  setAuthTokenGetter(fn) {
+    this._getAuthToken = typeof fn === 'function' ? fn : () => null
   }
 }
 

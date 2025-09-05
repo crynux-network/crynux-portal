@@ -9,14 +9,7 @@ import { walletAPI } from '@/api/v1/wallet'
 
 const wallet = useWalletStore()
 
-const checksummedAddress = computed(() => {
-	if (!wallet.address) return ''
-	try {
-		return ethers.getAddress(wallet.address)
-	} catch {
-		return wallet.address
-	}
-})
+
 
 const networkName = computed(() => {
 	const key = wallet.selectedNetworkKey
@@ -87,31 +80,58 @@ const withdrawalsPagination = ref({
 const withdrawalsLoading = ref(false)
 const withdrawalColumns = [
   {
-    title: "ID",
-    dataIndex: "id",
-    key: "id",
+    title: "Created At",
+    dataIndex: "time",
+    key: "time",
   },
-    {
-        title: "Amount",
-        dataIndex: "amount",
-        key: "amount",
-    },
-    {
-        title: "Network",
-        dataIndex: "network",
-        key: "network",
-    },
-    {
-        title: "Status",
-        dataIndex: "status",
-        key: "status",
-    },
-    {
-        title: "Benefit Address",
-        dataIndex: "benefit_address",
-        key: "benefit_address",
-    },
+  {
+    title: "Amount",
+    dataIndex: "amount",
+    key: "amount",
+  },
+  {
+    title: "Fee",
+    dataIndex: "withdrawal_fee",
+    key: "withdrawal_fee",
+  },
+  {
+    title: "Network",
+    dataIndex: "network",
+    key: "network",
+  },
+  {
+    title: "Status",
+    dataIndex: "status",
+    key: "status",
+  },
+  {
+    title: "Tx Hash",
+    dataIndex: "tx_hash",
+    key: "tx_hash",
+  },
 ]
+
+const truncateTxHash = (h) => {
+    if (!h) return ''
+    const s = String(h)
+    if (s.length <= 18) return s
+    return s.slice(0, 10) + '...' + s.slice(-8)
+}
+
+const formatNetworkName = (n) => {
+    if (!n) return ''
+    const s = String(n).toLowerCase()
+    if (s === 'dymension') return 'Dymension'
+    if (s === 'near') return 'Near'
+    return n
+}
+
+const getNetworkTagColor = (n) => {
+	const s = String(n || '').toLowerCase()
+	if (s.includes('dym')) return 'geekblue'
+	if (s.includes('near')) return 'green'
+	return undefined
+}
 
 const getWithdrawals = async (page = 1, pageSize = 10) => {
   if (!wallet.address) {
@@ -120,13 +140,26 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
   withdrawalsLoading.value = true;
   try {
     const res = await walletAPI.getWithdrawals(wallet.address, page, pageSize);
-    withdrawals.value = res.data.withdraw_records.map((record) => {
+    withdrawals.value = res.withdraw_records.map((record) => {
+      const hasAmount = record && record.amount !== undefined && record.amount !== null
+      const formattedAmount = hasAmount ? Number(ethers.formatEther(record.amount)).toFixed(6) : ''
+      const rawFee = record && (record.withdrawal_fee ?? record.fee ?? record.withdraw_fee ?? record.service_fee)
+      const hasFee = rawFee !== undefined && rawFee !== null
+      let formattedFee = ''
+      if (hasFee) {
+        try { formattedFee = Number(ethers.formatEther(rawFee)).toFixed(6) } catch { formattedFee = '' }
+      }
       return {
         ...record,
-        amount: ethers.formatEther(record.amount) + " CNX"
+        time: (record && (record.time || record.created_at)) || '',
+        amount: hasAmount ? ("CNX " + formattedAmount) : '',
+        withdrawal_fee: hasFee ? ("CNX " + formattedFee) : '',
+        network: formatNetworkName((record && record.network) || ''),
+        status: (record && record.status) || '',
+        tx_hash: (record && (record.tx_hash || record.txHash)) || '',
       }
     });
-    withdrawalsPagination.value.total = res.data.total;
+    withdrawalsPagination.value.total = res.total;
     withdrawalsPagination.value.current = page;
   } catch (e) {
     message.error(e.message);
@@ -252,7 +285,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
 						<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }">
 							<a-descriptions-item label="Network">{{ networkName }}</a-descriptions-item>
-							<a-descriptions-item label="Address">{{ checksummedAddress }}</a-descriptions-item>
+							<a-descriptions-item label="Address">{{ wallet.address }}</a-descriptions-item>
 							<a-descriptions-item label="Balance">{{ tokenSymbol }} {{ formattedBalance }}</a-descriptions-item>
 							<a-descriptions-item>
 								<template #label>
@@ -313,6 +346,22 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
                             @change="handleWithdrawalsTableChange"
                             row-key="id"
                         >
+							<template #bodyCell="{ column, record }">
+								<template v-if="column.dataIndex === 'status'">
+									<a-tag v-if="record.status === 0 || record.status === '0'" color="blue">Processing</a-tag>
+									<a-tag v-else-if="record.status === 1 || record.status === '1'" color="green">Success</a-tag>
+									<a-tag v-else-if="record.status === 2 || record.status === '2'" color="volcano">Failed</a-tag>
+									<span v-else>{{ record.status }}</span>
+								</template>
+								<template v-else-if="column.dataIndex === 'network'">
+									<a-tag :color="getNetworkTagColor(record.network)">
+										Crynux on {{ record.network }}
+									</a-tag>
+								</template>
+								<template v-else-if="column.dataIndex === 'tx_hash'">
+									<span>{{ truncateTxHash(record.tx_hash) }}</span>
+								</template>
+							</template>
                         </a-table>
 					</a-card>
 				</a-col>
@@ -320,19 +369,21 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 		</a-col>
 	</a-row>
 
-	<a-modal v-model:open="isModalOpen" :title="'Set Beneficial Address'" :confirm-loading="isSubmitting" @ok="submitSetBenefit" :ok-button-props="{ disabled: benefitAddress && !isZeroAddress(benefitAddress) }">
-		<div style="margin-bottom: 12px;">Current network: {{ networkName }}</div>
-		<a-alert type="warning" show-icon style="margin-bottom: 12px;">
-			<template #description>
-				<div>1) Keep the private key of this address safe and backed up.</div>
-				<div>2) Once set, this address cannot be changed.</div>
-			</template>
-		</a-alert>
+	<a-modal v-model:open="isModalOpen" :title="'Set Beneficial Address'" :confirm-loading="isSubmitting" @ok="submitSetBenefit" :ok-button-props="{ disabled: benefitAddress && !isZeroAddress(benefitAddress) }" :mask-closable="false">
+		<a-alert type="warning" show-icon style="margin-bottom: 12px;" message="Keep the private key of this address safe and backed up." />
+		<a-alert type="warning" show-icon style="margin-bottom: 12px;" message="Once set, this address cannot be changed." />
 		<div v-if="benefitAddress && !isZeroAddress(benefitAddress)">
 			Already set: {{ benefitAddress }}
 		</div>
 		<div v-else>
-			<a-input v-model:value="inputBenefitAddress" placeholder="0x..." />
+			<a-form layout="vertical">
+				<a-form-item label="Beneficial Address">
+					<a-input v-model:value="inputBenefitAddress" placeholder="0x..." />
+				</a-form-item>
+				<a-form-item label="Current Network">
+					<a-tag :color="getNetworkTagColor(networkName)">{{ networkName }}</a-tag>
+				</a-form-item>
+			</a-form>
 		</div>
 	</a-modal>
 </template>

@@ -9,6 +9,7 @@ import { useWalletStore } from '@/stores/wallet'
 import { ethers } from 'ethers'
 import {
   message,
+  Modal,
   Button as AButton,
   Layout as ALayout,
   LayoutContent as ALayoutContent,
@@ -17,11 +18,11 @@ import {
   Row as ARow,
   Col as ACol,
   Space as ASpace,
-  TypographyText as ATypographyText,
   TypographyLink as ATypographyLink,
   Dropdown as ADropdown,
   Menu as AMenu,
-  MenuItem as AMenuItem
+  MenuItem as AMenuItem,
+  MenuDivider as AMenuDivider
 } from 'ant-design-vue'
 import { onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import GithubButton from 'vue-github-button'
@@ -87,7 +88,14 @@ async function refreshAccountAndBalance() {
   const provider = window.ethereum
   if (!provider) return
   const accounts = await provider.request({ method: 'eth_accounts' })
-  const address = accounts && accounts.length ? accounts[0] : null
+  let address = accounts && accounts.length ? accounts[0] : null
+  if (address) {
+    try {
+      address = ethers.getAddress(address)
+    } catch (e) {
+      address = null
+    }
+  }
   wallet.setAccount(address)
   if (address) {
     let chainId = null
@@ -144,7 +152,7 @@ async function changeNetwork(val) {
   await refreshAccountAndBalance()
 }
 
-async function signOut() {
+async function performSignOut() {
   const provider = window.ethereum
   if (provider && provider.request) {
     try {
@@ -160,6 +168,17 @@ async function signOut() {
   auth.$reset()
   wallet.$reset()
   router.push('/')
+}
+
+function confirmSignOut() {
+  Modal.confirm({
+    title: 'Confirm Sign Out',
+    content: 'Are you sure you want to sign out?',
+    okText: 'Sign Out',
+    cancelText: 'Cancel',
+    okButtonProps: { danger: true },
+    onOk: () => performSignOut()
+  })
 }
 
 onMounted(async () => {
@@ -198,8 +217,9 @@ onBeforeUnmount(() => {
                   src="/logo-graphic-white.png"
                   alt="Crynux Logo"
                   style="height: 50px; display: block"
+                  @click="router.push({ name: 'netstats' })"
                 />
-                <a-typography-text class="brand-text" style="color: #fff; font-size: 20px">Crynux Portal</a-typography-text>
+                <a-typography-link @click="router.push({ name: 'netstats' })" class="brand-text" style="color: #fff; font-size: 20px">Crynux Portal</a-typography-link>
               </a-space>
             </a-col>
             <a-col>
@@ -227,7 +247,9 @@ onBeforeUnmount(() => {
                     </a-button>
                     <template #overlay>
                       <a-menu>
-                        <a-menu-item key="signout" @click="signOut">Sign Out</a-menu-item>
+                        <a-menu-item key="dashboard" @click="router.push('/dashboard')">Dashboard</a-menu-item>
+                        <a-menu-divider style="margin: 10px 0" />
+                        <a-menu-item key="signout" @click="confirmSignOut">Sign Out</a-menu-item>
                       </a-menu>
                     </template>
                   </a-dropdown>
