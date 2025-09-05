@@ -57,6 +57,8 @@ onBeforeUnmount(() => {
 
 const auth = useAuthStore()
 const wallet = useWalletStore()
+let isReauthing = false
+let reauthModalVisible = false
 
 const networks = [
   { key: 'dymension', name: config.networks.dymension.chainName, logo: '/dymension-square.png' },
@@ -98,6 +100,7 @@ async function refreshAccountAndBalance() {
       address = null
     }
   }
+  const prevAddress = wallet.address
   wallet.setAccount(address)
   if (address) {
     let chainId = null
@@ -110,7 +113,51 @@ async function refreshAccountAndBalance() {
     await wallet.fetchBalance()
   } else {
     wallet.setBalanceWei('0x0')
+    auth.clearSession()
   }
+  const sessionAddr = auth.sessionAddress || null
+  const mismatchWithSession = !!(address && sessionAddr && sessionAddr.toLowerCase() !== address.toLowerCase())
+  const addressChanged = !!(address && prevAddress && address !== prevAddress)
+  if (address && (mismatchWithSession || addressChanged)) {
+    promptReauth(address)
+  }
+}
+
+async function performReauth(address) {
+  if (isReauthing) return
+  const provider = await ensureProvider()
+  if (!provider) return
+  isReauthing = true
+  try {
+    const timestamp = Math.floor(Date.now() / 1000)
+    const action = 'Connect Wallet'
+    const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${address}\nTimestamp: ${timestamp}`
+    const signature = await provider.request({
+      method: 'personal_sign',
+      params: [messageToSign, address]
+    })
+    const resp = await walletAPI.connectWallet({ address, signature, timestamp })
+    auth.setSession(resp.token, resp.expires_at, address)
+    messageApi.success('Re-authenticated')
+  } catch (err) {
+    messageApi.error('Re-authentication was rejected or failed')
+  } finally {
+    isReauthing = false
+    reauthModalVisible = false
+  }
+}
+
+function promptReauth(address) {
+  if (reauthModalVisible || isReauthing) return
+  reauthModalVisible = true
+  Modal.confirm({
+    title: 'Authentication Required',
+    content: 'Your wallet account changed. Please re-authenticate to continue.',
+    okText: 'Re-authenticate',
+    cancelText: 'Later',
+    onOk: () => performReauth(address),
+    onCancel: () => { reauthModalVisible = false }
+  })
 }
 
 async function ensureProvider() {
@@ -141,7 +188,7 @@ async function connect() {
     await refreshAccountAndBalance()
 
     const resp = await walletAPI.connectWallet({ address, signature, timestamp })
-    auth.setSession(resp.token, resp.expires_at)
+    auth.setSession(resp.token, resp.expires_at, address)
     router.push('/dashboard')
   } catch (err) {
     messageApi.error('Connect failed or was rejected.')
@@ -187,8 +234,12 @@ onMounted(async () => {
   await refreshAccountAndBalance()
   const provider = window.ethereum
   if (provider) {
+    let accountChangeTimer = null
     provider.on('accountsChanged', async () => {
-      await refreshAccountAndBalance()
+      if (accountChangeTimer) clearTimeout(accountChangeTimer)
+      accountChangeTimer = setTimeout(async () => {
+        await refreshAccountAndBalance()
+      }, 200)
     })
     provider.on('chainChanged', async () => {
       await refreshAccountAndBalance()

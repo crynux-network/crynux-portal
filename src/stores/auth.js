@@ -3,7 +3,8 @@ import { defineStore } from 'pinia'
 export const useAuthStore = defineStore('auth', {
 	state: () => ({
 		sessionToken: null,
-		sessionExpiresAt: 0
+		sessionExpiresAt: 0,
+		sessionAddress: null
 	}),
 	getters: {
 		isAuthenticated(state) {
@@ -11,13 +12,15 @@ export const useAuthStore = defineStore('auth', {
 		}
 	},
 	actions: {
-		setSession(token, expiresAt) {
+		setSession(token, expiresAt, address) {
 			this.sessionToken = token
 			this.sessionExpiresAt = Number(expiresAt || 0)
+			if (address) this.sessionAddress = address
 		},
 		clearSession() {
 			this.sessionToken = null
 			this.sessionExpiresAt = 0
+			this.sessionAddress = null
 		}
 	},
 	persist: true

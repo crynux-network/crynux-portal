@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useWalletStore } from '@/stores/wallet'
+import { useAuthStore } from '@/stores/auth'
 import config from '@/config.json'
 import { ethers } from 'ethers'
 import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
@@ -9,7 +10,7 @@ import { walletAPI } from '@/api/v1/wallet'
 import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
 
 const wallet = useWalletStore()
-
+const auth = useAuthStore()
 
 
 const networkName = computed(() => {
@@ -211,10 +212,10 @@ const withdrawalColumns = [
 ]
 
 const truncateTxHash = (h) => {
-    if (!h) return ''
-    const s = String(h)
-    if (s.length <= 18) return s
-    return s.slice(0, 10) + '...' + s.slice(-8)
+	if (!h) return ''
+	const s = String(h)
+	if (s.length <= 18) return s
+	return s.slice(0, 10) + '...' + s.slice(-8)
 }
 
 const formatNetworkName = (n) => {
@@ -232,57 +233,77 @@ const getNetworkTagColor = (n) => {
 	return undefined
 }
 
+async function refreshDashboard() {
+	if (!wallet.address) {
+		benefitAddress.value = ''
+		relayBalance.value = 0
+		withdrawals.value = []
+		return
+	}
+	const sessionAddr = auth.sessionAddress || null
+	const hasMismatch = !!(sessionAddr && sessionAddr.toLowerCase() !== String(wallet.address).toLowerCase())
+	if (!auth.isAuthenticated || hasMismatch) {
+		benefitAddress.value = ''
+		relayBalance.value = 0
+		withdrawals.value = []
+		return
+	}
+	await fetchBenefitAddress()
+	await fetchRelayBalance()
+	await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
+}
+
 const getWithdrawals = async (page = 1, pageSize = 10) => {
-  if (!wallet.address) {
-    return;
-  }
-  withdrawalsLoading.value = true;
-  try {
-    const res = await walletAPI.getWithdrawals(wallet.address, page, pageSize);
-    withdrawals.value = res.withdraw_records.map((record) => {
-      const hasAmount = record && record.amount !== undefined && record.amount !== null
-      let formattedAmount = ''
-      if (hasAmount) {
-        try {
-          const amt = Number(ethers.formatEther(record.amount))
-          formattedAmount = formatInt(Math.round(amt))
-        } catch {
-          formattedAmount = ''
-        }
-      }
-      const rawFee = record && (record.withdrawal_fee ?? record.fee ?? record.withdraw_fee ?? record.service_fee)
-      const hasFee = rawFee !== undefined && rawFee !== null
-      let formattedFee = ''
-      if (hasFee) {
-        try {
-          const feeNum = Number(ethers.formatEther(rawFee))
-          formattedFee = formatInt(Math.round(feeNum))
-        } catch {
-          formattedFee = ''
-        }
-      }
-      const hasBenefit = !!(record && typeof record.benefit_address === 'string' && record.benefit_address.trim() !== '')
-      const toType = hasBenefit ? 'Beneficial' : 'Operational'
-      const toTypeColor = hasBenefit ? 'green' : 'red'
-      return {
-        ...record,
-        time: (record && (record.time || record.created_at)) || '',
-        amount: hasAmount ? ("CNX " + formattedAmount) : '',
-        withdrawal_fee: hasFee ? ("CNX " + formattedFee) : '',
-        network: formatNetworkName((record && record.network) || ''),
-        status: (record && (record.status ?? '')),
-        to_type: toType,
-        to_type_color: toTypeColor,
-        tx_hash: (record && (record.tx_hash || record.txHash)) || '',
-      }
-    });
-    withdrawalsPagination.value.total = res.total;
-    withdrawalsPagination.value.current = page;
-  } catch (e) {
-    message.error(e.message);
-  } finally {
-    withdrawalsLoading.value = false;
-  }
+	if (!wallet.address) {
+		return;
+	}
+	withdrawalsLoading.value = true;
+	try {
+		const res = await walletAPI.getWithdrawals(wallet.address, page, pageSize);
+		withdrawals.value = res.withdraw_records.map((record) => {
+			const hasAmount = record && record.amount !== undefined && record.amount !== null
+			let formattedAmount = ''
+			if (hasAmount) {
+				try {
+					const amt = Number(ethers.formatEther(record.amount))
+					formattedAmount = formatInt(Math.round(amt))
+				} catch {
+					formattedAmount = ''
+				}
+			}
+			const rawFee = record && (record.withdrawal_fee ?? record.fee ?? record.withdraw_fee ?? record.service_fee)
+			const hasFee = rawFee !== undefined && rawFee !== null
+			let formattedFee = ''
+			if (hasFee) {
+				try {
+					const feeNum = Number(ethers.formatEther(rawFee))
+					formattedFee = formatInt(Math.round(feeNum))
+				} catch {
+					formattedFee = ''
+				}
+			}
+			const hasBenefit = !!(record && typeof record.benefit_address === 'string' && record.benefit_address.trim() !== '')
+			const toType = hasBenefit ? 'Beneficial' : 'Operational'
+			const toTypeColor = hasBenefit ? 'green' : 'red'
+			return {
+				...record,
+				time: (record && (record.time || record.created_at)) || '',
+				amount: hasAmount ? ("CNX " + formattedAmount) : '',
+				withdrawal_fee: hasFee ? ("CNX " + formattedFee) : '',
+				network: formatNetworkName((record && record.network) || ''),
+				status: (record && (record.status ?? '')),
+				to_type: toType,
+				to_type_color: toTypeColor,
+				tx_hash: (record && (record.tx_hash || record.txHash)) || '',
+			}
+		});
+		withdrawalsPagination.value.total = res.total;
+		withdrawalsPagination.value.current = page;
+	} catch (e) {
+		message.error(e.message);
+	} finally {
+		withdrawalsLoading.value = false;
+	}
 }
 
 const handleWithdrawalsTableChange = (pagination) => {
@@ -428,15 +449,11 @@ onMounted(async () => {
 	if (wallet.address) {
 		await wallet.fetchBalance()
 	}
-	await fetchBenefitAddress()
-    await fetchRelayBalance()
-    await getWithdrawals()
+	await refreshDashboard()
 })
 
-watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], async () => {
-	await fetchBenefitAddress()
-    await fetchRelayBalance()
-    await getWithdrawals()
+watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
+	await refreshDashboard()
 })
 </script>
 
