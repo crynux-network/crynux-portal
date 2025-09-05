@@ -60,6 +60,11 @@ const wallet = useWalletStore()
 let isAuthenticating = false
 let reauthModalVisible = false
 
+function reauthWithFocusAndDelay() {
+  if (typeof window !== 'undefined' && window.focus) window.focus()
+  return new Promise(resolve => setTimeout(resolve, 200)).then(() => authenticate({ navigate: false }))
+}
+
 const networks = [
   { key: 'dymension', name: config.networks.dymension.chainName, logo: '/dymension-square.png' },
   { key: 'near', name: config.networks.near.chainName, logo: '/near-square.png' }
@@ -177,7 +182,9 @@ function promptReauth() {
     content: 'Your wallet account changed. Please re-authenticate to continue.',
     okText: 'Re-authenticate',
     cancelText: 'Later',
-    onOk: () => authenticate({ navigate: false }),
+    onOk: () => {
+      return reauthWithFocusAndDelay()
+    },
     onCancel: () => { reauthModalVisible = false }
   })
 }
