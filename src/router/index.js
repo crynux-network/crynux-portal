@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import NetstatsView from '@/components/netstats/netstats-view.vue'
 import UserDashboard from '@/components/user-dashboard.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useWalletStore } from '@/stores/wallet'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -24,13 +25,27 @@ const router = createRouter({
     }
   ]
 })
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore()
-  const valid = auth.isAuthenticated
-  if (to.matched.some(record => record.meta && record.meta.requiresAuth)) {
-    if (valid) {
+  const wallet = useWalletStore()
+  const isAuthed = auth.isAuthenticated
+  const hasProvider = typeof window !== 'undefined' && !!window.ethereum
+  const isDashboard = to.matched.some(record => record.meta && record.meta.requiresAuth)
+  if (isDashboard) {
+    if (isAuthed && hasProvider) {
       next()
     } else {
+      try {
+        const provider = typeof window !== 'undefined' ? window.ethereum : null
+        if (provider && provider.request) {
+          await provider.request({
+            method: 'wallet_revokePermissions',
+            params: [{ eth_accounts: {} }]
+          })
+        }
+      } catch (e) { console.warn('Failed to revoke wallet permissions', e) }
+      try { auth.$reset() } catch (e) { console.warn('Failed to reset auth store', e) }
+      try { wallet.$reset() } catch (e) { console.warn('Failed to reset wallet store', e) }
       next({ path: '/' })
     }
   } else {

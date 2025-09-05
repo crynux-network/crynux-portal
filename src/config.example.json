@@ -34,5 +34,7 @@
             "benefitContractAddress": ""
         }
     },
-    "default_network": "dymension"
+    "default_network": "dymension",
+    "withdrawal_fee": 20,
+    "withdrawal_min": 10000
 }

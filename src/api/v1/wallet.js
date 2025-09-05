@@ -18,6 +18,16 @@ class WalletAPI extends BaseAPI {
             },
         });
     }
+
+	withdraw(address, amount, benefitAddress, network, timestamp, signature) {
+		return v1.post(`/client/${address}/withdraw`, {
+			amount: amount,
+			benefit_address: benefitAddress,
+			network: network,
+			timestamp: timestamp,
+			signature: signature
+		})
+	}
 }
 
 export const walletAPI = new WalletAPI();

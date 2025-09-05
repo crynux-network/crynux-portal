@@ -1,9 +1,9 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useWalletStore } from '@/stores/wallet'
 import config from '@/config.json'
 import { ethers } from 'ethers'
-import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
 
@@ -71,6 +71,99 @@ const isSubmitting = ref(false)
 const benefitError = ref('')
 const relayBalance = ref(0)
 
+const isWithdrawOpen = ref(false)
+const withdrawFormRef = ref()
+const withdrawModel = reactive({ amount: null })
+const isWithdrawSubmitting = ref(false)
+
+const withdrawRules = {
+    amount: [
+        {
+            validator: (_rule, value) => {
+                const amt = Number(value)
+                const min = Number(minWithdrawCNX.value || 0)
+                const max = Math.max(0, Math.floor((Number(relayBalance.value || 0)) - withdrawalFeeInt.value))
+                if (value === null || value === undefined || value === '') return Promise.reject('Enter amount')
+                if (!Number.isInteger(amt)) return Promise.reject('Amount must be an integer')
+                if (amt < min) return Promise.reject(`Minimum is ${min} CNX`)
+                if (amt > max) return Promise.reject('Exceeds maximum available')
+                return Promise.resolve()
+            },
+            trigger: ['change', 'blur']
+        }
+    ]
+}
+
+const withdrawalFeeCNX = computed(() => {
+    const n = Number(config.withdrawal_fee || 0)
+    return isNaN(n) ? 0 : n
+})
+
+const withdrawalFeeInt = computed(() => {
+    return Math.round(withdrawalFeeCNX.value)
+})
+
+const actualDeductionCNX = computed(() => {
+    const amt = Number(withdrawModel.amount || 0)
+    const fee = withdrawalFeeCNX.value
+    if (isNaN(amt) || isNaN(fee)) return 0
+    return amt + fee
+})
+
+const actualDeductionInt = computed(() => {
+    return Math.round(actualDeductionCNX.value)
+})
+
+const minWithdrawCNX = computed(() => {
+    const n = Number(config.withdrawal_min || 0)
+    return isNaN(n) ? 0 : Math.floor(n)
+})
+const maxWithdrawCNX = computed(() => {
+    const bal = Number(relayBalance.value || 0)
+    const max = Math.floor(bal - withdrawalFeeInt.value)
+    return Math.max(0, max)
+})
+const isAmountInputDisabled = computed(() => maxWithdrawCNX.value < minWithdrawCNX.value)
+
+const formatInt = (n) => {
+    const num = Number(n || 0)
+    const v = Math.max(0, Math.floor(num))
+    try { return v.toLocaleString('en-US') } catch { return String(v) }
+}
+
+const destinationAddress = computed(() => {
+    if (benefitAddress.value && !isZeroAddress(benefitAddress.value)) return benefitAddress.value
+    return wallet.address || ''
+})
+
+const receivingTypeLabel = computed(() => {
+    return (benefitAddress.value && !isZeroAddress(benefitAddress.value)) ? 'Beneficial' : 'Operational'
+})
+
+const receivingTagColor = computed(() => {
+    return (benefitAddress.value && !isZeroAddress(benefitAddress.value)) ? 'green' : 'red'
+})
+
+const isWithdrawValid = computed(() => {
+    const amtRaw = withdrawModel.amount
+    if (amtRaw === null || amtRaw === undefined || amtRaw === '') return false
+    const amt = Number(amtRaw)
+    if (!Number.isInteger(amt)) return false
+    if (amt < minWithdrawCNX.value) return false
+    if (amt > maxWithdrawCNX.value) return false
+    try { return ethers.isAddress(destinationAddress.value) } catch { return false }
+})
+
+const isAmountFieldValid = computed(() => {
+    const amtRaw = withdrawModel.amount
+    if (amtRaw === null || amtRaw === undefined || amtRaw === '') return false
+    const amt = Number(amtRaw)
+    if (!Number.isInteger(amt)) return false
+    if (amt < minWithdrawCNX.value) return false
+    if (amt > maxWithdrawCNX.value) return false
+    return true
+})
+
 const withdrawals = ref([])
 const withdrawalsPagination = ref({
   current: 1,
@@ -98,6 +191,11 @@ const withdrawalColumns = [
     title: "Network",
     dataIndex: "network",
     key: "network",
+  },
+  {
+    title: "To Address",
+    dataIndex: "to_type",
+    key: "to_type",
   },
   {
     title: "Status",
@@ -142,20 +240,38 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
     const res = await walletAPI.getWithdrawals(wallet.address, page, pageSize);
     withdrawals.value = res.withdraw_records.map((record) => {
       const hasAmount = record && record.amount !== undefined && record.amount !== null
-      const formattedAmount = hasAmount ? Number(ethers.formatEther(record.amount)).toFixed(6) : ''
+      let formattedAmount = ''
+      if (hasAmount) {
+        try {
+          const amt = Number(ethers.formatEther(record.amount))
+          formattedAmount = formatInt(Math.round(amt))
+        } catch {
+          formattedAmount = ''
+        }
+      }
       const rawFee = record && (record.withdrawal_fee ?? record.fee ?? record.withdraw_fee ?? record.service_fee)
       const hasFee = rawFee !== undefined && rawFee !== null
       let formattedFee = ''
       if (hasFee) {
-        try { formattedFee = Number(ethers.formatEther(rawFee)).toFixed(6) } catch { formattedFee = '' }
+        try {
+          const feeNum = Number(ethers.formatEther(rawFee))
+          formattedFee = formatInt(Math.round(feeNum))
+        } catch {
+          formattedFee = ''
+        }
       }
+      const hasBenefit = !!(record && typeof record.benefit_address === 'string' && record.benefit_address.trim() !== '')
+      const toType = hasBenefit ? 'Beneficial' : 'Operational'
+      const toTypeColor = hasBenefit ? 'green' : 'red'
       return {
         ...record,
         time: (record && (record.time || record.created_at)) || '',
         amount: hasAmount ? ("CNX " + formattedAmount) : '',
         withdrawal_fee: hasFee ? ("CNX " + formattedFee) : '',
         network: formatNetworkName((record && record.network) || ''),
-        status: (record && record.status) || '',
+        status: (record && (record.status ?? '')),
+        to_type: toType,
+        to_type_color: toTypeColor,
         tx_hash: (record && (record.tx_hash || record.txHash)) || '',
       }
     });
@@ -257,7 +373,54 @@ const submitSetBenefit = async () => {
 }
 
 const withdrawRelay = async () => {
-    message.info('Withdraw pending integration')
+    withdrawModel.amount = null
+    isWithdrawOpen.value = true
+}
+
+const submitWithdraw = async () => {
+    const amt = Number(withdrawModel.amount)
+
+    const decimals = (config.networks[wallet.selectedNetworkKey]?.nativeCurrency?.decimals) ?? 18
+    let amountWeiStr = '0'
+    try {
+        amountWeiStr = ethers.parseUnits(String(amt), decimals).toString()
+    } catch (_) {
+        message.error('Invalid amount format')
+        return
+    }
+
+    const benefit = destinationAddress.value
+
+    isWithdrawSubmitting.value = true
+    try {
+        await wallet.ensureNetworkOnWallet()
+        const provider = window.ethereum
+        const timestamp = Math.floor(Date.now() / 1000)
+        const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefit} on ${wallet.selectedNetworkKey}`
+        const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${wallet.address}\nTimestamp: ${timestamp}`
+        const signature = await provider.request({
+            method: 'personal_sign',
+            params: [messageToSign, wallet.address]
+        })
+
+        await walletAPI.withdraw(
+            wallet.address,
+            amountWeiStr,
+            benefit,
+            wallet.selectedNetworkKey,
+            timestamp,
+            signature
+        )
+
+        message.success('Withdraw submitted')
+        isWithdrawOpen.value = false
+        await fetchRelayBalance()
+        await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
+    } catch (e) {
+        message.error(e?.message || 'Withdraw failed')
+    } finally {
+        isWithdrawSubmitting.value = false
+    }
 }
 
 onMounted(async () => {
@@ -324,8 +487,15 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 								<a-statistic title="Balance" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
 							</a-col>
 						</a-row>
-						<div style="margin-top: auto; text-align: center;">
-							<a-button type="primary" size="large" @click="withdrawRelay" style="height: 48px; padding: 0 36px; font-size: 16px;">Withdraw</a-button>
+						<div style="margin-top: auto;">
+							<a-row :gutter="12">
+								<a-col :span="12">
+									<a-button block size="large">Deposit</a-button>
+								</a-col>
+								<a-col :span="12">
+									<a-button block type="primary" size="large" @click="withdrawRelay">Withdraw</a-button>
+								</a-col>
+							</a-row>
 						</div>
 					</a-card>
 				</a-col>
@@ -358,6 +528,9 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 										Crynux on {{ record.network }}
 									</a-tag>
 								</template>
+								<template v-else-if="column.dataIndex === 'to_type'">
+									<a-tag :color="record.to_type_color">{{ record.to_type }}</a-tag>
+								</template>
 								<template v-else-if="column.dataIndex === 'tx_hash'">
 									<span>{{ truncateTxHash(record.tx_hash) }}</span>
 								</template>
@@ -385,6 +558,49 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 				</a-form-item>
 			</a-form>
 		</div>
+	</a-modal>
+
+	<a-modal
+		v-model:open="isWithdrawOpen"
+		:title="'Withdraw'"
+		:confirm-loading="isWithdrawSubmitting"
+		@ok="submitWithdraw"
+		:mask-closable="false"
+		:width="720"
+		ok-text="Submit"
+		:ok-button-props="{ disabled: !isWithdrawValid }"
+	>
+		<a-form layout="vertical" :model="withdrawModel" :rules="withdrawRules" ref="withdrawFormRef" :hide-required-mark="true" :style="{ marginTop: '24px', marginBottom: '32px' }">
+			<a-form-item name="amount" :help="isAmountInputDisabled ? 'Insufficient balance to meet the minimum after fee.' : undefined" :validate-status="isAmountInputDisabled ? 'error' : undefined" :style="{ marginBottom: '32px' }">
+				<a-input-number v-model:value="withdrawModel.amount" :min="minWithdrawCNX" :step="1" :controls="false" :precision="0" style="width: 100%" placeholder="Enter amount" addon-before="CNX" :disabled="isAmountInputDisabled" />
+				<template #extra>
+					<a-typography-text type="secondary" style="font-size: 12px; display: block; margin-top: 12px; margin-bottom: 16px;">Min: {{ formatInt(minWithdrawCNX) }} CNX · Max: {{ formatInt(maxWithdrawCNX) }} CNX</a-typography-text>
+				</template>
+			</a-form-item>
+		</a-form>
+		<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }" :style="{ marginTop: '32px' }">
+			<a-descriptions-item label="Actual Deduction">
+				<a-statistic :value="isAmountFieldValid ? actualDeductionInt : 0" :precision="0" :value-style="{ fontSize: '26px', color: '#1677ff' }">
+					<template #suffix>
+						<span style="font-size: 26px; color: #1677ff; margin-left: 4px;"> CNX</span>
+						<a-typography-text type="secondary" style="font-size: 12px; margin-left: 6px;">(includes fee {{ withdrawalFeeInt }} CNX)</a-typography-text>
+					</template>
+				</a-statistic>
+			</a-descriptions-item>
+			<a-descriptions-item label="Network">
+				<a-tag :color="getNetworkTagColor(networkName)">{{ networkName }}</a-tag>
+			</a-descriptions-item>
+			<a-descriptions-item label="Receiving Address">
+				<a-space size="small">
+					<a-tag :color="receivingTagColor">
+						<CheckCircleOutlined v-if="receivingTypeLabel === 'Beneficial'" style="margin-right: 4px;" />
+						<ExclamationCircleOutlined v-else style="margin-right: 4px;" />
+						{{ receivingTypeLabel }}
+					</a-tag>
+					<span>{{ destinationAddress }}</span>
+				</a-space>
+			</a-descriptions-item>
+		</a-descriptions>
 	</a-modal>
 </template>
 
