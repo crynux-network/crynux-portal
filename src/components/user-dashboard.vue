@@ -6,6 +6,7 @@ import { ethers } from 'ethers'
 import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
+import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
 
 const wallet = useWalletStore()
 
@@ -484,7 +485,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 					<a-card :title="`Relay Account`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1; display: flex; flex-direction: column" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, paddingBottom: '32px' }">
 						<a-row justify="center" style="margin-top: 24px;">
 							<a-col>
-								<a-statistic title="Balance" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
+								<a-statistic title="Balance (CNX)" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
 							</a-col>
 						</a-row>
 						<div style="margin-top: auto;">
@@ -506,6 +507,11 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value], 
 	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
 		<a-col :span="20" :offset="2">
 			<a-row :gutter="[16, 16]">
+				<a-col :span="24">
+					<a-card :title="`Relay Account Earnings`" :bordered="false" style="opacity: 0.9">
+						<RelayAccountEarningsChart :address="wallet.address" />
+					</a-card>
+				</a-col>
 				<a-col :span="24">
 					<a-card :title="`Withdrawals`" :bordered="false" style="opacity: 0.9">
 						<a-table

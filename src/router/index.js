@@ -17,11 +17,6 @@ const router = createRouter({
       name: 'dashboard',
       component: UserDashboard,
       meta: { requiresAuth: true }
-    },
-    {
-      path: '/:network',
-      name: 'network',
-      component: NetstatsView
     }
   ]
 })
@@ -30,8 +25,8 @@ router.beforeEach(async (to, from, next) => {
   const wallet = useWalletStore()
   const isAuthed = auth.isAuthenticated
   const hasProvider = typeof window !== 'undefined' && !!window.ethereum
-  const isDashboard = to.matched.some(record => record.meta && record.meta.requiresAuth)
-  if (isDashboard) {
+  const requiresAuth = to.matched.some(record => record.meta && record.meta.requiresAuth)
+  if (requiresAuth) {
     if (isAuthed && hasProvider) {
       next()
     } else {

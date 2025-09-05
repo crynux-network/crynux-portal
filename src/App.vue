@@ -84,6 +84,8 @@ function handleClickOutside() {
   showNetworkDropdown.value = false
 }
 
+const isDashboard = computed(() => router.currentRoute.value?.name === 'dashboard')
+
 async function refreshAccountAndBalance() {
   const provider = window.ethereum
   if (!provider) return
@@ -216,16 +218,16 @@ onBeforeUnmount(() => {
                 <img
                   src="/logo-graphic-white.png"
                   alt="Crynux Logo"
-                  style="height: 50px; display: block"
+                  style="height: 50px; display: block; cursor: pointer"
                   @click="router.push({ name: 'netstats' })"
                 />
-                <a-typography-link @click="router.push({ name: 'netstats' })" class="brand-text" style="color: #fff; font-size: 20px">Crynux Portal</a-typography-link>
+                <a-typography-link @click="router.push({ name: 'netstats' })" class="brand-text" style="color: #fff; font-size: 20px; cursor: pointer">Crynux Portal</a-typography-link>
               </a-space>
             </a-col>
             <a-col>
               <a-space size="large" align="center">
                 <template v-if="auth.isAuthenticated && wallet.isConnected">
-                  <div class="network-selector" @click.stop="toggleNetworkDropdown">
+                  <div v-if="isDashboard" class="network-selector" @click.stop="toggleNetworkDropdown">
                     <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
                     <span class="network-name">{{ selectedNetwork.name }}</span>
                     <span class="dropdown-arrow">▼</span>

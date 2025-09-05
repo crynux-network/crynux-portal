@@ -11,6 +11,9 @@ class IncentivesAPI extends BaseAPI {
     getIncentivesTotal() {
         return v1.get('/incentive/total')
     }
+    getNodeIncentives(address, page, pageSize) {
+        return v1.get('/incentive/node/' + address + '?page=' + page + '&page_size=' + pageSize)
+    }
 }
 
 const incentivesAPI = new IncentivesAPI()
