@@ -181,11 +181,10 @@ function promptReauth() {
     title: 'Authentication Required',
     content: 'Your wallet account changed. Please re-authenticate to continue.',
     okText: 'Re-authenticate',
-    cancelText: 'Later',
+    okCancel: false,
     onOk: () => {
       return reauthWithFocusAndDelay()
     },
-    onCancel: () => { reauthModalVisible = false }
   })
 }
 
