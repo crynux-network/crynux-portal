@@ -57,7 +57,7 @@ onBeforeUnmount(() => {
 
 const auth = useAuthStore()
 const wallet = useWalletStore()
-let isReauthing = false
+let isAuthenticating = false
 let reauthModalVisible = false
 
 const networks = [
@@ -119,80 +119,71 @@ async function refreshAccountAndBalance() {
   const mismatchWithSession = !!(address && sessionAddr && sessionAddr.toLowerCase() !== address.toLowerCase())
   const addressChanged = !!(address && prevAddress && address !== prevAddress)
   if (address && (mismatchWithSession || addressChanged)) {
-    promptReauth(address)
+    promptReauth()
   }
 }
 
-async function performReauth(address) {
-  if (isReauthing) return
-  const provider = await ensureProvider()
-  if (!provider) return
-  isReauthing = true
-  try {
-    const timestamp = Math.floor(Date.now() / 1000)
-    const action = 'Connect Wallet'
-    const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${address}\nTimestamp: ${timestamp}`
-    const signature = await provider.request({
-      method: 'personal_sign',
-      params: [messageToSign, address]
+function authenticate(options = { navigate: false }) {
+  if (isAuthenticating) return Promise.resolve()
+  const provider = window.ethereum
+  if (!provider) {
+    messageApi.error('Please install MetaMask in your browser.')
+    return Promise.reject(new Error('No provider'))
+  }
+  isAuthenticating = true
+  const timestamp = Math.floor(Date.now() / 1000)
+  const action = 'Connect Wallet'
+  return provider.request({ method: 'eth_requestAccounts' })
+    .then((accounts) => {
+      const acct = (accounts && accounts.length) ? accounts[0] : null
+      if (!acct) throw new Error('No account connected')
+      const addressToAuth = ethers.getAddress(acct)
+      const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${addressToAuth}\nTimestamp: ${timestamp}`
+      return provider.request({
+        method: 'personal_sign',
+        params: [messageToSign, addressToAuth]
+      }).then(signature => ({ signature, addressToAuth }))
     })
-    const resp = await walletAPI.connectWallet({ address, signature, timestamp })
-    auth.setSession(resp.token, resp.expires_at, address)
-    messageApi.success('Re-authenticated')
-  } catch (err) {
-    messageApi.error('Re-authentication was rejected or failed')
-  } finally {
-    isReauthing = false
-    reauthModalVisible = false
-  }
+    .then(({ signature, addressToAuth }) => walletAPI.connectWallet({ address: addressToAuth, signature, timestamp })
+      .then(resp => ({ resp, addressToAuth })))
+    .then(({ resp, addressToAuth }) => {
+      auth.setSession(resp.token, resp.expires_at, addressToAuth)
+      wallet.setAccount(addressToAuth)
+      return wallet.ensureNetworkOnWallet(wallet.selectedNetworkKey)
+        .then(() => refreshAccountAndBalance())
+        .then(() => {
+          if (options.navigate) {
+            router.push('/dashboard')
+          } else {
+            messageApi.success('Re-authenticated')
+          }
+        })
+    })
+    .catch(() => {
+      auth.clearSession()
+      messageApi.error('Authentication failed or was rejected')
+    })
+    .finally(() => {
+      isAuthenticating = false
+      reauthModalVisible = false
+    })
 }
 
-function promptReauth(address) {
-  if (reauthModalVisible || isReauthing) return
+function promptReauth() {
+  if (reauthModalVisible || isAuthenticating) return
   reauthModalVisible = true
   Modal.confirm({
     title: 'Authentication Required',
     content: 'Your wallet account changed. Please re-authenticate to continue.',
     okText: 'Re-authenticate',
     cancelText: 'Later',
-    onOk: () => performReauth(address),
+    onOk: () => authenticate({ navigate: false }),
     onCancel: () => { reauthModalVisible = false }
   })
 }
 
-async function ensureProvider() {
-  if (typeof window === 'undefined' || !window.ethereum) {
-    messageApi.error('Please install MetaMask in your browser.')
-    return null
-  }
-  return window.ethereum
-}
-
 async function connect() {
-  const provider = await ensureProvider()
-  if (!provider) return
-  try {
-    const accounts = await provider.request({ method: 'eth_requestAccounts' })
-    const address = ethers.getAddress(accounts[0])
-    wallet.setAccount(address)
-
-    const timestamp = Math.floor(Date.now() / 1000)
-    const action = 'Connect Wallet'
-    const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${address}\nTimestamp: ${timestamp}`
-    const signature = await provider.request({
-      method: 'personal_sign',
-      params: [messageToSign, address]
-    })
-
-    await wallet.ensureNetworkOnWallet(wallet.selectedNetworkKey)
-    await refreshAccountAndBalance()
-
-    const resp = await walletAPI.connectWallet({ address, signature, timestamp })
-    auth.setSession(resp.token, resp.expires_at, address)
-    router.push('/dashboard')
-  } catch (err) {
-    messageApi.error('Connect failed or was rejected.')
-  }
+  return authenticate({ navigate: true })
 }
 
 async function changeNetwork(val) {
@@ -239,7 +230,7 @@ onMounted(async () => {
       if (accountChangeTimer) clearTimeout(accountChangeTimer)
       accountChangeTimer = setTimeout(async () => {
         await refreshAccountAndBalance()
-      }, 200)
+      }, 800)
     })
     provider.on('chainChanged', async () => {
       await refreshAccountAndBalance()
