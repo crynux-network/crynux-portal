@@ -8,6 +8,7 @@ import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined 
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
 import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
+import moment from 'moment'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -233,6 +234,14 @@ const getNetworkTagColor = (n) => {
 	return undefined
 }
 
+const formatTimestamp = (t) => {
+	if (t === undefined || t === null || t === '') return ''
+	const n = Number(t)
+	if (!Number.isFinite(n)) return String(t)
+	const seconds = n > 1e12 ? Math.floor(n / 1000) : Math.floor(n)
+	return moment.unix(seconds).format('YYYY-MM-DD HH:mm')
+}
+
 async function refreshDashboard() {
 	if (!wallet.address) {
 		benefitAddress.value = ''
@@ -271,7 +280,7 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 					formattedAmount = ''
 				}
 			}
-			const rawFee = record && (record.withdrawal_fee ?? record.fee ?? record.withdraw_fee ?? record.service_fee)
+			const rawFee = record && record.withdrawal_fee
 			const hasFee = rawFee !== undefined && rawFee !== null
 			let formattedFee = ''
 			if (hasFee) {
@@ -287,14 +296,14 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 			const toTypeColor = hasBenefit ? 'green' : 'red'
 			return {
 				...record,
-				time: (record && (record.time || record.created_at)) || '',
+				time: formatTimestamp(record && (record.created_at)),
 				amount: hasAmount ? ("CNX " + formattedAmount) : '',
 				withdrawal_fee: hasFee ? ("CNX " + formattedFee) : '',
 				network: formatNetworkName((record && record.network) || ''),
 				status: (record && (record.status ?? '')),
 				to_type: toType,
 				to_type_color: toTypeColor,
-				tx_hash: (record && (record.tx_hash || record.txHash)) || '',
+				tx_hash: (record && (record.tx_hash)) || '',
 			}
 		});
 		withdrawalsPagination.value.total = res.total;
