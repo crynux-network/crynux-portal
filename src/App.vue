@@ -193,8 +193,12 @@ async function connect() {
 }
 
 async function changeNetwork(val) {
+  const switched = await wallet.ensureNetworkOnWallet(val)
+  if (!switched) {
+    messageApi.error('Failed to switch network in wallet')
+    return
+  }
   wallet.setSelectedNetwork(val)
-  await wallet.ensureNetworkOnWallet(val)
   await refreshAccountAndBalance()
 }
 
