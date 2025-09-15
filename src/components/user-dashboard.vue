@@ -291,16 +291,11 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 					formattedFee = ''
 				}
 			}
-			const benefitAddrStr = (record && record.benefit_address) || ''
-			const opAddrStr = wallet.address || ''
-			const hasBenefit = !!(typeof benefitAddrStr === 'string' && benefitAddrStr.trim() !== '')
-			const isSameAsOperational = hasBenefit && opAddrStr && String(benefitAddrStr).toLowerCase() === String(opAddrStr).toLowerCase()
-			let toType = hasBenefit ? 'Beneficial' : 'Operational'
-			let toTypeColor = hasBenefit ? 'green' : 'red'
-			if (isSameAsOperational) {
-				toType = 'To operational'
-				toTypeColor = 'red'
-			}
+			const benefitAddrStr = String((record && record.benefit_address) || '').trim()
+			const opAddrStr = String(wallet.address || '').trim()
+			const isBeneficial = benefitAddrStr !== '' && benefitAddrStr.toLowerCase() !== opAddrStr.toLowerCase()
+			const toType = isBeneficial ? 'Beneficial' : 'Operational'
+			const toTypeColor = isBeneficial ? 'green' : 'red'
 			return {
 				...record,
 				time: formatTimestamp(record && (record.created_at)),

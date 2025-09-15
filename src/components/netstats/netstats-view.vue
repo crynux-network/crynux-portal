@@ -154,7 +154,7 @@ onMounted(async () => {
                 >
                     <a-descriptions-item label="Network Name" :span="5">Crynux Network</a-descriptions-item>
                     <a-descriptions-item label="Network Version" :span="5">Helium (Incentivized Testnet)</a-descriptions-item>
-                    <a-descriptions-item label="Node Version" :span="5">v2.6.0</a-descriptions-item>
+                    <a-descriptions-item label="Node Version" :span="5">v2.7.0</a-descriptions-item>
                 </a-descriptions>
             </a-card>
         </a-col>
