@@ -1,0 +1,87 @@
+name: Build and deploy static site
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (branch or tag) to checkout; defaults to current ref'
+        required: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          yarn install --immutable || yarn install
+
+      - name: Build
+        run: yarn build
+
+      - name: Compute metadata
+        id: meta
+        shell: bash
+        run: |
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          ARCHIVE_NAME="dist-${SHA_SHORT}.tar.gz"
+          echo "sha_short=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+          echo "archive_name=${ARCHIVE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Archive build output
+        shell: bash
+        run: |
+          tar -czf "${{ steps.meta.outputs.archive_name }}" -C dist .
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add server to known hosts
+        shell: bash
+        run: |
+          ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Prepare remote directory
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          DEPLOY_TARGET_DIR: ${{ secrets.DEPLOY_TARGET_DIR }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          envs: DEPLOY_TARGET_DIR
+          script: |
+            set -euo pipefail
+            mkdir -p "$DEPLOY_TARGET_DIR"
+            rm -rf "$DEPLOY_TARGET_DIR"/*
+
+      - name: Upload dist to server via SCP
+        shell: bash
+        run: |
+          timeout 15m scp -P ${{ secrets.DEPLOY_PORT }} -r dist/* ${{ secrets.DEPLOY_USERNAME }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_TARGET_DIR }}/
+
+      - name: Upload build archive (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.meta.outputs.sha_short }}
+          path: ${{ steps.meta.outputs.archive_name }}
