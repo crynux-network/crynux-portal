@@ -33,6 +33,11 @@ jobs:
         run: |
           yarn install --immutable || yarn install
 
+      - name: Prepare config
+        shell: bash
+        run: |
+          cp -f src/config.example.json src/config.json
+
       - name: Build
         run: yarn build
 
