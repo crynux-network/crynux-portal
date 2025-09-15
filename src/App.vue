@@ -240,8 +240,13 @@ function confirmSignOut() {
 }
 
 onMounted(async () => {
-  await refreshAccountAndBalance()
   const provider = window.ethereum
+  if (provider) {
+    try {
+      await wallet.ensureNetworkOnWallet(wallet.selectedNetworkKey)
+    } catch (e) { messageApi.error("Couldn't set the selected network automatically. Please refresh and try again.") }
+  }
+  await refreshAccountAndBalance()
   if (provider) {
     let accountChangeTimer = null
     provider.on('accountsChanged', async () => {
