@@ -291,9 +291,16 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 					formattedFee = ''
 				}
 			}
-			const hasBenefit = !!(record && typeof record.benefit_address === 'string' && record.benefit_address.trim() !== '')
-			const toType = hasBenefit ? 'Beneficial' : 'Operational'
-			const toTypeColor = hasBenefit ? 'green' : 'red'
+			const benefitAddrStr = (record && record.benefit_address) || ''
+			const opAddrStr = wallet.address || ''
+			const hasBenefit = !!(typeof benefitAddrStr === 'string' && benefitAddrStr.trim() !== '')
+			const isSameAsOperational = hasBenefit && opAddrStr && String(benefitAddrStr).toLowerCase() === String(opAddrStr).toLowerCase()
+			let toType = hasBenefit ? 'Beneficial' : 'Operational'
+			let toTypeColor = hasBenefit ? 'green' : 'red'
+			if (isSameAsOperational) {
+				toType = 'To operational'
+				toTypeColor = 'red'
+			}
 			return {
 				...record,
 				time: formatTimestamp(record && (record.created_at)),
@@ -420,14 +427,14 @@ const submitWithdraw = async () => {
         return
     }
 
-    const benefit = destinationAddress.value
+    const benefitToSend = (benefitAddress.value && !isZeroAddress(benefitAddress.value)) ? benefitAddress.value : wallet.address
 
     isWithdrawSubmitting.value = true
     try {
         await wallet.ensureNetworkOnWallet()
         const provider = window.ethereum
         const timestamp = Math.floor(Date.now() / 1000)
-        const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefit} on ${wallet.selectedNetworkKey}`
+        const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefitToSend} on ${wallet.selectedNetworkKey}`
         const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${wallet.address}\nTimestamp: ${timestamp}`
         const signature = await provider.request({
             method: 'personal_sign',
@@ -437,7 +444,7 @@ const submitWithdraw = async () => {
         await walletAPI.withdraw(
             wallet.address,
             amountWeiStr,
-            benefit,
+            benefitToSend,
             wallet.selectedNetworkKey,
             timestamp,
             signature

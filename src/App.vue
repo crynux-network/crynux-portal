@@ -164,7 +164,15 @@ function authenticate(options = { navigate: false }) {
           }
         })
     })
-    .catch(() => {
+    .catch(async () => {
+      try {
+        await provider.request({
+          method: 'wallet_revokePermissions',
+          params: [{ eth_accounts: {} }]
+        })
+      } catch (e) { void 0 }
+      wallet.setAccount(null)
+      wallet.setBalanceWei('0x0')
       auth.clearSession()
       messageApi.error('Authentication failed or was rejected')
     })
