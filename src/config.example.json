@@ -1,40 +1,36 @@
 {
-    "relay_url": "https://staging.relay.crynux.io",
+    "relay_url": "https://relay.crynux.io",
     "networks": {
         "dymension": {
             "chainId": "10000",
             "chainName": "Crynux on Dymension",
             "rpcUrls": [
-                "https://json-rpc.testnet.crynux.io"
+                "https://json-rpc.testnet-dym.crynux.io"
             ],
             "nativeCurrency": {
                 "name": "Crynux",
                 "symbol": "CNX",
                 "decimals": 18
             },
-            "blockExplorerUrls": [
-                ""
-            ],
+            "blockExplorerUrls": [],
             "benefitContractAddress": "0x3ec8130af8f71C134F3f59702E58BC6F8F0e9099"
         },
         "near": {
             "chainId": "1313161574",
             "chainName": "Crynux on Near",
             "rpcUrls": [
-                "https://rpc-0x4e454166.aurora-cloud.dev"
+                "https://json-rpc.testnet-near.crynux.io"
             ],
             "nativeCurrency": {
                 "name": "Crynux",
                 "symbol": "CNX",
                 "decimals": 18
             },
-            "blockExplorerUrls": [
-                ""
-            ],
-            "benefitContractAddress": ""
+            "blockExplorerUrls": [],
+            "benefitContractAddress": "0x06aCfA4867C94F97F55De91B257a28480DE8D3b1"
         }
     },
     "default_network": "dymension",
-    "withdrawal_fee": 20,
+    "withdrawal_fee": 100,
     "withdrawal_min": 10000
 }

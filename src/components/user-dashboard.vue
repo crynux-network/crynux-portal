@@ -8,6 +8,7 @@ import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined 
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
 import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
+import moment from 'moment'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -233,6 +234,14 @@ const getNetworkTagColor = (n) => {
 	return undefined
 }
 
+const formatTimestamp = (t) => {
+	if (t === undefined || t === null || t === '') return ''
+	const n = Number(t)
+	if (!Number.isFinite(n)) return String(t)
+	const seconds = n > 1e12 ? Math.floor(n / 1000) : Math.floor(n)
+	return moment.unix(seconds).format('YYYY-MM-DD HH:mm')
+}
+
 async function refreshDashboard() {
 	if (!wallet.address) {
 		benefitAddress.value = ''
@@ -271,7 +280,7 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 					formattedAmount = ''
 				}
 			}
-			const rawFee = record && (record.withdrawal_fee ?? record.fee ?? record.withdraw_fee ?? record.service_fee)
+			const rawFee = record && record.withdrawal_fee
 			const hasFee = rawFee !== undefined && rawFee !== null
 			let formattedFee = ''
 			if (hasFee) {
@@ -282,19 +291,26 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 					formattedFee = ''
 				}
 			}
-			const hasBenefit = !!(record && typeof record.benefit_address === 'string' && record.benefit_address.trim() !== '')
-			const toType = hasBenefit ? 'Beneficial' : 'Operational'
-			const toTypeColor = hasBenefit ? 'green' : 'red'
+			const benefitAddrStr = (record && record.benefit_address) || ''
+			const opAddrStr = wallet.address || ''
+			const hasBenefit = !!(typeof benefitAddrStr === 'string' && benefitAddrStr.trim() !== '')
+			const isSameAsOperational = hasBenefit && opAddrStr && String(benefitAddrStr).toLowerCase() === String(opAddrStr).toLowerCase()
+			let toType = hasBenefit ? 'Beneficial' : 'Operational'
+			let toTypeColor = hasBenefit ? 'green' : 'red'
+			if (isSameAsOperational) {
+				toType = 'To operational'
+				toTypeColor = 'red'
+			}
 			return {
 				...record,
-				time: (record && (record.time || record.created_at)) || '',
+				time: formatTimestamp(record && (record.created_at)),
 				amount: hasAmount ? ("CNX " + formattedAmount) : '',
 				withdrawal_fee: hasFee ? ("CNX " + formattedFee) : '',
 				network: formatNetworkName((record && record.network) || ''),
 				status: (record && (record.status ?? '')),
 				to_type: toType,
 				to_type_color: toTypeColor,
-				tx_hash: (record && (record.tx_hash || record.txHash)) || '',
+				tx_hash: (record && (record.tx_hash)) || '',
 			}
 		});
 		withdrawalsPagination.value.total = res.total;
@@ -411,14 +427,14 @@ const submitWithdraw = async () => {
         return
     }
 
-    const benefit = destinationAddress.value
+    const benefitToSend = (benefitAddress.value && !isZeroAddress(benefitAddress.value)) ? benefitAddress.value : wallet.address
 
     isWithdrawSubmitting.value = true
     try {
         await wallet.ensureNetworkOnWallet()
         const provider = window.ethereum
         const timestamp = Math.floor(Date.now() / 1000)
-        const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefit} on ${wallet.selectedNetworkKey}`
+        const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefitToSend} on ${wallet.selectedNetworkKey}`
         const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${wallet.address}\nTimestamp: ${timestamp}`
         const signature = await provider.request({
             method: 'personal_sign',
@@ -428,7 +444,7 @@ const submitWithdraw = async () => {
         await walletAPI.withdraw(
             wallet.address,
             amountWeiStr,
-            benefit,
+            benefitToSend,
             wallet.selectedNetworkKey,
             timestamp,
             signature

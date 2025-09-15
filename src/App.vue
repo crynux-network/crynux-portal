@@ -164,7 +164,15 @@ function authenticate(options = { navigate: false }) {
           }
         })
     })
-    .catch(() => {
+    .catch(async () => {
+      try {
+        await provider.request({
+          method: 'wallet_revokePermissions',
+          params: [{ eth_accounts: {} }]
+        })
+      } catch (e) { void 0 }
+      wallet.setAccount(null)
+      wallet.setBalanceWei('0x0')
       auth.clearSession()
       messageApi.error('Authentication failed or was rejected')
     })
@@ -193,8 +201,12 @@ async function connect() {
 }
 
 async function changeNetwork(val) {
+  const switched = await wallet.ensureNetworkOnWallet(val)
+  if (!switched) {
+    messageApi.error('Failed to switch network in wallet')
+    return
+  }
   wallet.setSelectedNetwork(val)
-  await wallet.ensureNetworkOnWallet(val)
   await refreshAccountAndBalance()
 }
 

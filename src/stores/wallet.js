@@ -53,10 +53,24 @@ export const useWalletStore = defineStore('wallet', {
 			} catch (err) {
 				if (err && err.code === 4902) {
 					try {
-						const addParams = { ...net, chainId: hexId }
+						const rpcUrls = Array.isArray(net.rpcUrls) ? net.rpcUrls.filter(Boolean) : []
+						const blockExplorerUrlsRaw = Array.isArray(net.blockExplorerUrls) ? net.blockExplorerUrls.filter(Boolean) : []
+						const addParams = {
+							chainId: hexId,
+							chainName: net.chainName,
+							nativeCurrency: net.nativeCurrency,
+							rpcUrls
+						}
+						if (blockExplorerUrlsRaw.length) {
+							addParams.blockExplorerUrls = blockExplorerUrlsRaw
+						}
 						await provider.request({
 							method: 'wallet_addEthereumChain',
 							params: [addParams]
+						})
+						await provider.request({
+							method: 'wallet_switchEthereumChain',
+							params: [{ chainId: hexId }]
 						})
 						return true
 					} catch (_) {
