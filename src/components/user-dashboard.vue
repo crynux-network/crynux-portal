@@ -32,10 +32,10 @@ const tokenSymbol = computed(() => {
 	return (config.networks[key] && config.networks[key].nativeCurrency && config.networks[key].nativeCurrency.symbol) || ''
 })
 
-const formattedBalance = computed(() => {
-	const hex = wallet.balanceWei || '0x0'
+const formatWeiHexToDisplay = (hex) => {
+	const h = hex || '0x0'
 	let bn = 0n
-	try { bn = BigInt(hex) } catch { bn = 0n }
+	try { bn = BigInt(h) } catch { bn = 0n }
 	const d = BigInt((config.networks[wallet.selectedNetworkKey]?.nativeCurrency?.decimals) ?? 18)
 	const decimals = d > 0n ? d : 18n
 	const base = 10n ** decimals
@@ -51,6 +51,15 @@ const formattedBalance = computed(() => {
 	}
 	const fracStr = fraction.toString().padStart(6, '0')
 	return `${integer.toString()}.${fracStr}`
+}
+
+const formattedBalance = computed(() => {
+	return formatWeiHexToDisplay(wallet.balanceWei)
+})
+
+const benefitBalanceWei = ref('0x0')
+const formattedBenefitBalance = computed(() => {
+	return formatWeiHexToDisplay(benefitBalanceWei.value)
 })
 
 const abi = [
@@ -245,6 +254,7 @@ const formatTimestamp = (t) => {
 async function refreshDashboard() {
 	if (!wallet.address) {
 		benefitAddress.value = ''
+        benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
 		withdrawals.value = []
 		return
@@ -253,11 +263,17 @@ async function refreshDashboard() {
 	const hasMismatch = !!(sessionAddr && sessionAddr.toLowerCase() !== String(wallet.address).toLowerCase())
 	if (!auth.isAuthenticated || hasMismatch) {
 		benefitAddress.value = ''
+        benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
 		withdrawals.value = []
 		return
 	}
-	await fetchBenefitAddress()
+    await fetchBenefitAddress()
+    if (benefitAddress.value && !isZeroAddress(benefitAddress.value)) {
+        await fetchBenefitBalance()
+    } else {
+        benefitBalanceWei.value = '0x0'
+    }
 	await fetchRelayBalance()
 	await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
 }
@@ -369,6 +385,20 @@ const fetchBenefitAddress = async () => {
 	}
 }
 
+const fetchBenefitBalance = async () => {
+    if (!window.ethereum) return
+    const addr = benefitAddress.value
+    if (!addr || isZeroAddress(addr)) return
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        const bn = await provider.getBalance(addr)
+        const hex = '0x' + bn.toString(16)
+        benefitBalanceWei.value = hex
+    } catch (e) {
+        console.error(e)
+    }
+}
+
 const openSetModal = () => {
 	inputBenefitAddress.value = ''
 	isModalOpen.value = true
@@ -398,6 +428,7 @@ const submitSetBenefit = async () => {
 		message.success('Beneficial address set')
 		isModalOpen.value = false
 		await fetchBenefitAddress()
+		await fetchBenefitBalance()
 	} catch (e) {
 		message.error('Failed to set address')
 	} finally {
@@ -475,7 +506,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value, a
 			<a-row :gutter="[16, 16]" align="stretch">
 				<a-col :span="16" style="display: flex; flex-direction: column">
 					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
-						<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }">
+						<a-descriptions :column="1" bordered :label-style="{ 'width': '240px' }">
 							<a-descriptions-item label="Network">{{ networkName }}</a-descriptions-item>
 							<a-descriptions-item label="Address">{{ wallet.address }}</a-descriptions-item>
 							<a-descriptions-item label="Balance">{{ tokenSymbol }} {{ formattedBalance }}</a-descriptions-item>
@@ -506,12 +537,16 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value, a
 									</template>
 								</div>
 							</a-descriptions-item>
+						<a-descriptions-item label="Beneficial Address Balance">
+							<template v-if="benefitAddress && !isZeroAddress(benefitAddress)">{{ tokenSymbol }} {{ formattedBenefitBalance }}</template>
+							<template v-else>-</template>
+						</a-descriptions-item>
 						</a-descriptions>
 					</a-card>
 				</a-col>
 				<a-col :span="8" style="display: flex; flex-direction: column">
 					<a-card :title="`Relay Account`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1; display: flex; flex-direction: column" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, paddingBottom: '32px' }">
-						<a-row justify="center" style="margin-top: 24px;">
+							<a-row justify="center" style="margin-top: 48px;">
 							<a-col>
 								<a-statistic title="Balance (CNX)" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
 							</a-col>
