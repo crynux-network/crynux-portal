@@ -4,6 +4,9 @@ import { useWalletStore } from '@/stores/wallet'
 import { useAuthStore } from '@/stores/auth'
 import config from '@/config.json'
 import { ethers } from 'ethers'
+import beneficialAbi from '@/abi/beneficial-address.json'
+import nodeStakingAbi from '@/abi/node-staking.json'
+import creditsAbi from '@/abi/credits.json'
 import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
@@ -19,52 +22,88 @@ const networkName = computed(() => {
 	return (config.networks[key] && config.networks[key].chainName) || key
 })
 
-const currentNetwork = computed(() => {
-	return config.networks[wallet.selectedNetworkKey] || {}
+const beneficialAddressContractAddress = computed(() => {
+    return config.networks[wallet.selectedNetworkKey].contracts.beneficialAddress
 })
 
-const contractAddress = computed(() => {
-	return currentNetwork.value?.benefitContractAddress || ''
+const nodeStakingContractAddress = computed(() => {
+    return config.networks[wallet.selectedNetworkKey].contracts.nodeStaking
 })
 
-const tokenSymbol = computed(() => {
-	const key = wallet.selectedNetworkKey
-	return (config.networks[key] && config.networks[key].nativeCurrency && config.networks[key].nativeCurrency.symbol) || ''
+const creditsContractAddress = computed(() => {
+    return config.networks[wallet.selectedNetworkKey].contracts.credits
 })
+
+// removed tokenSymbol in favor of fixed 'CNX' labels in UI
+
+const formatWeiHexToDisplay = (hex) => {
+	const h = hex || '0x0'
+	let bn = 0n
+	try { bn = BigInt(h) } catch { bn = 0n }
+	return formatBigInt18(bn)
+}
+
+const formatBigInt18 = (value) => {
+    let bn = 0n
+    try {
+        if (typeof value === 'bigint') bn = value
+        else if (typeof value === 'string') bn = BigInt(value)
+        else if (typeof value === 'number') bn = BigInt(Math.floor(Math.max(0, value)))
+    } catch { bn = 0n }
+    const d = 18n
+    const base = 10n ** d
+    const integer = bn / base
+    const target = 6n
+    let fraction = 0n
+    if (d >= target) {
+        const scaleDown = 10n ** (d - target)
+        fraction = (bn % base) / scaleDown
+    } else {
+        const scaleUp = 10n ** (target - d)
+        fraction = (bn % base) * scaleUp
+    }
+    const intStrRaw = integer.toString()
+    const intStr = intStrRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    const fracStr = fraction.toString().padStart(6, '0')
+    return `${intStr}.${fracStr}`
+}
 
 const formattedBalance = computed(() => {
-	const hex = wallet.balanceWei || '0x0'
-	let bn = 0n
-	try { bn = BigInt(hex) } catch { bn = 0n }
-	const d = BigInt((config.networks[wallet.selectedNetworkKey]?.nativeCurrency?.decimals) ?? 18)
-	const decimals = d > 0n ? d : 18n
-	const base = 10n ** decimals
-	const integer = bn / base
-	const target = 6n
-	let fraction = 0n
-	if (decimals >= target) {
-		const scaleDown = 10n ** (decimals - target)
-		fraction = (bn % base) / scaleDown
-	} else {
-		const scaleUp = 10n ** (target - decimals)
-		fraction = (bn % base) * scaleUp
-	}
-	const fracStr = fraction.toString().padStart(6, '0')
-	return `${integer.toString()}.${fracStr}`
+	return formatWeiHexToDisplay(wallet.balanceWei)
 })
 
-const abi = [
-	{ "inputs": [], "stateMutability": "nonpayable", "type": "constructor" },
-	{ "inputs": [ { "internalType": "address", "name": "owner", "type": "address" } ], "name": "OwnableInvalidOwner", "type": "error" },
-	{ "inputs": [ { "internalType": "address", "name": "account", "type": "address" } ], "name": "OwnableUnauthorizedAccount", "type": "error" },
-	{ "anonymous": false, "inputs": [ { "indexed": true, "internalType": "address", "name": "nodeAddress", "type": "address" }, { "indexed": true, "internalType": "address", "name": "benefitAddress", "type": "address" } ], "name": "BenefitAddressSet", "type": "event" },
-	{ "anonymous": false, "inputs": [ { "indexed": true, "internalType": "address", "name": "previousOwner", "type": "address" }, { "indexed": true, "internalType": "address", "name": "newOwner", "type": "address" } ], "name": "OwnershipTransferred", "type": "event" },
-	{ "inputs": [ { "internalType": "address", "name": "nodeAddress", "type": "address" } ], "name": "getBenefitAddress", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
-	{ "inputs": [], "name": "owner", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" },
-	{ "inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-	{ "inputs": [ { "internalType": "address", "name": "benefitAddress", "type": "address" } ], "name": "setBenefitAddress", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-	{ "inputs": [ { "internalType": "address", "name": "newOwner", "type": "address" } ], "name": "transferOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
-]
+const benefitBalanceWei = ref('0x0')
+const formattedBenefitBalance = computed(() => {
+	return formatWeiHexToDisplay(benefitBalanceWei.value)
+})
+
+const stakedBalanceWei = ref('0x0')
+const stakedCredits = ref(0n)
+const formattedStakedBalance = computed(() => {
+    return formatWeiHexToDisplay(stakedBalanceWei.value)
+})
+const formattedStakedCredits = computed(() => {
+    return formatBigInt18(stakedCredits.value)
+})
+const isFetchingStake = ref(false)
+const hasStakeInfoLoaded = ref(false)
+
+const creditsBalance = ref(0n)
+const formattedCreditsBalance = computed(() => {
+    return formatBigInt18(creditsBalance.value)
+})
+const isFetchingCredits = ref(false)
+const hasCreditsLoaded = ref(false)
+
+const abi = beneficialAbi
+
+function createReadProvider() {
+	const net = config.networks[wallet.selectedNetworkKey]
+	const urls = (net && Array.isArray(net.rpcUrls)) ? net.rpcUrls : []
+	const url = urls[0]
+	if (!url) throw new Error('No RPC URL configured for network')
+	return new ethers.JsonRpcProvider(url)
+}
 
 const benefitAddress = ref('')
 const isFetchingBenefit = ref(false)
@@ -245,7 +284,13 @@ const formatTimestamp = (t) => {
 async function refreshDashboard() {
 	if (!wallet.address) {
 		benefitAddress.value = ''
+        benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
+        stakedBalanceWei.value = '0x0'
+        stakedCredits.value = '0'
+        hasStakeInfoLoaded.value = false
+        creditsBalance.value = '0'
+        hasCreditsLoaded.value = false
 		withdrawals.value = []
 		return
 	}
@@ -253,11 +298,24 @@ async function refreshDashboard() {
 	const hasMismatch = !!(sessionAddr && sessionAddr.toLowerCase() !== String(wallet.address).toLowerCase())
 	if (!auth.isAuthenticated || hasMismatch) {
 		benefitAddress.value = ''
+        benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
+        stakedBalanceWei.value = '0x0'
+        stakedCredits.value = '0'
+        hasStakeInfoLoaded.value = false
+        creditsBalance.value = '0'
+        hasCreditsLoaded.value = false
 		withdrawals.value = []
 		return
 	}
-	await fetchBenefitAddress()
+    await fetchBenefitAddress()
+    if (benefitAddress.value && !isZeroAddress(benefitAddress.value)) {
+        await fetchBenefitBalance()
+    } else {
+        benefitBalanceWei.value = '0x0'
+    }
+    await fetchNodeStakingInfo()
+    await fetchCreditsBalance()
 	await fetchRelayBalance()
 	await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
 }
@@ -345,19 +403,14 @@ const isZeroAddress = (addr) => {
 const fetchBenefitAddress = async () => {
 	benefitError.value = ''
 	isFetchingBenefit.value = true
-	if (!contractAddress.value) {
-		benefitError.value = 'Failed to load. Please refresh the page.'
-		isFetchingBenefit.value = false
-		return
-	}
-	if (!wallet.address || !window.ethereum) {
+	if (!wallet.address) {
 		benefitAddress.value = ''
 		isFetchingBenefit.value = false
 		return
 	}
 	try {
-		const provider = new ethers.BrowserProvider(window.ethereum)
-		const contract = new ethers.Contract(contractAddress.value, abi, provider)
+		const provider = createReadProvider()
+		const contract = new ethers.Contract(beneficialAddressContractAddress.value, abi, provider)
 		const addr = await contract.getBenefitAddress(wallet.address)
 		benefitAddress.value = addr
 	} catch (e) {
@@ -367,6 +420,80 @@ const fetchBenefitAddress = async () => {
 	} finally {
 		isFetchingBenefit.value = false
 	}
+}
+
+const fetchBenefitBalance = async () => {
+	const addr = benefitAddress.value
+	if (!addr || isZeroAddress(addr)) return
+	try {
+		const provider = createReadProvider()
+		const bn = await provider.getBalance(addr)
+		const hex = '0x' + bn.toString(16)
+		benefitBalanceWei.value = hex
+	} catch (e) {
+		console.error(e)
+	}
+}
+
+const fetchNodeStakingInfo = async () => {
+    hasStakeInfoLoaded.value = false
+    if (!wallet.address || !nodeStakingContractAddress.value) {
+        stakedBalanceWei.value = '0x0'
+        stakedCredits.value = 0n
+        return
+    }
+    isFetchingStake.value = true
+    try {
+        const provider = createReadProvider()
+        const contract = new ethers.Contract(nodeStakingContractAddress.value, nodeStakingAbi, provider)
+        const res = await contract.getStakingInfo(wallet.address)
+        const balanceRaw = (res && (res.stakedBalance ?? res[1])) || 0n
+        const creditsRaw = (res && (res.stakedCredits ?? res[2])) || 0n
+        let balanceHex = '0x0'
+        try {
+            balanceHex = '0x' + balanceRaw.toString(16)
+        } catch {
+            balanceHex = '0x0'
+        }
+        stakedBalanceWei.value = balanceHex
+        try {
+            stakedCredits.value = (typeof creditsRaw === 'bigint') ? creditsRaw : BigInt(creditsRaw ?? 0)
+        } catch {
+            stakedCredits.value = 0n
+        }
+    } catch (e) {
+        console.error(e)
+        stakedBalanceWei.value = '0x0'
+        stakedCredits.value = 0n
+    } finally {
+        isFetchingStake.value = false
+        hasStakeInfoLoaded.value = true
+    }
+}
+
+const fetchCreditsBalance = async () => {
+    hasCreditsLoaded.value = false
+    if (!wallet.address || !creditsContractAddress.value) {
+        creditsBalance.value = 0n
+        return
+    }
+    isFetchingCredits.value = true
+    try {
+        const provider = createReadProvider()
+        const contract = new ethers.Contract(creditsContractAddress.value, creditsAbi, provider)
+        const res = await contract.getCredits(wallet.address)
+        try {
+            creditsBalance.value = (typeof res === 'bigint') ? res : BigInt(res ?? 0)
+        } catch {
+            creditsBalance.value = 0n
+        }
+    } catch (e) {
+        console.error(e)
+        creditsBalance.value = 0n
+    } finally {
+        isFetchingCredits.value = false
+        hasCreditsLoaded.value = true
+    }
 }
 
 const openSetModal = () => {
@@ -379,7 +506,7 @@ const submitSetBenefit = async () => {
 		message.error('No wallet provider')
 		return
 	}
-	if (!contractAddress.value) {
+	if (!beneficialAddressContractAddress.value) {
 		message.error('Contract not configured')
 		return
 	}
@@ -392,12 +519,13 @@ const submitSetBenefit = async () => {
 		await wallet.ensureNetworkOnWallet()
 		const provider = new ethers.BrowserProvider(window.ethereum)
 		const signer = await provider.getSigner()
-		const contract = new ethers.Contract(contractAddress.value, abi, signer)
+		const contract = new ethers.Contract(beneficialAddressContractAddress.value, abi, signer)
 		const tx = await contract.setBenefitAddress(inputBenefitAddress.value)
 		await tx.wait()
 		message.success('Beneficial address set')
 		isModalOpen.value = false
 		await fetchBenefitAddress()
+		await fetchBenefitBalance()
 	} catch (e) {
 		message.error('Failed to set address')
 	} finally {
@@ -463,7 +591,7 @@ onMounted(async () => {
 	await refreshDashboard()
 })
 
-watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
+watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
 	await refreshDashboard()
 })
 </script>
@@ -475,10 +603,22 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value, a
 			<a-row :gutter="[16, 16]" align="stretch">
 				<a-col :span="16" style="display: flex; flex-direction: column">
 					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
-						<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }">
-							<a-descriptions-item label="Network">{{ networkName }}</a-descriptions-item>
-							<a-descriptions-item label="Address">{{ wallet.address }}</a-descriptions-item>
-							<a-descriptions-item label="Balance">{{ tokenSymbol }} {{ formattedBalance }}</a-descriptions-item>
+						<a-descriptions :column="2" bordered :label-style="{ 'width': '160px' }">
+							<a-descriptions-item :span="2" label="Network">{{ networkName }}</a-descriptions-item>
+							<a-descriptions-item :span="2" label="Address">{{ wallet.address }}</a-descriptions-item>
+							<a-descriptions-item label="CNX Balance"><span>{{ formattedBalance }}</span></a-descriptions-item>
+							<a-descriptions-item label="CNX Staked">
+								<template v-if="hasStakeInfoLoaded"><span>{{ formattedStakedBalance }}</span></template>
+								<template v-else>Loading...</template>
+							</a-descriptions-item>
+							<a-descriptions-item label="Credits Balance">
+								<template v-if="hasCreditsLoaded">{{ formattedCreditsBalance }}</template>
+								<template v-else>Loading...</template>
+							</a-descriptions-item>
+							<a-descriptions-item label="Credits Staked">
+								<template v-if="hasStakeInfoLoaded">{{ formattedStakedCredits }}</template>
+								<template v-else>Loading...</template>
+							</a-descriptions-item>
 							<a-descriptions-item>
 								<template #label>
 									<span style="display: inline-flex; align-items: center; white-space: nowrap;">
@@ -498,7 +638,10 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value, a
 									<span v-if="isFetchingBenefit">Loading...</span>
 									<template v-else>
 										<span v-if="benefitError" style="color: #d4380d;">{{ benefitError }}</span>
-										<span v-else-if="benefitAddress && !isZeroAddress(benefitAddress)">{{ benefitAddress }}</span>
+										<span v-else-if="benefitAddress && !isZeroAddress(benefitAddress)">
+											{{ benefitAddress }}
+											<span style="margin-left: 8px;">(Balance: CNX {{ formattedBenefitBalance }})</span>
+										</span>
 										<span v-else>
 											<span style="margin-right: 8px;">Not set</span>
 											<a-button type="primary" size="small" @click="openSetModal">Set Beneficial Address</a-button>
@@ -506,12 +649,13 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, contractAddress.value, a
 									</template>
 								</div>
 							</a-descriptions-item>
+
 						</a-descriptions>
 					</a-card>
 				</a-col>
 				<a-col :span="8" style="display: flex; flex-direction: column">
 					<a-card :title="`Relay Account`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1; display: flex; flex-direction: column" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, paddingBottom: '32px' }">
-						<a-row justify="center" style="margin-top: 24px;">
+							<a-row justify="center" style="margin-top: 48px;">
 							<a-col>
 								<a-statistic title="Balance (CNX)" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
 							</a-col>
