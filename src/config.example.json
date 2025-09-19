@@ -13,7 +13,11 @@
                 "decimals": 18
             },
             "blockExplorerUrls": [],
-            "benefitContractAddress": "0x3ec8130af8f71C134F3f59702E58BC6F8F0e9099"
+            "contracts": {
+                "beneficialAddress": "0x3ec8130af8f71C134F3f59702E58BC6F8F0e9099",
+                "nodeStaking": "0xb030d5D8fF00159636F9198092Dda8f1f32F520C",
+                "credits": "0x8fA78AFD382c123Ee49150874D8D12cc73437631"
+            }
         },
         "near": {
             "chainId": "1313161574",
@@ -27,10 +31,16 @@
                 "decimals": 18
             },
             "blockExplorerUrls": [],
-            "benefitContractAddress": "0x06aCfA4867C94F97F55De91B257a28480DE8D3b1"
+            "contracts": {
+                "beneficialAddress": "0x06aCfA4867C94F97F55De91B257a28480DE8D3b1",
+                "nodeStaking": "0xE15b5DD09f9867C8dD0FbC0f57216b440300c99d",
+                "credits": "0xB47E277aE7Cbb93949D7202b6e29e33f541EC262"
+            }
         }
     },
     "default_network": "dymension",
     "withdrawal_fee": 100,
-    "withdrawal_min": 10000
+    "withdrawal_min": 10000,
+    "deposit_address": "",
+    "deposit_min": 1000
 }
