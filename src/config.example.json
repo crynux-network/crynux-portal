@@ -42,5 +42,13 @@
     "withdrawal_fee": 100,
     "withdrawal_min": 10000,
     "deposit_address": "",
-    "deposit_min": 1000
+    "deposit_min": 1000,
+    "social_links": {
+        "twitter": "https://x.com/crynuxio",
+        "discord": "https://discord.gg/Ug2AHUbrrm",
+        "github": "https://github.com/crynux-network",
+        "blog": "https://blog.crynux.io",
+        "docs": "https://docs.crynux.io",
+        "home": "https://crynux.io"
+    }
 }

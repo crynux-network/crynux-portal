@@ -338,29 +338,29 @@ onBeforeUnmount(() => {
             <a-col :span="20" :offset="2">
               <div class="bottom-bar">
                 <a-space class="footer-links">
-                  <a-typography-link href="https://crynux.io" target="_blank"
+                  <a-typography-link :href="config.social_links.home" target="_blank"
                     >Home</a-typography-link
                   >
                   &nbsp;|&nbsp;
-                  <a-typography-link href="https://docs.crynux.io" target="_blank"
+                  <a-typography-link :href="config.social_links.docs" target="_blank"
                     >Docs</a-typography-link
                   >
                   &nbsp;|&nbsp;
-                  <a-typography-link href="https://blog.crynux.io" target="_blank"
+                  <a-typography-link :href="config.social_links.blog" target="_blank"
                     >Blog</a-typography-link
                   >
                   &nbsp;|&nbsp;
-                  <a-typography-link href="https://x.com/crynuxio" target="_blank"
+                  <a-typography-link :href="config.social_links.twitter" target="_blank"
                     >Twitter
                   </a-typography-link>
                   &nbsp;|&nbsp;
-                  <a-typography-link href="https://discord.gg/Ug2AHUbrrm" target="_blank"
+                  <a-typography-link :href="config.social_links.discord" target="_blank"
                     >Discord
                   </a-typography-link>
                   &nbsp;|&nbsp;
                   <!-- Place this tag where you want the button to render. -->
                   <github-button
-                    href="https://github.com/crynux-network/crynux-node"
+                    :href="config.social_links.github + '/crynux-node'"
                     data-color-scheme="no-preference: light; light: light; dark: light;"
                     data-show-count="true"
                     aria-label="Star Crynux Node on GitHub"

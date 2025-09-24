@@ -34,8 +34,6 @@ const creditsContractAddress = computed(() => {
     return config.networks[wallet.selectedNetworkKey].contracts.credits
 })
 
-// removed tokenSymbol in favor of fixed 'CNX' labels in UI
-
 const formatWeiHexToDisplay = (hex) => {
 	const h = hex || '0x0'
 	let bn = 0n
@@ -611,10 +609,24 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 								<template v-if="hasStakeInfoLoaded"><span>{{ formattedStakedBalance }}</span></template>
 								<template v-else>Loading...</template>
 							</a-descriptions-item>
-							<a-descriptions-item label="Credits Balance">
-								<template v-if="hasCreditsLoaded">{{ formattedCreditsBalance }}</template>
-								<template v-else>Loading...</template>
-							</a-descriptions-item>
+                            <a-descriptions-item>
+                                <template #label>
+                                    <span style="display: inline-flex; align-items: center; white-space: nowrap;">
+                                        <span>Credits Balance</span>
+                                        <a-popover placement="right">
+                                            <template #content>
+                                                <div style="max-width: 300px;">
+                                                    <div>Credits are special node credits that can only be used to start a node. In the Node WebUI, they are combined with your CNX and displayed as CNX Balance or CNX Staked under Node Wallet. Credits are non-transferable. If your node is slashed, credits may be deducted. If credits are depleted, you will need regular CNX to start a node.</div>
+                                                    <div style="margin-top: 8px;">You can get free Credits in our <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>.</div>
+                                                </div>
+                                            </template>
+                                            <QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+                                        </a-popover>
+                                    </span>
+                                </template>
+                                <template v-if="hasCreditsLoaded">{{ formattedCreditsBalance }}</template>
+                                <template v-else>Loading...</template>
+                            </a-descriptions-item>
 							<a-descriptions-item label="Credits Staked">
 								<template v-if="hasStakeInfoLoaded">{{ formattedStakedCredits }}</template>
 								<template v-else>Loading...</template>
