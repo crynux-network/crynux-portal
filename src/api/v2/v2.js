@@ -59,6 +59,7 @@ class V2Client {
     )
 
     this.apiForbiddenErrorHandler = null
+    this.apiUnauthorizedErrorHandler = null
     this.apiServerErrorHandler = null
     this.apiUnknownErrorHandler = null
   }
@@ -94,6 +95,12 @@ class V2Client {
       return Promise.reject(new ApiError(ApiError.Type.Validation, errorData.detail))
     } else if (status === 422) {
       return Promise.reject(new ApiError(ApiError.Type.Validation, errorData.detail[0].msg))
+    } else if (status === 401) {
+      if (typeof this.apiUnauthorizedErrorHandler === 'function') {
+        let handler = this.apiUnauthorizedErrorHandler
+        handler()
+      }
+      return Promise.reject(new ApiError(ApiError.Type.Unauthorized))
     } else if (status === 403) {
       if (typeof this.apiForbiddenErrorHandler === 'function') {
         let handler = this.apiForbiddenErrorHandler

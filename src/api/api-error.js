@@ -13,6 +13,7 @@ class ApiError extends Error {
 ApiError.Type = {
   Validation: 'Validation Error',
   Server: 'Internal Server Error',
+  Unauthorized: 'Unauthorized Error',
   Forbidden: 'Forbidden Error',
   NotFound: 'Not Found',
   Unknown: 'Unknown Error'

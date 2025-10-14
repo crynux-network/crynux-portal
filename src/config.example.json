@@ -41,7 +41,7 @@
     "default_network": "dymension",
     "withdrawal_fee": 100,
     "withdrawal_min": 10000,
-    "deposit_address": "",
+    "deposit_address": "0x2003D1F047C1948cfE12e449379e3ce487070765",
     "deposit_min": 1000,
     "social_links": {
         "twitter": "https://x.com/crynuxio",

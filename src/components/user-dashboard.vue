@@ -103,6 +103,19 @@ function createReadProvider() {
 	return new ethers.JsonRpcProvider(url)
 }
 
+function isUserRejectedError(err) {
+    const e = err || {}
+    const msg = String(e.message || '').toLowerCase()
+    return (
+        e.code === 4001 ||
+        e.code === 'ACTION_REJECTED' ||
+        (e.info && e.info.error && e.info.error.code === 4001) ||
+        (e.error && e.error.code === 4001) ||
+        msg.includes('user rejected') ||
+        msg.includes('user denied')
+    )
+}
+
 const benefitAddress = ref('')
 const isFetchingBenefit = ref(false)
 const isModalOpen = ref(false)
@@ -115,6 +128,50 @@ const isWithdrawOpen = ref(false)
 const withdrawFormRef = ref()
 const withdrawModel = reactive({ amount: null })
 const isWithdrawSubmitting = ref(false)
+
+// Deposit state
+const isDepositOpen = ref(false)
+const depositFormRef = ref()
+const depositModel = reactive({ amount: null })
+const isDepositSubmitting = ref(false)
+const depositAddress = computed(() => String(config.deposit_address).trim())
+const minDepositCNX = computed(() => {
+    const n = Number(config.deposit_min)
+    return Math.floor(n)
+})
+const maxDepositCNX = computed(() => {
+    return Math.max(0, Math.floor(Number(ethers.formatEther(wallet.balanceWei))))
+})
+const hasDepositValue = computed(() => depositModel.amount !== null && depositModel.amount !== undefined && depositModel.amount !== '')
+const depositAmountError = computed(() => {
+    if (!hasDepositValue.value) return ''
+    const amt = Number(depositModel.amount)
+    if (!Number.isInteger(amt)) return 'Amount must be an integer'
+    if (amt < minDepositCNX.value) return `Minimum is ${minDepositCNX.value} CNX`
+    if (amt > maxDepositCNX.value) return 'Exceeds maximum available'
+    return ''
+})
+const depositValidateStatus = computed(() => (depositAmountError.value ? 'error' : undefined))
+const depositHelpMessage = computed(() => (depositAmountError.value || undefined))
+const isDepositValid = computed(() => {
+    if (!hasDepositValue.value) return false
+    return !depositAmountError.value
+})
+const depositRules = {
+    amount: [
+        {
+            validator: (_rule, value) => {
+                const amt = Number(value)
+                const min = Number(minDepositCNX.value || 0)
+                if (value === null || value === undefined || value === '') return Promise.reject('Enter amount')
+                if (!Number.isInteger(amt)) return Promise.reject('Amount must be an integer')
+                if (amt < min) return Promise.reject(`Minimum is ${min} CNX`)
+                return Promise.resolve()
+            },
+            trigger: ['change', 'blur']
+        }
+    ]
+}
 
 const withdrawRules = {
     amount: [
@@ -539,7 +596,7 @@ const withdrawRelay = async () => {
 const submitWithdraw = async () => {
     const amt = Number(withdrawModel.amount)
 
-    const decimals = (config.networks[wallet.selectedNetworkKey]?.nativeCurrency?.decimals) ?? 18
+    const decimals = config.networks[wallet.selectedNetworkKey].nativeCurrency.decimals
     let amountWeiStr = '0'
     try {
         amountWeiStr = ethers.parseUnits(String(amt), decimals).toString()
@@ -576,9 +633,52 @@ const submitWithdraw = async () => {
         await fetchRelayBalance()
         await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
     } catch (e) {
-        message.error(e?.message || 'Withdraw failed')
+        console.error('Withdraw error:', e)
+        if (isUserRejectedError(e)) {
+            message.error('User rejected')
+        } else {
+            message.error('Withdraw failed')
+        }
     } finally {
         isWithdrawSubmitting.value = false
+    }
+}
+
+const openDeposit = async () => {
+    depositModel.amount = null
+    isDepositOpen.value = true
+}
+
+const submitDeposit = async () => {
+    const amt = Number(depositModel.amount)
+    const decimals = (config.networks[wallet.selectedNetworkKey]?.nativeCurrency?.decimals) ?? 18
+    let valueWei
+    try {
+        valueWei = ethers.parseUnits(String(amt), decimals)
+    } catch (_) {
+        message.error('Invalid amount format')
+        return
+    }
+    isDepositSubmitting.value = true
+    try {
+        await wallet.ensureNetworkOnWallet()
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        const signer = await provider.getSigner()
+        const tx = await signer.sendTransaction({ to: depositAddress.value, value: valueWei })
+        await tx.wait()
+        message.success('Deposit sent')
+        isDepositOpen.value = false
+        await wallet.fetchBalance()
+        await fetchRelayBalance()
+    } catch (e) {
+        console.error('Deposit error:', e)
+        if (isUserRejectedError(e)) {
+            message.error('User rejected')
+        } else {
+            message.error('Deposit failed')
+        }
+    } finally {
+        isDepositSubmitting.value = false
     }
 }
 
@@ -674,8 +774,8 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 						</a-row>
 						<div style="margin-top: auto;">
 							<a-row :gutter="12">
-								<a-col :span="12">
-									<a-button block size="large">Deposit</a-button>
+						<a-col :span="12">
+							<a-button block size="large" @click="openDeposit">Deposit</a-button>
 								</a-col>
 								<a-col :span="12">
 									<a-button block type="primary" size="large" @click="withdrawRelay">Withdraw</a-button>
@@ -748,6 +848,81 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 				</a-form-item>
 			</a-form>
 		</div>
+	</a-modal>
+
+	<a-modal
+		v-model:open="isDepositOpen"
+		:title="'Deposit'"
+		:confirm-loading="isDepositSubmitting"
+		@ok="submitDeposit"
+		:mask-closable="false"
+		:width="720"
+		:ok-text="isDepositSubmitting ? 'Sending' : 'Send'"
+		:cancel-button-props="{ disabled: isDepositSubmitting }"
+		:closable="!isDepositSubmitting"
+		:keyboard="!isDepositSubmitting"
+		:ok-button-props="{ disabled: !isDepositValid }"
+	>
+		<template #title>
+			<span>Deposit</span>
+			<a-tooltip placement="right">
+				<template #title>
+					<span>The deposit will go into the Relay Account associated with this address.<br/>Please ensure the sending address and the target Relay Account address are the same.</span>
+				</template>
+				<QuestionCircleOutlined style="margin-left: 8px; color: #888;" />
+			</a-tooltip>
+		</template>
+		<a-form layout="vertical" :model="depositModel" :rules="depositRules" ref="depositFormRef" :hide-required-mark="true" :style="{ marginTop: '24px', marginBottom: '32px' }">
+			<a-form-item name="amount" :help="depositHelpMessage" :validate-status="depositValidateStatus" :style="{ marginBottom: '32px' }">
+				<a-input-number v-model:value="depositModel.amount" :step="1" :controls="false" :precision="0" style="width: 100%" placeholder="Enter amount" addon-before="CNX" />
+				<template #extra>
+					<a-typography-text type="secondary" style="font-size: 12px; display: block; margin-top: 12px; margin-bottom: 16px;">Min: {{ formatInt(minDepositCNX) }} CNX · Max: {{ formatInt(maxDepositCNX) }} CNX</a-typography-text>
+				</template>
+			</a-form-item>
+		</a-form>
+		<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }" :style="{ marginTop: '32px' }">
+			<a-descriptions-item label="Deposit Amount">
+				<a-statistic :value="isDepositValid ? Math.floor(Number(depositModel.amount)) : 0" :precision="0" :value-style="{ fontSize: '26px', color: '#1677ff' }">
+					<template #suffix>
+						<span style="font-size: 26px; color: #1677ff; margin-left: 4px;"> CNX</span>
+					</template>
+				</a-statistic>
+			</a-descriptions-item>
+			<a-descriptions-item>
+				<template #label>
+					<span style="display: inline-flex; align-items: center; white-space: nowrap;">
+						<span>Send Address</span>
+						<a-tooltip placement="right">
+							<template #title>
+								<span>The deposit will go into the Relay Account associated with this address.</span>
+							</template>
+							<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+						</a-tooltip>
+					</span>
+				</template>
+				<span>{{ wallet.address }}</span>
+			</a-descriptions-item>
+			<a-descriptions-item label="Network">
+				<a-tag :color="getNetworkTagColor(networkName)">{{ networkName }}</a-tag>
+			</a-descriptions-item>
+			<a-descriptions-item>
+				<template #label>
+					<span style="display: inline-flex; align-items: center; white-space: nowrap;">
+						<span>Relay Address</span>
+						<a-tooltip placement="right">
+							<template #title>
+								<span>The system wallet of the Crynux Relay that receives deposits.<br/>To prevent phishing, please verify this address in the Crynux docs or on Discord.</span>
+							</template>
+							<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+						</a-tooltip>
+					</span>
+				</template>
+				<div>
+					<span>{{ depositAddress }}</span>
+					<a-typography-text type="danger" style="font-size: 12px; display: block; margin-top: 6px;">To prevent phishing, please verify this address in the Crynux <a :href="config.social_links.docs" target="_blank" rel="noopener noreferrer">Docs</a> or on <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>.</a-typography-text>
+				</div>
+			</a-descriptions-item>
+		</a-descriptions>
 	</a-modal>
 
 	<a-modal
