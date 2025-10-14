@@ -164,17 +164,18 @@ function authenticate(options = { navigate: false }) {
           }
         })
     })
-    .catch(async () => {
+    .catch(async (e) => {
+      console.error('Authentication error:', e)
       try {
         await provider.request({
           method: 'wallet_revokePermissions',
           params: [{ eth_accounts: {} }]
         })
-      } catch (e) { void 0 }
+      } catch (err) { console.error('Failed to revoke wallet permissions:', err) }
       wallet.setAccount(null)
       wallet.setBalanceWei('0x0')
       auth.clearSession()
-      messageApi.error('Authentication failed or was rejected')
+      try { messageApi.error('Authentication failed or was rejected') } catch (err) { console.error('Failed to show auth error message:', err) }
     })
     .finally(() => {
       isAuthenticating = false
