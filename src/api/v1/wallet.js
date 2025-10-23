@@ -19,6 +19,15 @@ class WalletAPI extends BaseAPI {
         });
     }
 
+    getDeposits(address, page, pageSize) {
+        return v1.get(`/client/${address}/deposit/list`, {
+            params: {
+                page: page,
+                page_size: pageSize,
+            },
+        });
+    }
+
 	withdraw(address, amount, benefitAddress, network, timestamp, signature) {
 		return v1.post(`/client/${address}/withdraw`, {
 			amount: amount,
