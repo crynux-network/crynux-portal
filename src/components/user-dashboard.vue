@@ -1017,7 +1017,10 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 				</template>
 				<div>
 					<span>{{ depositAddress }}</span>
-					<a-typography-text type="danger" style="font-size: 12px; display: block; margin-top: 6px;">To prevent phishing, please verify this address in the Crynux <a :href="config.social_links.docs" target="_blank" rel="noopener noreferrer">Docs</a> or on <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>.</a-typography-text>
+					<a-typography-text type="danger" style="font-size: 12px; display: block; margin-top: 6px;">To prevent phishing, please verify this address in the
+                        <a-typography-link :href="'https://docs.crynux.io/crynux-token/wallet-configuration#deposit-address'" target="_blank" rel="noopener noreferrer">Crynux Docs</a-typography-link> or on
+                        <a-typography-link :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a-typography-link>.
+                    </a-typography-text>
 				</div>
 			</a-descriptions-item>
 		</a-descriptions>
