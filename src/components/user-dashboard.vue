@@ -268,6 +268,14 @@ const withdrawalsPagination = ref({
   total: 0,
 })
 const withdrawalsLoading = ref(false)
+
+const deposits = ref([])
+const depositsPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+})
+const depositsLoading = ref(false)
 const withdrawalColumns = [
   {
     title: "Created At",
@@ -298,6 +306,29 @@ const withdrawalColumns = [
     title: "Status",
     dataIndex: "status",
     key: "status",
+  },
+  {
+    title: "Tx Hash",
+    dataIndex: "tx_hash",
+    key: "tx_hash",
+  },
+]
+
+const depositColumns = [
+  {
+    title: "Created At",
+    dataIndex: "time",
+    key: "time",
+  },
+  {
+    title: "Amount",
+    dataIndex: "amount",
+    key: "amount",
+  },
+  {
+    title: "Network",
+    dataIndex: "network",
+    key: "network",
   },
   {
     title: "Tx Hash",
@@ -347,6 +378,7 @@ async function refreshDashboard() {
         creditsBalance.value = '0'
         hasCreditsLoaded.value = false
 		withdrawals.value = []
+		deposits.value = []
 		return
 	}
 	const sessionAddr = auth.sessionAddress || null
@@ -361,6 +393,7 @@ async function refreshDashboard() {
         creditsBalance.value = '0'
         hasCreditsLoaded.value = false
 		withdrawals.value = []
+		deposits.value = []
 		return
 	}
     await fetchBenefitAddress()
@@ -373,6 +406,7 @@ async function refreshDashboard() {
     await fetchCreditsBalance()
 	await fetchRelayBalance()
 	await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
+	await getDeposits(depositsPagination.value.current, depositsPagination.value.pageSize)
 }
 
 const getWithdrawals = async (page = 1, pageSize = 10) => {
@@ -432,6 +466,45 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 
 const handleWithdrawalsTableChange = (pagination) => {
   getWithdrawals(pagination.current, pagination.pageSize);
+}
+
+const getDeposits = async (page = 1, pageSize = 10) => {
+	if (!wallet.address) {
+		return;
+	}
+	depositsLoading.value = true;
+	try {
+		const res = await walletAPI.getDeposits(wallet.address, page, pageSize);
+		deposits.value = res.deposit_records.map((record) => {
+			const hasAmount = record && record.amount !== undefined && record.amount !== null
+			let formattedAmount = ''
+			if (hasAmount) {
+				try {
+					const amt = Number(ethers.formatEther(record.amount))
+					formattedAmount = formatInt(Math.round(amt))
+				} catch {
+					formattedAmount = ''
+				}
+			}
+			return {
+				...record,
+				time: formatTimestamp(record && (record.created_at)),
+				amount: hasAmount ? ("CNX " + formattedAmount) : '',
+				network: formatNetworkName((record && record.network) || ''),
+				tx_hash: (record && (record.tx_hash)) || '',
+			}
+		});
+		depositsPagination.value.total = res.total;
+		depositsPagination.value.current = page;
+	} catch (e) {
+		message.error(e.message);
+	} finally {
+		depositsLoading.value = false;
+	}
+}
+
+const handleDepositsTableChange = (pagination) => {
+  getDeposits(pagination.current, pagination.pageSize);
 }
 
 
@@ -797,35 +870,60 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 					</a-card>
 				</a-col>
 				<a-col :span="24">
-					<a-card :title="`Withdrawals`" :bordered="false" style="opacity: 0.9">
-						<a-table
-                            :columns="withdrawalColumns"
-                            :data-source="withdrawals"
-                            :loading="withdrawalsLoading"
-                            :pagination="withdrawalsPagination"
-                            @change="handleWithdrawalsTableChange"
-                            row-key="id"
-                        >
-							<template #bodyCell="{ column, record }">
-								<template v-if="column.dataIndex === 'status'">
-									<a-tag v-if="record.status === 0 || record.status === '0'" color="blue">Processing</a-tag>
-									<a-tag v-else-if="record.status === 1 || record.status === '1'" color="green">Success</a-tag>
-									<a-tag v-else-if="record.status === 2 || record.status === '2'" color="volcano">Failed</a-tag>
-									<span v-else>{{ record.status }}</span>
-								</template>
-								<template v-else-if="column.dataIndex === 'network'">
-									<a-tag :color="getNetworkTagColor(record.network)">
-										Crynux on {{ record.network }}
-									</a-tag>
-								</template>
-								<template v-else-if="column.dataIndex === 'to_type'">
-									<a-tag :color="record.to_type_color">{{ record.to_type }}</a-tag>
-								</template>
-								<template v-else-if="column.dataIndex === 'tx_hash'">
-									<span>{{ truncateTxHash(record.tx_hash) }}</span>
-								</template>
-							</template>
-                        </a-table>
+					<a-card :title="`Relay Account Transactions`" :bordered="false" style="opacity: 0.9">
+						<a-tabs default-active-key="withdrawals" type="card">
+							<a-tab-pane key="withdrawals" tab="Withdrawals">
+								<a-table
+									:columns="withdrawalColumns"
+									:data-source="withdrawals"
+									:loading="withdrawalsLoading"
+									:pagination="withdrawalsPagination"
+									@change="handleWithdrawalsTableChange"
+									row-key="id"
+								>
+									<template #bodyCell="{ column, record }">
+										<template v-if="column.dataIndex === 'status'">
+											<a-tag v-if="record.status === 0 || record.status === '0'" color="blue">Processing</a-tag>
+											<a-tag v-else-if="record.status === 1 || record.status === '1'" color="green">Success</a-tag>
+											<a-tag v-else-if="record.status === 2 || record.status === '2'" color="volcano">Failed</a-tag>
+											<span v-else>{{ record.status }}</span>
+										</template>
+										<template v-else-if="column.dataIndex === 'network'">
+											<a-tag :color="getNetworkTagColor(record.network)">
+												Crynux on {{ record.network }}
+											</a-tag>
+										</template>
+										<template v-else-if="column.dataIndex === 'to_type'">
+											<a-tag :color="record.to_type_color">{{ record.to_type }}</a-tag>
+										</template>
+										<template v-else-if="column.dataIndex === 'tx_hash'">
+											<span>{{ truncateTxHash(record.tx_hash) }}</span>
+										</template>
+									</template>
+								</a-table>
+							</a-tab-pane>
+							<a-tab-pane key="deposits" tab="Deposits">
+								<a-table
+									:columns="depositColumns"
+									:data-source="deposits"
+									:loading="depositsLoading"
+									:pagination="depositsPagination"
+									@change="handleDepositsTableChange"
+									row-key="id"
+								>
+									<template #bodyCell="{ column, record }">
+										<template v-if="column.dataIndex === 'network'">
+											<a-tag :color="getNetworkTagColor(record.network)">
+												Crynux on {{ record.network }}
+											</a-tag>
+										</template>
+										<template v-else-if="column.dataIndex === 'tx_hash'">
+											<span>{{ truncateTxHash(record.tx_hash) }}</span>
+										</template>
+									</template>
+								</a-table>
+							</a-tab-pane>
+						</a-tabs>
 					</a-card>
 				</a-col>
 			</a-row>

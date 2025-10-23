@@ -2,7 +2,7 @@
     "relay_url": "https://relay.crynux.io",
     "networks": {
         "dymension": {
-            "chainId": "10000",
+            "chainId": "1313161573",
             "chainName": "Crynux on Dymension",
             "rpcUrls": [
                 "https://json-rpc.testnet-dym.crynux.io"
@@ -14,9 +14,9 @@
             },
             "blockExplorerUrls": [],
             "contracts": {
-                "beneficialAddress": "0x3ec8130af8f71C134F3f59702E58BC6F8F0e9099",
-                "nodeStaking": "0xb030d5D8fF00159636F9198092Dda8f1f32F520C",
-                "credits": "0x8fA78AFD382c123Ee49150874D8D12cc73437631"
+                "beneficialAddress": "0x2b70C7d900333Bd0DBc4be0cAfFcFAA931D118FA",
+                "nodeStaking": "0x07E149A0e372C2F54Df6358d021d700703D222D1",
+                "credits": "0xA06ACFDFcb199a0Bb238EB3BfBd87552D0F5f159"
             }
         },
         "near": {
