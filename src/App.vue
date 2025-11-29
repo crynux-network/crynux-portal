@@ -22,8 +22,10 @@ import {
   Dropdown as ADropdown,
   Menu as AMenu,
   MenuItem as AMenuItem,
-  MenuDivider as AMenuDivider
+  MenuDivider as AMenuDivider,
+  Input as AInput
 } from 'ant-design-vue'
+import { SearchOutlined } from '@ant-design/icons-vue'
 import { onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import GithubButton from 'vue-github-button'
 
@@ -38,6 +40,7 @@ v1.apiUnknownErrorHandler = defaultErrorHandler
 
 const vantaRef = ref(null)
 const router = useRouter()
+const searchAddress = ref('')
 
 let wavesEffect = null
 onMounted(() => {
@@ -279,7 +282,7 @@ onBeforeUnmount(() => {
           style="height: 80px; line-height: 80px; padding: 0 50px; background: transparent"
         >
           <a-row justify="space-between" align="middle" style="height: 100%">
-            <a-col>
+            <a-col :span="6">
               <a-space align="center" size="middle">
                 <img
                   src="/logo-graphic-white.png"
@@ -290,8 +293,25 @@ onBeforeUnmount(() => {
                 <a-typography-link @click="router.push({ name: 'netstats' })" class="brand-text" style="color: #fff; font-size: 20px; cursor: pointer">Crynux Portal</a-typography-link>
               </a-space>
             </a-col>
-            <a-col>
+            <a-col :span="12" style="display: flex; justify-content: center; align-items: center;">
+              <a-input
+                v-if="!isDashboard"
+                v-model:value="searchAddress"
+                placeholder="Search node address"
+                class="header-search-input"
+                :bordered="false"
+              >
+                <template #prefix>
+                  <SearchOutlined style="color: rgba(255, 255, 255, 0.6); margin-right: 4px;" />
+                </template>
+              </a-input>
+            </a-col>
+            <a-col :span="6" style="display: flex; justify-content: flex-end;">
               <a-space size="large" align="center">
+                <template v-if="!isDashboard">
+                  <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'netstats' }" @click="router.push({ name: 'netstats' })">Netstats</a-button>
+                  <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'staking' }" @click="router.push({ name: 'staking' })">Staking</a-button>
+                </template>
                 <template v-if="auth.isAuthenticated && wallet.isConnected">
                   <div v-if="isDashboard" class="network-selector" @click.stop="toggleNetworkDropdown">
                     <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
@@ -499,4 +519,54 @@ onBeforeUnmount(() => {
   text-overflow ellipsis
   flex 1
   min-width 0
+
+.header-search-input
+  width 400px
+  background-color transparent
+  border 1px solid rgba(255, 255, 255, 0.7)
+  border-radius 6px
+  color #fff
+  transition all 0.3s
+
+  &:hover, &:focus, &:focus-within
+    background-color rgba(255, 255, 255, 0.1)
+    border-color #fff
+    box-shadow 0 0 10px rgba(255, 255, 255, 0.2)
+
+  input
+    background transparent !important
+    color #fff
+    &::placeholder
+      color rgba(255, 255, 255, 0.7) !important
+
+  :deep(input)
+    background transparent !important
+    color #fff
+    &::placeholder
+      color rgba(255, 255, 255, 0.7) !important
+
+.nav-button
+  color rgba(255, 255, 255, 0.7) !important
+  font-size 18px
+  padding 4px 8px !important
+  height auto
+  position relative
+  
+  &:hover
+    color #fff !important
+
+  &.active
+    color #fff !important
+    
+    &::after
+      content ''
+      position absolute
+      bottom -4px
+      left 50%
+      transform translateX(-50%)
+      width 20px
+      height 3px
+      background-color #fff
+      border-radius 2px
+
 </style>
