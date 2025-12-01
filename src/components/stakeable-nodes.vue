@@ -183,6 +183,7 @@ onMounted(() => {
 
 <style scoped>
 .stakeable-nodes-container {
-  padding: 50px;
+  padding: 0;
+  margin-top: 20px;
 }
 </style>

@@ -25,7 +25,7 @@ import {
   MenuDivider as AMenuDivider,
   Input as AInput
 } from 'ant-design-vue'
-import { SearchOutlined } from '@ant-design/icons-vue'
+import { SearchOutlined, MenuOutlined } from '@ant-design/icons-vue'
 import { onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import GithubButton from 'vue-github-button'
 
@@ -62,6 +62,7 @@ const auth = useAuthStore()
 const wallet = useWalletStore()
 let isAuthenticating = false
 let reauthModalVisible = false
+const mobileMenuOpen = ref(false)
 
 function reauthWithFocusAndDelay() {
   if (typeof window !== 'undefined' && window.focus) window.focus()
@@ -278,79 +279,168 @@ onBeforeUnmount(() => {
     <div id="content-container">
       <context-holder />
       <a-layout style="min-height: 100%; background: transparent">
-        <a-layout-header
-          style="height: 80px; line-height: 80px; padding: 0 50px; background: transparent"
-        >
-          <a-row justify="space-between" align="middle" style="height: 100%">
-            <a-col :span="6">
-              <a-space align="center" size="middle">
-                <img
-                  src="/logo-graphic-white.png"
-                  alt="Crynux Logo"
-                  style="height: 50px; display: block; cursor: pointer"
-                  @click="router.push({ name: 'netstats' })"
-                />
-                <a-typography-link @click="router.push({ name: 'netstats' })" class="brand-text" style="color: #fff; font-size: 20px; cursor: pointer">Crynux Portal</a-typography-link>
-              </a-space>
-            </a-col>
-            <a-col :span="12" style="display: flex; justify-content: center; align-items: center;">
+        <a-layout-header class="app-header">
+          <div class="header-inner">
+            <a-row class="top-row" align="middle" justify="space-between">
+              <a-col :xs="{ span: 18 }" :sm="{ span: 18 }" :md="{ span: 6 }">
+                <a-space align="center" size="middle" class="brand" @click="router.push({ name: 'netstats' })">
+                  <img
+                    src="/logo-graphic-white.png"
+                    alt="Crynux Logo"
+                    class="brand-logo"
+                  />
+                  <a-typography-link class="brand-text" style="color: #fff; font-size: 20px; cursor: pointer">Crynux Portal</a-typography-link>
+                </a-space>
+              </a-col>
+              <a-col :xs="{ span: 0 }" :sm="{ span: 0 }" :md="{ span: 12 }" class="search-desktop">
+                <div class="search-desktop-center">
+                  <a-input
+                    v-if="!isDashboard"
+                    v-model:value="searchAddress"
+                    placeholder="Search node address"
+                    class="header-search-input"
+                    :bordered="false"
+                  >
+                    <template #prefix>
+                      <SearchOutlined style="color: rgba(255, 255, 255, 0.6); margin-right: 4px;" />
+                    </template>
+                  </a-input>
+                </div>
+              </a-col>
+              <a-col :xs="{ span: 6 }" :sm="{ span: 6 }" :md="{ span: 6 }" class="actions-col">
+                <div class="actions">
+                  <div class="nav-desktop">
+                    <a-space size="large" align="center">
+                      <template v-if="!isDashboard">
+                        <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'netstats' }" @click="router.push({ name: 'netstats' })">Netstats</a-button>
+                        <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'staking' }" @click="router.push({ name: 'staking' })">Staking</a-button>
+                      </template>
+                      <template v-if="auth.isAuthenticated && wallet.isConnected">
+                        <div v-if="isDashboard" class="network-selector" @click.stop="toggleNetworkDropdown">
+                          <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
+                          <span class="network-name">{{ selectedNetwork.name }}</span>
+                          <span class="dropdown-arrow">▼</span>
+                          <div class="network-dropdown" v-if="showNetworkDropdown" @click.stop>
+                            <div
+                              v-for="n in networks"
+                              :key="n.key"
+                              class="network-option"
+                              @click="selectNetwork(n.key)"
+                            >
+                              <img :src="n.logo" :alt="n.name" class="network-option-logo">
+                              <span class="network-option-name">{{ n.name }}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <a-dropdown :trigger="['hover']">
+                          <a-button ghost size="large" class="connect-button-ghost">
+                            {{ wallet.shortAddress() }}
+                          </a-button>
+                          <template #overlay>
+                            <a-menu>
+                              <a-menu-item key="dashboard" @click="router.push('/dashboard')">Dashboard</a-menu-item>
+                              <a-menu-divider style="margin: 10px 0" />
+                              <a-menu-item key="signout" @click="confirmSignOut">Sign Out</a-menu-item>
+                            </a-menu>
+                          </template>
+                        </a-dropdown>
+                      </template>
+                      <template v-else>
+                        <a-button ghost size="large" class="connect-button-ghost" @click="connect">Connect</a-button>
+                      </template>
+                    </a-space>
+                  </div>
+                  <div class="menu-toggle">
+                    <a-button type="text" ghost @click="mobileMenuOpen = true" aria-label="Open menu">
+                      <MenuOutlined style="font-size: 22px; color: #fff;" />
+                    </a-button>
+                  </div>
+                </div>
+              </a-col>
+            </a-row>
+            <div class="search-mobile" v-if="!isDashboard">
               <a-input
-                v-if="!isDashboard"
                 v-model:value="searchAddress"
                 placeholder="Search node address"
-                class="header-search-input"
+                class="header-search-input mobile"
                 :bordered="false"
               >
                 <template #prefix>
                   <SearchOutlined style="color: rgba(255, 255, 255, 0.6); margin-right: 4px;" />
                 </template>
               </a-input>
-            </a-col>
-            <a-col :span="6" style="display: flex; justify-content: flex-end;">
-              <a-space size="large" align="center">
-                <template v-if="!isDashboard">
-                  <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'netstats' }" @click="router.push({ name: 'netstats' })">Netstats</a-button>
-                  <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'staking' }" @click="router.push({ name: 'staking' })">Staking</a-button>
-                </template>
-                <template v-if="auth.isAuthenticated && wallet.isConnected">
-                  <div v-if="isDashboard" class="network-selector" @click.stop="toggleNetworkDropdown">
-                    <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
-                    <span class="network-name">{{ selectedNetwork.name }}</span>
-                    <span class="dropdown-arrow">▼</span>
-                    <div class="network-dropdown" v-if="showNetworkDropdown" @click.stop>
-                      <div
-                        v-for="n in networks"
-                        :key="n.key"
-                        class="network-option"
-                        @click="selectNetwork(n.key)"
-                      >
-                        <img :src="n.logo" :alt="n.name" class="network-option-logo">
-                        <span class="network-option-name">{{ n.name }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <a-dropdown>
-                    <a-button ghost size="large" class="connect-button-ghost">
-                      {{ wallet.shortAddress() }}
-                    </a-button>
-                    <template #overlay>
-                      <a-menu>
-                        <a-menu-item key="dashboard" @click="router.push('/dashboard')">Dashboard</a-menu-item>
-                        <a-menu-divider style="margin: 10px 0" />
-                        <a-menu-item key="signout" @click="confirmSignOut">Sign Out</a-menu-item>
-                      </a-menu>
-                    </template>
-                  </a-dropdown>
-                </template>
-                <template v-else>
-                  <a-button ghost size="large" class="connect-button-ghost" @click="connect">Connect</a-button>
-                </template>
-              </a-space>
-            </a-col>
-          </a-row>
+            </div>
+          </div>
         </a-layout-header>
+        <a-drawer
+          :open="mobileMenuOpen"
+          placement="right"
+          :width="280"
+          @close="mobileMenuOpen = false"
+          root-class-name="header-drawer"
+          :body-style="{ padding: '16px', background: '#fff' }"
+          :header-style="{ background: '#fff' }"
+        >
+          <template #extra>
+            <span
+              v-if="auth.isAuthenticated && wallet.isConnected"
+              class="drawer-address"
+            >{{ wallet.shortAddress() }}</span>
+          </template>
+          <a-space direction="vertical" style="width: 100%;">
+            <a-button type="text" block class="drawer-nav-btn"
+              :class="{ active: router.currentRoute.value.name === 'netstats' }"
+              @click="router.push({ name: 'netstats' }); mobileMenuOpen = false"
+            >Netstats</a-button>
+            <a-button type="text" block class="drawer-nav-btn"
+              :class="{ active: router.currentRoute.value.name === 'staking' }"
+              @click="router.push({ name: 'staking' }); mobileMenuOpen = false"
+            >Staking</a-button>
+            <template v-if="auth.isAuthenticated && wallet.isConnected">
+              <a-button
+                type="text"
+                block
+                class="drawer-nav-btn"
+                :class="{ active: router.currentRoute.value.name === 'dashboard' }"
+                @click="router.push({ name: 'dashboard' }); mobileMenuOpen = false"
+              >Dashboard</a-button>
+            </template>
+            <div class="drawer-separator"></div>
+            <template v-if="auth.isAuthenticated && wallet.isConnected">
+              <div class="network-selector" @click.stop="toggleNetworkDropdown">
+                <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
+                <span class="network-name">{{ selectedNetwork.name }}</span>
+                <span class="dropdown-arrow">▼</span>
+                <div class="network-dropdown" v-if="showNetworkDropdown" @click.stop>
+                  <div
+                    v-for="n in networks"
+                    :key="n.key"
+                    class="network-option"
+                    @click="selectNetwork(n.key)"
+                  >
+                    <img :src="n.logo" :alt="n.name" class="network-option-logo">
+                    <span class="network-option-name">{{ n.name }}</span>
+                  </div>
+                </div>
+              </div>
+              <a-button block danger type="primary" ghost style="margin-top: 4px;" @click="confirmSignOut(); mobileMenuOpen = false">Sign Out</a-button>
+            </template>
+            <template v-else>
+              <a-button
+                block
+                ghost
+                size="large"
+                class="connect-button-ghost"
+                :style="{ color: '#1677ff', borderColor: '#1677ff', background: '#fff' }"
+                @click="connect(); mobileMenuOpen = false"
+              >Connect</a-button>
+            </template>
+          </a-space>
+        </a-drawer>
         <a-layout-content style="background: transparent">
-          <RouterView />
+          <div class="responsive-container">
+            <RouterView />
+          </div>
         </a-layout-content>
         <a-layout-footer
           style="background: transparent; padding: 0; margin-top: 24px; margin-bottom: 24px"
@@ -403,8 +493,118 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
-<style lang="stylus"></style>
+<style lang="stylus">
+.header-drawer
+  .ant-drawer-header
+    background #fff
+  .ant-drawer-body
+    background #fff
+
+  .ant-drawer-body .connect-button-ghost.ant-btn
+    color #1677ff !important
+    border-color #1677ff !important
+    background-color #fff !important
+    transition background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease
+
+  .ant-drawer-body .connect-button-ghost.ant-btn:hover,
+  .ant-drawer-body .connect-button-ghost.ant-btn:focus
+    background-color #fff !important
+    color #0958d9 !important
+    border-color #0958d9 !important
+
+  .ant-drawer-body .connect-button-ghost.ant-btn:active
+    background-color #fff !important
+    color #003eb3 !important
+    border-color #003eb3 !important
+
+  .drawer-address
+    color #777
+    font-size 12px
+    user-select text
+
+  /* Light theme overrides for network selector inside white drawer */
+  .ant-drawer-body .network-selector
+    background-color #f5f5f5
+    color #111
+    border none
+    border-radius 10px
+    padding 0 12px
+    height 40px
+    display flex
+    width 100%
+    justify-content space-between
+    align-items center
+    gap 8px
+    transition background-color .2s ease
+    box-sizing border-box
+    margin-top 4px
+
+  .ant-drawer-body .network-selector .dropdown-arrow
+    color #555
+    opacity 0.9
+
+  .ant-drawer-body .network-dropdown
+    background #fff
+    border 1px solid #eaeaea
+    border-radius 10px
+    box-shadow 0 8px 24px rgba(0,0,0,0.08)
+    left 0
+    right auto
+    min-width 0
+    width 100%
+    top calc(100% + 6px)
+    z-index 1001
+
+  .ant-drawer-body .network-option
+    &:hover
+      background-color #f5f5f5
+
+  .ant-drawer-body .network-option-name
+    color #333
+</style>
 <style lang="stylus" scoped>
+.app-header
+  height 80px
+  line-height 1
+  padding 0 50px
+  background transparent
+
+  @media (max-width: 992px)
+    height auto
+    padding 16px 24px 12px
+
+.header-inner
+  display block
+
+.top-row
+  height 80px
+
+  @media (max-width: 992px)
+    height 56px
+
+.brand
+  cursor pointer
+  white-space nowrap
+  display inline-flex
+  align-items center
+  gap 12px
+
+.brand-logo
+  height 50px
+  display block
+  cursor pointer
+  flex-shrink 0
+
+.responsive-container
+  width 100%
+  max-width 1400px
+  margin 0 auto
+  padding 0 24px
+  box-sizing border-box
+
+  @media (max-width: 768px)
+    padding 0 16px
+
 #bg-container,
 #content-container
   position relative
@@ -414,6 +614,46 @@ onBeforeUnmount(() => {
 #content-container
   overflow-y auto
   overflow-x hidden
+
+.search-desktop
+  display block
+
+.search-desktop-center
+  display flex
+  justify-content center
+  align-items center
+
+.actions-col
+  display flex
+  justify-content flex-end
+
+.actions
+  display flex
+  align-items center
+  justify-content flex-end
+  gap 8px
+
+.nav-desktop
+  display block
+
+.menu-toggle
+  display none
+
+@media (max-width: 992px)
+  .nav-desktop
+    display none
+  .menu-toggle
+    display block
+  .search-desktop
+    display none
+
+.search-mobile
+  display none
+  margin 16px 0 0
+
+@media (max-width: 992px)
+  .search-mobile
+    display block
 
 .bottom-bar
   width 100%
@@ -442,8 +682,8 @@ onBeforeUnmount(() => {
   letter-spacing 0.2px
   line-height 1
 
-.connect-button-ghost:hover,
-.connect-button-ghost:focus
+.app-header .connect-button-ghost:hover,
+.app-header .connect-button-ghost:focus
   background rgba(255, 255, 255, 0.2) !important
   color #fff !important
   border-color #fff !important
@@ -544,6 +784,16 @@ onBeforeUnmount(() => {
     color #fff
     &::placeholder
       color rgba(255, 255, 255, 0.7) !important
+  &.mobile
+    width 100%
+
+@media (max-width: 1200px)
+  .header-search-input
+    width 300px
+
+@media (max-width: 992px)
+  .header-search-input
+    width 100%
 
 .nav-button
   color rgba(255, 255, 255, 0.7) !important
@@ -551,13 +801,13 @@ onBeforeUnmount(() => {
   padding 4px 8px !important
   height auto
   position relative
-  
+
   &:hover
     color #fff !important
 
   &.active
     color #fff !important
-    
+
     &::after
       content ''
       position absolute
@@ -568,5 +818,33 @@ onBeforeUnmount(() => {
       height 3px
       background-color #fff
       border-radius 2px
+
+.drawer-nav-btn
+  color #333 !important
+  text-align left
+  height 40px
+  font-size 16px
+  border-radius 8px
+  padding 0 8px
+  transition all 0.2s ease
+
+  &:hover
+    background #f5f5f5
+    color #111 !important
+
+  &.active
+    background #e6f4ff
+    color #1677ff !important
+
+.drawer-separator
+  height 1px
+  background #f0f0f0
+  margin 8px 0
+
+.header-drawer
+  :deep(.ant-drawer-header)
+    background #fff
+  :deep(.ant-drawer-body)
+    background #fff
 
 </style>
