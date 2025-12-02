@@ -561,6 +561,13 @@ onBeforeUnmount(() => {
 
   .ant-drawer-body .network-option-name
     color #333
+
+  .ant-drawer-body .network-name
+    white-space nowrap
+    overflow hidden
+    text-overflow ellipsis
+    flex 1
+    min-width 0
 </style>
 <style lang="stylus" scoped>
 .app-header
@@ -703,6 +710,7 @@ onBeforeUnmount(() => {
   gap 8px
   color #fff
   align-self center
+  white-space nowrap
 
 .network-logo
   height 16px
@@ -714,6 +722,7 @@ onBeforeUnmount(() => {
   font-size 14px
   line-height 1
   opacity 0.95
+  white-space nowrap
 
 .dropdown-arrow
   margin-left 6px
