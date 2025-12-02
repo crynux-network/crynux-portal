@@ -12,6 +12,7 @@ import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
 import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
 import moment from 'moment'
+import NetworkTag from '@/components/network-tag.vue'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -350,13 +351,6 @@ const formatNetworkName = (n) => {
     if (s === 'dymension') return 'Dymension'
     if (s === 'near') return 'Near'
     return n
-}
-
-const getNetworkTagColor = (n) => {
-	const s = String(n || '').toLowerCase()
-	if (s.includes('dym')) return 'geekblue'
-	if (s.includes('near')) return 'green'
-	return undefined
 }
 
 const formatTimestamp = (t) => {
@@ -889,9 +883,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 											<span v-else>{{ record.status }}</span>
 										</template>
 										<template v-else-if="column.dataIndex === 'network'">
-											<a-tag :color="getNetworkTagColor(record.network)">
-												Crynux on {{ record.network }}
-											</a-tag>
+											<NetworkTag :text="'Crynux on ' + record.network" />
 										</template>
 										<template v-else-if="column.dataIndex === 'to_type'">
 											<a-tag :color="record.to_type_color">{{ record.to_type }}</a-tag>
@@ -913,9 +905,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 								>
 									<template #bodyCell="{ column, record }">
 										<template v-if="column.dataIndex === 'network'">
-											<a-tag :color="getNetworkTagColor(record.network)">
-												Crynux on {{ record.network }}
-											</a-tag>
+											<NetworkTag :text="'Crynux on ' + record.network" />
 										</template>
 										<template v-else-if="column.dataIndex === 'tx_hash'">
 											<span>{{ truncateTxHash(record.tx_hash) }}</span>
@@ -942,7 +932,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 					<a-input v-model:value="inputBenefitAddress" placeholder="0x..." />
 				</a-form-item>
 				<a-form-item label="Current Network">
-					<a-tag :color="getNetworkTagColor(networkName)">{{ networkName }}</a-tag>
+					<NetworkTag :text="networkName" />
 				</a-form-item>
 			</a-form>
 		</div>
@@ -1001,7 +991,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 				<span>{{ wallet.address }}</span>
 			</a-descriptions-item>
 			<a-descriptions-item label="Network">
-				<a-tag :color="getNetworkTagColor(networkName)">{{ networkName }}</a-tag>
+				<NetworkTag :text="networkName" />
 			</a-descriptions-item>
 			<a-descriptions-item>
 				<template #label>
@@ -1054,7 +1044,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 				</a-statistic>
 			</a-descriptions-item>
 			<a-descriptions-item label="Network">
-				<a-tag :color="getNetworkTagColor(networkName)">{{ networkName }}</a-tag>
+				<NetworkTag :text="networkName" />
 			</a-descriptions-item>
 			<a-descriptions-item label="Receiving Address">
 				<a-space size="small">
