@@ -445,49 +445,47 @@ onBeforeUnmount(() => {
         <a-layout-footer
           style="background: transparent; padding: 0; margin-top: 24px; margin-bottom: 24px"
         >
-          <a-row>
-            <a-col :span="20" :offset="2">
-              <div class="bottom-bar">
-                <a-space class="footer-links">
-                  <a-typography-link :href="config.social_links.home" target="_blank"
-                    >Home</a-typography-link
-                  >
-                  &nbsp;|&nbsp;
-                  <a-typography-link :href="config.social_links.docs" target="_blank"
-                    >Docs</a-typography-link
-                  >
-                  &nbsp;|&nbsp;
-                  <a-typography-link :href="config.social_links.blog" target="_blank"
-                    >Blog</a-typography-link
-                  >
-                  &nbsp;|&nbsp;
-                  <a-typography-link :href="config.social_links.twitter" target="_blank"
-                    >Twitter
-                  </a-typography-link>
-                  &nbsp;|&nbsp;
-                  <a-typography-link :href="config.social_links.discord" target="_blank"
-                    >Discord
-                  </a-typography-link>
-                  &nbsp;|&nbsp;
-                  <!-- Place this tag where you want the button to render. -->
-                  <github-button
-                    :href="config.social_links.github + '/crynux-node'"
-                    data-color-scheme="no-preference: light; light: light; dark: light;"
-                    data-show-count="true"
-                    aria-label="Star Crynux Node on GitHub"
-                    :style="{ position: 'relative', top: '4px' }"
-                    >Star
-                  </github-button>
-                </a-space>
-                <img
-                  class="footer-logo"
-                  src="/logo-full-white.png"
-                  width="140"
-                  alt="Crynux logo"
-                />
-              </div>
-            </a-col>
-          </a-row>
+          <div class="responsive-container">
+            <div class="bottom-bar">
+              <a-space class="footer-links" :wrap="true">
+                <a-typography-link :href="config.social_links.home" target="_blank"
+                  >Home</a-typography-link
+                >
+                &nbsp;|&nbsp;
+                <a-typography-link :href="config.social_links.docs" target="_blank"
+                  >Docs</a-typography-link
+                >
+                &nbsp;|&nbsp;
+                <a-typography-link :href="config.social_links.blog" target="_blank"
+                  >Blog</a-typography-link
+                >
+                &nbsp;|&nbsp;
+                <a-typography-link :href="config.social_links.twitter" target="_blank"
+                  >Twitter
+                </a-typography-link>
+                &nbsp;|&nbsp;
+                <a-typography-link :href="config.social_links.discord" target="_blank"
+                  >Discord
+                </a-typography-link>
+                &nbsp;|&nbsp;
+                <!-- Place this tag where you want the button to render. -->
+                <github-button
+                  :href="config.social_links.github + '/crynux-node'"
+                  data-color-scheme="no-preference: light; light: light; dark: light;"
+                  data-show-count="true"
+                  aria-label="Star Crynux Node on GitHub"
+                  :style="{ position: 'relative', top: '4px' }"
+                  >Star
+                </github-button>
+              </a-space>
+              <img
+                class="footer-logo"
+                src="/logo-full-white.png"
+                width="140"
+                alt="Crynux logo"
+              />
+            </div>
+          </div>
         </a-layout-footer>
       </a-layout>
     </div>
@@ -664,15 +662,18 @@ onBeforeUnmount(() => {
 
 .bottom-bar
   width 100%
-  height 60px
+  min-height 60px
   bottom 0
   left 0
-  padding 0 32px
+  padding 0 8px
   display flex
   justify-content space-between
   align-items center
+  flex-wrap nowrap
 
 .footer-links
+  flex 1 1 auto
+  max-width calc(100% - 180px)
   color #fff
   opacity 0.8
   a
@@ -682,6 +683,24 @@ onBeforeUnmount(() => {
 
 .footer-logo
   opacity 0.8
+
+@media (max-width: 768px)
+  .bottom-bar
+    padding 0 6px
+  .footer-links
+    max-width calc(100% - 160px)
+
+@media (max-width: 576px)
+  .bottom-bar
+    flex-direction column
+    align-items flex-start
+    gap 8px
+    padding 0 4px
+  .footer-links
+    max-width 100%
+    width 100%
+  .footer-logo
+    margin-top 24px
 
 .brand-text
   font-family -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif
