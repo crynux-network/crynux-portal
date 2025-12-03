@@ -108,6 +108,7 @@ const fetchData = async () => {
         :pagination="{
             'pageSize': 10
         }"
+        :scroll="{ x: 800 }"
         size="small"
     >
         <template #bodyCell="{ column, record }">

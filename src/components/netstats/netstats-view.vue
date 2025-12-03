@@ -25,20 +25,73 @@ import {
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
 
+const isNarrowTwoCol = computed(() => {
+    return screens.value.md && !screens.value.lg
+})
+
 const statisticValueStyle = computed(() => {
-    const fontSize = screens.value.xs ? '36px' : '56px'
+    let fontSize = '56px'
+    if (screens.value.xs) {
+        fontSize = '36px'
+    } else if (isNarrowTwoCol.value) {
+        fontSize = '32px'
+    }
     return {
         color: '#1677ff',
         'font-size': fontSize,
-        'text-align': 'center',
-        'margin-top': '30px'
+        'text-align': 'center'
     }
 })
 
 const brandBlue = computed(() => statisticValueStyle.value.color)
 
 const kpiValueStyle = computed(() => {
-    return { color: brandBlue.value }
+    let fontSize = '24px'
+    if (isNarrowTwoCol.value) {
+        fontSize = '16px'
+    }
+    return {
+        color: brandBlue.value,
+        'font-size': fontSize
+    }
+})
+
+const kpiIconStyle = computed(() => {
+    let fontSize = '20px'
+    if (isNarrowTwoCol.value) {
+        fontSize = '14px'
+    }
+    return {
+        color: brandBlue.value,
+        'margin-right': '6px',
+        'font-size': fontSize
+    }
+})
+
+const unitStyle = computed(() => {
+    let fontSize = '20px'
+    if (screens.value.xs) {
+        fontSize = '16px'
+    } else if (isNarrowTwoCol.value) {
+        fontSize = '14px'
+    }
+    return {
+        color: '#666666',
+        'font-size': fontSize,
+        'margin-top': '2px',
+        'text-align': 'center'
+    }
+})
+
+const totalPowerCardBodyStyle = computed(() => {
+    return {
+        display: 'flex',
+        'flex-direction': 'column',
+        'justify-content': 'center',
+        'align-items': 'center',
+        'flex': '1 1 auto',
+        'padding-bottom': '48px'
+    }
 })
 
 const gridItemStyle = computed(() => {
@@ -153,25 +206,31 @@ onMounted(async () => {
     <div class="top-spacer"></div>
     <a-row :gutter="[16, 16]">
         <a-col :xs="24" :sm="24" :md="8" :lg="6">
-            <a-card title="Total Computing Power" :bordered="false" style="height: 100%; opacity: 0.9">
-                <a-statistic
-                    :value="totalComputingPower"
-                    :precision="0"
-                    class="demo-class"
-                    :value-style="statisticValueStyle"
-                >
-                    <template #suffix>
-                        <span style="margin-left:6px; color: #666666; font-size: 20px">TFLOPS</span>
-                    </template>
-                </a-statistic>
+            <a-card
+                title="Total Computing Power"
+                :bordered="false"
+                :body-style="totalPowerCardBodyStyle"
+                style="height: 100%; opacity: 0.9"
+                class="total-power-card"
+            >
+                <div style="width: 100%; text-align: center">
+                    <a-statistic
+                        :value="totalComputingPower"
+                        :precision="0"
+                        class="demo-class"
+                        :value-style="statisticValueStyle"
+                        :style="{ 'margin-bottom': '2px' }"
+                    />
+                    <div :style="unitStyle">TFLOPS</div>
+                </div>
             </a-card>
         </a-col>
         <a-col :xs="24" :sm="24" :md="16" :lg="18">
             <a-card :class="nodesTasksCardClass" title="Nodes and Tasks" :bordered="false" :body-style="{ padding: '16px 16px' }" style="height: 100%; opacity: 0.9; overflow: hidden">
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :value="allNodeNumbers.totalNodes" :value-style="kpiValueStyle">
+                    <a-statistic :value="allNodeNumbers.totalNodes" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
-                            <team-outlined :style="{ color: brandBlue, 'margin-right': '8px' }" />
+                            <team-outlined :style="kpiIconStyle" />
                         </template>
                         <template #title>
                             <div style="text-align: center">Total Nodes</div>
@@ -179,9 +238,9 @@ onMounted(async () => {
                     </a-statistic>
                 </a-card-grid>
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :value="allTaskNumbers.totalTasks" :value-style="kpiValueStyle">
+                    <a-statistic :value="allTaskNumbers.totalTasks" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
-                            <profile-outlined :style="{ color: brandBlue, 'margin-right': '8px' }" />
+                            <profile-outlined :style="kpiIconStyle" />
                         </template>
                         <template #title>
                             <div style="text-align: center">Total Tasks</div>
@@ -189,9 +248,9 @@ onMounted(async () => {
                     </a-statistic>
                 </a-card-grid>
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :precision="0" :value="totalIncentives" :value-style="kpiValueStyle">
+                    <a-statistic :precision="0" :value="totalIncentives" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
-                            <dollar-circle-outlined :style="{ color: brandBlue, 'margin-right': '8px' }" />
+                            <dollar-circle-outlined :style="kpiIconStyle" />
                         </template>
                         <template #title>
                             <div style="text-align: center">Total Incentives</div>
@@ -199,9 +258,9 @@ onMounted(async () => {
                     </a-statistic>
                 </a-card-grid>
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :value="allNodeNumbers.activeNodes" :value-style="kpiValueStyle">
+                    <a-statistic :value="allNodeNumbers.activeNodes" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
-                            <check-circle-outlined :style="{ color: brandBlue, 'margin-right': '8px' }" />
+                            <check-circle-outlined :style="kpiIconStyle" />
                         </template>
                         <template #title>
                             <div style="text-align: center">Active Nodes</div>
@@ -209,9 +268,9 @@ onMounted(async () => {
                     </a-statistic>
                 </a-card-grid>
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :value="allTaskNumbers.queuedTasks" :value-style="kpiValueStyle">
+                    <a-statistic :value="allTaskNumbers.queuedTasks" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
-                            <clock-circle-outlined :style="{ color: brandBlue, 'margin-right': '8px' }" />
+                            <clock-circle-outlined :style="kpiIconStyle" />
                         </template>
                         <template #title>
                             <div style="text-align: center">Queued Tasks</div>
@@ -219,9 +278,9 @@ onMounted(async () => {
                     </a-statistic>
                 </a-card-grid>
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :value="allTaskNumbers.runningTasks" :value-style="kpiValueStyle">
+                    <a-statistic :value="allTaskNumbers.runningTasks" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
-                            <play-circle-outlined :style="{ color: brandBlue, 'margin-right': '8px' }" />
+                            <play-circle-outlined :style="kpiIconStyle" />
                         </template>
                         <template #title>
                             <div style="text-align: center">Running Tasks</div>
@@ -305,6 +364,20 @@ onMounted(async () => {
 <style scoped lang="stylus">
 .top-spacer
     height 20px
+
+.total-power-card
+    display flex
+    flex-direction column
+
+:deep(.total-power-card > .ant-card-body)
+    flex 1 1 auto
+    display flex
+    flex-direction column
+
+::v-deep(.total-power-card > .ant-card-body)
+    flex 1 1 auto
+    display flex
+    flex-direction column
 
 :deep(.nodes-tasks-card .ant-card-body > .ant-card-grid)
     box-shadow none !important
