@@ -42,6 +42,17 @@ const vantaRef = ref(null)
 const router = useRouter()
 const searchAddress = ref('')
 
+function handleSearchEnter() {
+  const address = searchAddress.value.trim()
+  if (!address) return
+  if (!ethers.isAddress(address)) {
+    messageApi.error('Invalid address')
+    return
+  }
+  router.push({ name: 'node-details', params: { address } })
+  searchAddress.value = ''
+}
+
 let wavesEffect = null
 onMounted(() => {
   wavesEffect = VANTA.WAVES({
@@ -300,6 +311,7 @@ onBeforeUnmount(() => {
                     placeholder="Search node address"
                     class="header-search-input"
                     :bordered="false"
+                    @pressEnter="handleSearchEnter"
                   >
                     <template #prefix>
                       <SearchOutlined style="color: rgba(255, 255, 255, 0.6); margin-right: 4px;" />
@@ -364,6 +376,7 @@ onBeforeUnmount(() => {
                 placeholder="Search node address"
                 class="header-search-input mobile"
                 :bordered="false"
+                @pressEnter="handleSearchEnter"
               >
                 <template #prefix>
                   <SearchOutlined style="color: rgba(255, 255, 255, 0.6); margin-right: 4px;" />
