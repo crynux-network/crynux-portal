@@ -1,7 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import NetstatsView from '@/components/netstats/netstats-view.vue'
-import StakeableNodes from '@/components/stakeable-nodes.vue'
+import StakeableNodes from '@/components/staking/stakeable-nodes.vue'
 import UserDashboard from '@/components/user-dashboard.vue'
+import NodeDetails from '@/components/staking/node-details.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWalletStore } from '@/stores/wallet'
 
@@ -17,6 +18,11 @@ const router = createRouter({
       path: '/staking',
       name: 'staking',
       component: StakeableNodes
+    },
+    {
+      path: '/nodes/:address',
+      name: 'node-details',
+      component: NodeDetails
     },
     {
       path: '/dashboard',
