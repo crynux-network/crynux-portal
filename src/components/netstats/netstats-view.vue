@@ -42,11 +42,15 @@ const kpiValueStyle = computed(() => {
 })
 
 const gridItemStyle = computed(() => {
-    const width = screens.value.xs ? '50%' : '33.33%'
+    const width = screens.value.md ? '33.33%' : '50%'
     return {
         width,
         'text-align': 'center'
     }
+})
+
+const nodesTasksCardClass = computed(() => {
+    return ['nodes-tasks-card', screens.value.md ? 'cols-3' : 'cols-2']
 })
 
 const allNodeNumbers = reactive({
@@ -163,7 +167,7 @@ onMounted(async () => {
             </a-card>
         </a-col>
         <a-col :xs="24" :sm="24" :md="16" :lg="18">
-            <a-card class="nodes-tasks-card" title="Nodes and Tasks" :bordered="false" :body-style="{ padding: '16px 16px' }" style="height: 100%; opacity: 0.9; overflow: hidden">
+            <a-card :class="nodesTasksCardClass" title="Nodes and Tasks" :bordered="false" :body-style="{ padding: '16px 16px' }" style="height: 100%; opacity: 0.9; overflow: hidden">
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
                     <a-statistic :value="allNodeNumbers.totalNodes" :value-style="kpiValueStyle">
                         <template #prefix>
@@ -317,22 +321,74 @@ onMounted(async () => {
     box-shadow none !important
 
 /* vertical inner separators (do not touch outer edges due to body padding) */
-:deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(1)),
-:deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(2)),
-:deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(4)),
-:deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(5))
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(1)),
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(2)),
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(4)),
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(5))
     border-right 1px solid var(--ant-border-color-split, #f0f0f0)
 
-::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(1)),
-::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(2)),
-::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(4)),
-::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(5))
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(1)),
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(2)),
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(4)),
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(5))
     border-right 1px solid var(--ant-border-color-split, #f0f0f0)
 
 /* horizontal inner separator between two rows */
-:deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(n+4))
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(n+4))
     border-top 1px solid var(--ant-border-color-split, #f0f0f0)
 
-::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(n+4))
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(n+4))
+    border-top 1px solid var(--ant-border-color-split, #f0f0f0)
+
+/* responsive: fix inner borders when grid wraps to 2 columns on xs */
+@media (max-width: 575.98px)
+    /* reset to avoid conflicting borders after width change */
+    ::deep(.nodes-tasks-card .ant-card-body > .ant-card-grid)
+        border-right none
+        border-top none
+    ::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid)
+        border-right none
+        border-top none
+
+    /* add right separator for left-column items: 1,3,5 */
+    ::deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(odd))
+        border-right 1px solid var(--ant-border-color-split, #f0f0f0)
+    ::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(odd))
+        border-right 1px solid var(--ant-border-color-split, #f0f0f0)
+
+    /* add top separator starting from second row: 3..6 */
+    ::deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(n+3))
+        border-top 1px solid var(--ant-border-color-split, #f0f0f0)
+    ::v-deep(.nodes-tasks-card .ant-card-body > .ant-card-grid:nth-child(n+3))
+        border-top 1px solid var(--ant-border-color-split, #f0f0f0)
+
+/* dynamic layout-aware separators */
+/* 3-column layout */
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(1)),
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(2)),
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(4)),
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(5))
+    border-right 1px solid var(--ant-border-color-split, #f0f0f0)
+
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(1)),
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(2)),
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(4)),
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(5))
+    border-right 1px solid var(--ant-border-color-split, #f0f0f0)
+
+::deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(n+4))
+    border-top 1px solid var(--ant-border-color-split, #f0f0f0)
+::v-deep(.nodes-tasks-card.cols-3 .ant-card-body > .ant-card-grid:nth-child(n+4))
+    border-top 1px solid var(--ant-border-color-split, #f0f0f0)
+
+/* 2-column layout */
+::deep(.nodes-tasks-card.cols-2 .ant-card-body > .ant-card-grid:nth-child(odd))
+    border-right 1px solid var(--ant-border-color-split, #f0f0f0)
+::v-deep(.nodes-tasks-card.cols-2 .ant-card-body > .ant-card-grid:nth-child(odd))
+    border-right 1px solid var(--ant-border-color-split, #f0f0f0)
+
+::deep(.nodes-tasks-card.cols-2 .ant-card-body > .ant-card-grid:nth-child(n+3))
+    border-top 1px solid var(--ant-border-color-split, #f0f0f0)
+::v-deep(.nodes-tasks-card.cols-2 .ant-card-body > .ant-card-grid:nth-child(n+3))
     border-top 1px solid var(--ant-border-color-split, #f0f0f0)
 </style>
