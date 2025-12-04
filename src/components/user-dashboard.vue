@@ -13,6 +13,7 @@ import { walletAPI } from '@/api/v1/wallet'
 import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
 import moment from 'moment'
 import NetworkTag from '@/components/network-tag.vue'
+import { createReadProvider, isUserRejectedError, formatBigInt18, toBigInt } from '@/services/contract'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -36,35 +37,8 @@ const creditsContractAddress = computed(() => {
 })
 
 const formatWeiHexToDisplay = (hex) => {
-	const h = hex || '0x0'
-	let bn = 0n
-	try { bn = BigInt(h) } catch { bn = 0n }
-	return formatBigInt18(bn)
-}
-
-const formatBigInt18 = (value) => {
-    let bn = 0n
-    try {
-        if (typeof value === 'bigint') bn = value
-        else if (typeof value === 'string') bn = BigInt(value)
-        else if (typeof value === 'number') bn = BigInt(Math.floor(Math.max(0, value)))
-    } catch { bn = 0n }
-    const d = 18n
-    const base = 10n ** d
-    const integer = bn / base
-    const target = 6n
-    let fraction = 0n
-    if (d >= target) {
-        const scaleDown = 10n ** (d - target)
-        fraction = (bn % base) / scaleDown
-    } else {
-        const scaleUp = 10n ** (target - d)
-        fraction = (bn % base) * scaleUp
-    }
-    const intStrRaw = integer.toString()
-    const intStr = intStrRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-    const fracStr = fraction.toString().padStart(6, '0')
-    return `${intStr}.${fracStr}`
+	const bn = toBigInt(hex || '0x0')
+	return formatBigInt18(bn, 6)
 }
 
 const formattedBalance = computed(() => {
@@ -82,40 +56,19 @@ const formattedStakedBalance = computed(() => {
     return formatWeiHexToDisplay(stakedBalanceWei.value)
 })
 const formattedStakedCredits = computed(() => {
-    return formatBigInt18(stakedCredits.value)
+    return formatBigInt18(stakedCredits.value, 6)
 })
 const isFetchingStake = ref(false)
 const hasStakeInfoLoaded = ref(false)
 
 const creditsBalance = ref(0n)
 const formattedCreditsBalance = computed(() => {
-    return formatBigInt18(creditsBalance.value)
+    return formatBigInt18(creditsBalance.value, 6)
 })
 const isFetchingCredits = ref(false)
 const hasCreditsLoaded = ref(false)
 
 const abi = beneficialAbi
-
-function createReadProvider() {
-	const net = config.networks[wallet.selectedNetworkKey]
-	const urls = (net && Array.isArray(net.rpcUrls)) ? net.rpcUrls : []
-	const url = urls[0]
-	if (!url) throw new Error('No RPC URL configured for network')
-	return new ethers.JsonRpcProvider(url)
-}
-
-function isUserRejectedError(err) {
-    const e = err || {}
-    const msg = String(e.message || '').toLowerCase()
-    return (
-        e.code === 4001 ||
-        e.code === 'ACTION_REJECTED' ||
-        (e.info && e.info.error && e.info.error.code === 4001) ||
-        (e.error && e.error.code === 4001) ||
-        msg.includes('user rejected') ||
-        msg.includes('user denied')
-    )
-}
 
 const benefitAddress = ref('')
 const isFetchingBenefit = ref(false)
@@ -531,7 +484,7 @@ const fetchBenefitAddress = async () => {
 		return
 	}
 	try {
-		const provider = createReadProvider()
+		const provider = createReadProvider(wallet.selectedNetworkKey)
 		const contract = new ethers.Contract(beneficialAddressContractAddress.value, abi, provider)
 		const addr = await contract.getBenefitAddress(wallet.address)
 		benefitAddress.value = addr
@@ -548,7 +501,7 @@ const fetchBenefitBalance = async () => {
 	const addr = benefitAddress.value
 	if (!addr || isZeroAddress(addr)) return
 	try {
-		const provider = createReadProvider()
+		const provider = createReadProvider(wallet.selectedNetworkKey)
 		const bn = await provider.getBalance(addr)
 		const hex = '0x' + bn.toString(16)
 		benefitBalanceWei.value = hex
@@ -566,7 +519,7 @@ const fetchNodeStakingInfo = async () => {
     }
     isFetchingStake.value = true
     try {
-        const provider = createReadProvider()
+        const provider = createReadProvider(wallet.selectedNetworkKey)
         const contract = new ethers.Contract(nodeStakingContractAddress.value, nodeStakingAbi, provider)
         const res = await contract.getStakingInfo(wallet.address)
         const balanceRaw = (res && (res.stakedBalance ?? res[1])) || 0n
@@ -601,7 +554,7 @@ const fetchCreditsBalance = async () => {
     }
     isFetchingCredits.value = true
     try {
-        const provider = createReadProvider()
+        const provider = createReadProvider(wallet.selectedNetworkKey)
         const contract = new ethers.Contract(creditsContractAddress.value, creditsAbi, provider)
         const res = await contract.getCredits(wallet.address)
         try {

@@ -6,7 +6,6 @@ import {
   Row as ARow,
   Col as ACol,
   Tag as ATag,
-  Button as AButton,
   Tooltip as ATooltip,
   Progress as AProgress,
   Spin as ASpin,
@@ -24,21 +23,19 @@ import {
   ThunderboltOutlined,
   DollarOutlined
 } from '@ant-design/icons-vue'
-import { ethers } from 'ethers'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
-import { walletAPI } from '@/api/v1/wallet'
 import { useWalletStore } from '@/stores/wallet'
-import { useAuthStore } from '@/stores/auth'
 import config from '@/config.json'
+import { formatBigInt18Compact } from '@/services/contract'
 import NetworkTag from '@/components/network-tag.vue'
 import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
 import NodeStakingChart from '@/components/staking/node-staking-chart.vue'
 import NodeScoresChart from '@/components/staking/node-scores-chart.vue'
 import NodeDelegatorsChart from '@/components/staking/node-delegators-chart.vue'
+import MyDelegation from '@/components/staking/my-delegation.vue'
 
 const route = useRoute()
 const wallet = useWalletStore()
-const auth = useAuthStore()
 
 const nodeAddress = computed(() => route.params.address)
 const node = ref(null)
@@ -54,9 +51,6 @@ const networkName = computed(() => {
   return (config.networks[key] && config.networks[key].chainName) || key
 })
 
-// Mock staking data - will be replaced with actual data later
-const userStaking = ref(null)
-const hasStaking = computed(() => wallet.isConnected && userStaking.value !== null)
 
 const normalizeStatus = (status) => {
   const v = status
@@ -103,44 +97,6 @@ const percentFromRatio = (ratio) => {
   return clampPercent(r * 100)
 }
 
-const formatBigInt18 = (value, decimals = 2) => {
-  let bn = 0n
-  try {
-    if (typeof value === 'bigint') bn = value
-    else if (typeof value === 'string') bn = BigInt(value)
-    else if (typeof value === 'number') bn = BigInt(Math.floor(Math.max(0, value)))
-  } catch { bn = 0n }
-  const base = 10n ** 18n
-  const integer = bn / base
-  const remainder = bn % base
-  const fracStr = remainder.toString().padStart(18, '0').slice(0, decimals)
-  if (decimals === 0) return formatIntegerWithThousands(integer.toString())
-  return formatIntegerWithThousands(integer.toString()) + '.' + fracStr
-}
-
-const formatBigInt18Compact = (value) => {
-  let bn = 0n
-  try {
-    if (typeof value === 'bigint') bn = value
-    else if (typeof value === 'string') bn = BigInt(value)
-    else if (typeof value === 'number') bn = BigInt(Math.floor(Math.max(0, value)))
-  } catch { bn = 0n }
-  const base = 10n ** 18n
-  const integer = bn / base
-  const B = 1_000_000_000n
-  const M = 1_000_000n
-  const K = 1_000n
-  const toOneDecimal = (val, unit) => {
-    const scaledTimes10 = (val * 10n) / unit
-    const whole = scaledTimes10 / 10n
-    const frac = scaledTimes10 % 10n
-    return frac === 0n ? `${whole}` : `${whole}.${frac}`
-  }
-  if (integer >= B) return `${toOneDecimal(integer, B)}B`
-  if (integer >= M) return `${toOneDecimal(integer, M)}M`
-  if (integer >= K) return `${toOneDecimal(integer, K)}K`
-  return formatIntegerWithThousands(integer.toString())
-}
 
 const gpuDisplayName = computed(() => {
   if (!node.value?.gpu_name) return ''
@@ -249,93 +205,9 @@ const shortenAddress = (address) => {
   return address.slice(0, 8) + '...' + address.slice(-6)
 }
 
-const handleStake = () => {
-  // Placeholder for stake action
-  message.info('Stake functionality coming soon')
-}
-
-let isAuthenticating = false
-
-async function refreshAccountAndBalance() {
-  const provider = window.ethereum
-  if (!provider) return
-  const accounts = await provider.request({ method: 'eth_accounts' })
-  let address = accounts && accounts.length ? accounts[0] : null
-  if (address) {
-    try {
-      address = ethers.getAddress(address)
-    } catch (e) {
-      address = null
-    }
-  }
-  wallet.setAccount(address)
-  if (address) {
-    let chainId = null
-    try {
-      chainId = await provider.request({ method: 'eth_chainId' })
-    } catch (e) {
-      chainId = null
-    }
-    wallet.setChainId(chainId)
-    await wallet.fetchBalance()
-  } else {
-    wallet.setBalanceWei('0x0')
-    auth.clearSession()
-  }
-}
-
-function authenticate() {
-  if (isAuthenticating) return Promise.resolve()
-  const provider = window.ethereum
-  if (!provider) {
-    message.error('Please install MetaMask in your browser.')
-    return Promise.reject(new Error('No provider'))
-  }
-  isAuthenticating = true
-  const timestamp = Math.floor(Date.now() / 1000)
-  const action = 'Connect Wallet'
-  return provider.request({ method: 'eth_requestAccounts' })
-    .then((accounts) => {
-      const acct = (accounts && accounts.length) ? accounts[0] : null
-      if (!acct) throw new Error('No account connected')
-      const addressToAuth = ethers.getAddress(acct)
-      const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${addressToAuth}\nTimestamp: ${timestamp}`
-      return provider.request({
-        method: 'personal_sign',
-        params: [messageToSign, addressToAuth]
-      }).then(signature => ({ signature, addressToAuth }))
-    })
-    .then(({ signature, addressToAuth }) => walletAPI.connectWallet({ address: addressToAuth, signature, timestamp })
-      .then(resp => ({ resp, addressToAuth })))
-    .then(({ resp, addressToAuth }) => {
-      auth.setSession(resp.token, resp.expires_at, addressToAuth)
-      wallet.setAccount(addressToAuth)
-      return wallet.ensureNetworkOnWallet(wallet.selectedNetworkKey)
-        .then(() => refreshAccountAndBalance())
-        .then(() => {
-          message.success('Wallet connected')
-        })
-    })
-    .catch(async (e) => {
-      console.error('Authentication error:', e)
-      try {
-        await provider.request({
-          method: 'wallet_revokePermissions',
-          params: [{ eth_accounts: {} }]
-        })
-      } catch (err) { console.error('Failed to revoke wallet permissions:', err) }
-      wallet.setAccount(null)
-      wallet.setBalanceWei('0x0')
-      auth.clearSession()
-      message.error('Authentication failed or was rejected')
-    })
-    .finally(() => {
-      isAuthenticating = false
-    })
-}
-
-async function connect() {
-  return authenticate()
+const handleStakingChanged = () => {
+  fetchData()
+  fetchDelegations()
 }
 
 onMounted(async () => {
@@ -383,46 +255,8 @@ onMounted(async () => {
 
             <a-divider />
 
-            <!-- User Staking Section -->
-            <div class="user-staking-section">
-              <template v-if="!wallet.isConnected">
-                <div class="not-connected">
-                  <p>Connect your wallet to stake on this node</p>
-                  <a-button type="primary" @click="connect">Connect</a-button>
-                </div>
-              </template>
-
-              <template v-else-if="hasStaking">
-                <div class="staking-info">
-                  <div class="staking-detail">
-                    <span class="label">Staked Amount</span>
-                    <span class="value">{{ formatBigInt18(userStaking.amount) }} CNX</span>
-                  </div>
-                  <div class="staking-detail">
-                    <span class="label">Staked Since</span>
-                    <span class="value">{{ userStaking.stakedAt }}</span>
-                  </div>
-                  <div class="staking-detail">
-                    <span class="label">Today Earnings</span>
-                    <span class="value earnings">{{ formatBigInt18(userStaking.todayEarnings) }} CNX</span>
-                  </div>
-                  <div class="staking-detail">
-                    <span class="label">Total Earnings</span>
-                    <span class="value earnings">{{ formatBigInt18(userStaking.totalEarnings) }} CNX</span>
-                  </div>
-                </div>
-              </template>
-
-              <template v-else>
-                <div class="no-staking">
-                  <p>You haven't staked on this node yet</p>
-                  <a-button type="primary" @click="handleStake">
-                    <template #icon><dollar-outlined /></template>
-                    Stake Now
-                  </a-button>
-                </div>
-              </template>
-            </div>
+            <!-- My Delegation Section -->
+            <MyDelegation :node-address="nodeAddress" @staking-changed="handleStakingChanged" />
           </a-card>
         </a-col>
 
@@ -738,56 +572,6 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: 700;
   color: #1890ff;
-}
-
-/* User Staking Section */
-.user-staking-section {
-  margin-top: 0;
-}
-
-.not-connected,
-.no-staking {
-  text-align: center;
-  padding: 40px 16px;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
-}
-
-.not-connected p,
-.no-staking p {
-  color: rgba(0, 0, 0, 0.45);
-  margin-bottom: 16px;
-}
-
-.staking-info {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(24, 144, 255, 0.04);
-  border-radius: 8px;
-  border: 1px solid rgba(24, 144, 255, 0.1);
-}
-
-.staking-detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.staking-detail .label {
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.staking-detail .value {
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.85);
-}
-
-.staking-detail .value.earnings {
-  color: #52c41a;
 }
 
 /* Metrics Card Styles */

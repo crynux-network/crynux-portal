@@ -5,6 +5,7 @@ import { PlayCircleOutlined, PauseCircleOutlined, MinusCircleOutlined, FunnelPlo
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
 import { useWalletStore } from '@/stores/wallet'
 import config from '@/config.json'
+import { formatBigInt18Compact } from '@/services/contract'
 import NetworkTag from '@/components/network-tag.vue'
 
 const nodes = ref([])
@@ -80,29 +81,6 @@ const percentFromRatio = (ratio) => {
   return clampPercent(r * 100)
 }
 
-const formatBigInt18Compact = (value) => {
-  let bn = 0n
-  try {
-    if (typeof value === 'bigint') bn = value
-    else if (typeof value === 'string') bn = BigInt(value)
-    else if (typeof value === 'number') bn = BigInt(Math.floor(Math.max(0, value)))
-  } catch { bn = 0n }
-  const base = 10n ** 18n
-  const integer = bn / base
-  const B = 1_000_000_000n
-  const M = 1_000_000n
-  const K = 1_000n
-  const toOneDecimal = (val, unit) => {
-    const scaledTimes10 = (val * 10n) / unit
-    const whole = scaledTimes10 / 10n
-    const frac = scaledTimes10 % 10n
-    return frac === 0n ? `${whole}` : `${whole}.${frac}`
-  }
-  if (integer >= B) return `${toOneDecimal(integer, B)}B`
-  if (integer >= M) return `${toOneDecimal(integer, M)}M`
-  if (integer >= K) return `${toOneDecimal(integer, K)}K`
-  return formatIntegerWithThousands(integer.toString())
-}
 
 
 const fetchData = async (page = 1) => {
