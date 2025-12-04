@@ -139,7 +139,7 @@ onUnmounted(() => {
 
 <template>
   <div class="stakeable-nodes-container">
-    <a-card :title="'Stakeable Nodes'" :bordered="false" style="opacity: 0.95">
+    <a-card :title="'Stakeable Nodes'" :bordered="false" style="opacity: 0.9">
       <a-list
         :data-source="nodes"
         :loading="loading"
@@ -210,6 +210,7 @@ onUnmounted(() => {
                             :stroke-color="'#8c8c8c'"
                             :trail-color="'#e9e9e9'"
                             :status="'normal'"
+                            :title="null"
                           />
                           <div class="score-label-row">
                             <funnel-plot-outlined />
@@ -228,6 +229,7 @@ onUnmounted(() => {
                             :stroke-color="'#8c8c8c'"
                             :trail-color="'#e9e9e9'"
                             :status="'normal'"
+                            :title="null"
                           />
                           <div class="score-label-row">
                             <thunderbolt-outlined />
@@ -246,6 +248,7 @@ onUnmounted(() => {
                             :stroke-color="'#8c8c8c'"
                             :trail-color="'#e9e9e9'"
                             :status="'normal'"
+                            :title="null"
                           />
                           <div class="score-label-row">
                             <dollar-outlined />

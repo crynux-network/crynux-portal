@@ -347,10 +347,10 @@ onMounted(async () => {
 <template>
   <div class="node-details-container">
     <a-spin :spinning="loading" tip="Loading...">
-      <a-row :gutter="[24, 24]" v-if="node">
+      <a-row :gutter="[16, 16]" v-if="node">
         <!-- Left Card: Node Basic Info -->
         <a-col :xs="24" :lg="8">
-          <a-card class="info-card" :bordered="false">
+          <a-card class="info-card" :bordered="false" style="opacity: 0.9">
             <div class="node-header">
               <div class="status-badge">
                 <a-tooltip :title="statusText(node.status)">
@@ -428,7 +428,7 @@ onMounted(async () => {
 
         <!-- Right Card: Node Metrics -->
         <a-col :xs="24" :lg="16">
-          <a-card class="metrics-card" :bordered="false">
+          <a-card class="metrics-card" :bordered="false" style="opacity: 0.9">
             <a-row :gutter="[0, 0]" class="metrics-row">
               <!-- Left Section: Scores + Staking + Delegators -->
               <a-col :xs="24" :md="16" class="metrics-left">
@@ -444,6 +444,7 @@ onMounted(async () => {
                           :stroke-color="'#1890ff'"
                           :trail-color="'#e9e9e9'"
                           :format="(p) => Math.round(p).toString()"
+                          :title="null"
                         />
                         <div class="score-label">
                           <funnel-plot-outlined />
@@ -460,6 +461,7 @@ onMounted(async () => {
                           :stroke-color="'#52c41a'"
                           :trail-color="'#e9e9e9'"
                           :format="(p) => Math.round(p).toString()"
+                          :title="null"
                         />
                         <div class="score-label">
                           <thunderbolt-outlined />
@@ -476,6 +478,7 @@ onMounted(async () => {
                           :stroke-color="'#faad14'"
                           :trail-color="'#e9e9e9'"
                           :format="(p) => Math.round(p).toString()"
+                          :title="null"
                         />
                         <div class="score-label">
                           <dollar-outlined />
@@ -552,37 +555,37 @@ onMounted(async () => {
       </a-row>
 
       <!-- Node Rewards Chart -->
-      <a-row :gutter="[24, 24]" style="margin-top: 24px" v-if="node">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
         <a-col :span="24">
-          <a-card class="chart-card" title="Node Rewards" :bordered="false">
+          <a-card class="chart-card" title="Node Rewards" :bordered="false" style="opacity: 0.9">
             <NodeRewardsChart :address="nodeAddress" />
           </a-card>
         </a-col>
       </a-row>
 
       <!-- Node Charts Row 1 -->
-      <a-row :gutter="[24, 24]" style="margin-top: 24px" v-if="node">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
         <a-col :xs="24" :lg="12">
-          <a-card class="chart-card" title="Node Scores" :bordered="false">
+          <a-card class="chart-card" title="Node Scores" :bordered="false" style="opacity: 0.9">
             <NodeScoresChart :address="nodeAddress" />
           </a-card>
         </a-col>
         <a-col :xs="24" :lg="12">
-          <a-card class="chart-card" title="Node Staking" :bordered="false">
+          <a-card class="chart-card" title="Node Staking" :bordered="false" style="opacity: 0.9">
             <NodeStakingChart :address="nodeAddress" />
           </a-card>
         </a-col>
       </a-row>
 
       <!-- Node Charts Row 2 -->
-      <a-row :gutter="[24, 24]" style="margin-top: 24px" v-if="node">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
         <a-col :xs="24" :lg="8">
-          <a-card class="chart-card" title="Delegators" :bordered="false">
+          <a-card class="chart-card" title="Delegators" :bordered="false" style="opacity: 0.9">
             <NodeDelegatorsChart :address="nodeAddress" />
           </a-card>
         </a-col>
         <a-col :xs="24" :lg="16">
-          <a-card class="delegations-card" title="Delegations" :bordered="false">
+          <a-card class="delegations-card" title="Delegations" :bordered="false" style="opacity: 0.9">
             <a-spin :spinning="delegationsLoading">
               <a-table
                 v-if="delegations.length > 0"
