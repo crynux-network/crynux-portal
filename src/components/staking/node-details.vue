@@ -12,6 +12,8 @@ import {
   Spin as ASpin,
   Divider as ADivider,
   TypographyText as ATypographyText,
+  Table as ATable,
+  Empty as AEmpty,
   message
 } from 'ant-design-vue'
 import {
@@ -29,6 +31,10 @@ import { useWalletStore } from '@/stores/wallet'
 import { useAuthStore } from '@/stores/auth'
 import config from '@/config.json'
 import NetworkTag from '@/components/network-tag.vue'
+import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
+import NodeStakingChart from '@/components/staking/node-staking-chart.vue'
+import NodeScoresChart from '@/components/staking/node-scores-chart.vue'
+import NodeDelegatorsChart from '@/components/staking/node-delegators-chart.vue'
 
 const route = useRoute()
 const wallet = useWalletStore()
@@ -37,6 +43,11 @@ const auth = useAuthStore()
 const nodeAddress = computed(() => route.params.address)
 const node = ref(null)
 const loading = ref(false)
+const delegations = ref([])
+const delegationsLoading = ref(false)
+const delegationsTotal = ref(0)
+const delegationsPage = ref(1)
+const delegationsPageSize = 10
 
 const networkName = computed(() => {
   const key = wallet.selectedNetworkKey
@@ -165,6 +176,79 @@ const fetchData = async () => {
   }
 }
 
+const fetchDelegations = async (page = 1) => {
+  if (!node.value?.network) return
+  delegationsLoading.value = true
+  try {
+    const resp = await v2DelegatedStakingAPI.getNodeDelegations(nodeAddress.value, node.value.network, page, delegationsPageSize)
+    delegations.value = Array.isArray(resp?.delegations) ? resp.delegations : []
+    delegationsTotal.value = resp?.total || 0
+    delegationsPage.value = page
+  } catch (e) {
+    console.error('Failed to load delegations:', e)
+    delegations.value = []
+    delegationsTotal.value = 0
+  } finally {
+    delegationsLoading.value = false
+  }
+}
+
+const onDelegationsPageChange = (page) => {
+  fetchDelegations(page)
+}
+
+const delegationsColumns = [
+  {
+    title: 'Delegator',
+    dataIndex: 'user_address',
+    key: 'user_address',
+    width: 150
+  },
+  {
+    title: 'Staking',
+    dataIndex: 'staking_amount',
+    key: 'staking_amount',
+    width: 100,
+    align: 'right'
+  },
+  {
+    title: 'Staked At',
+    dataIndex: 'staked_at',
+    key: 'staked_at',
+    width: 110,
+    align: 'center'
+  },
+  {
+    title: 'Rewards Today',
+    dataIndex: 'today_earnings',
+    key: 'today_earnings',
+    width: 120,
+    align: 'right'
+  },
+  {
+    title: 'Rewards Total',
+    dataIndex: 'total_earnings',
+    key: 'total_earnings',
+    width: 120,
+    align: 'right'
+  }
+]
+
+const formatStakingAmount = (value) => {
+  return formatBigInt18Compact(value)
+}
+
+const formatDate = (timestamp) => {
+  if (!timestamp) return '-'
+  const date = new Date(timestamp * 1000)
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+const shortenAddress = (address) => {
+  if (!address) return ''
+  return address.slice(0, 8) + '...' + address.slice(-6)
+}
+
 const handleStake = () => {
   // Placeholder for stake action
   message.info('Stake functionality coming soon')
@@ -254,8 +338,9 @@ async function connect() {
   return authenticate()
 }
 
-onMounted(() => {
-  fetchData()
+onMounted(async () => {
+  await fetchData()
+  fetchDelegations()
 })
 </script>
 
@@ -466,6 +551,82 @@ onMounted(() => {
         </a-col>
       </a-row>
 
+      <!-- Node Rewards Chart -->
+      <a-row :gutter="[24, 24]" style="margin-top: 24px" v-if="node">
+        <a-col :span="24">
+          <a-card class="chart-card" title="Node Rewards" :bordered="false">
+            <NodeRewardsChart :address="nodeAddress" />
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <!-- Node Charts Row 1 -->
+      <a-row :gutter="[24, 24]" style="margin-top: 24px" v-if="node">
+        <a-col :xs="24" :lg="12">
+          <a-card class="chart-card" title="Node Scores" :bordered="false">
+            <NodeScoresChart :address="nodeAddress" />
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :lg="12">
+          <a-card class="chart-card" title="Node Staking" :bordered="false">
+            <NodeStakingChart :address="nodeAddress" />
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <!-- Node Charts Row 2 -->
+      <a-row :gutter="[24, 24]" style="margin-top: 24px" v-if="node">
+        <a-col :xs="24" :lg="8">
+          <a-card class="chart-card" title="Delegators" :bordered="false">
+            <NodeDelegatorsChart :address="nodeAddress" />
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :lg="16">
+          <a-card class="delegations-card" title="Delegations" :bordered="false">
+            <a-spin :spinning="delegationsLoading">
+              <a-table
+                v-if="delegations.length > 0"
+                :columns="delegationsColumns"
+                :data-source="delegations"
+                :pagination="{
+                  current: delegationsPage,
+                  pageSize: delegationsPageSize,
+                  total: delegationsTotal,
+                  size: 'small',
+                  onChange: onDelegationsPageChange
+                }"
+                :scroll="{ x: 500 }"
+                size="small"
+                row-key="user_address"
+              >
+                <template #bodyCell="{ column, record }">
+                  <template v-if="column.key === 'user_address'">
+                    <a-tooltip :title="record.user_address">
+                      <span class="delegator-address">{{ shortenAddress(record.user_address) }}</span>
+                    </a-tooltip>
+                  </template>
+                  <template v-else-if="column.key === 'staking_amount'">
+                    <span>{{ formatStakingAmount(record.staking_amount) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'staked_at'">
+                    <span>{{ formatDate(record.staked_at) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'today_earnings'">
+                    <span>{{ formatStakingAmount(record.today_earnings) }}</span>
+                  </template>
+                  <template v-else-if="column.key === 'total_earnings'">
+                    <span>{{ formatStakingAmount(record.total_earnings) }}</span>
+                  </template>
+                </template>
+              </a-table>
+              <div v-else class="empty-delegations">
+                  <a-empty description="No delegations yet" />
+                </div>
+            </a-spin>
+          </a-card>
+        </a-col>
+      </a-row>
+
       <div v-else-if="!loading" class="no-data">
         <p>Node not found or failed to load</p>
       </div>
@@ -635,14 +796,22 @@ onMounted(() => {
 
 .metrics-card :deep(.ant-card-body) {
   padding: 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .metrics-row {
   height: 100%;
+  flex: 1;
 }
 
 .metrics-left {
   padding-right: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 24px;
 }
 
 .metrics-right {
@@ -651,7 +820,7 @@ onMounted(() => {
 }
 
 .metrics-section {
-  margin-bottom: 28px;
+  margin-bottom: 0;
 }
 
 .metrics-section:last-child {
@@ -689,7 +858,6 @@ onMounted(() => {
   padding: 20px 12px;
   background: rgba(0, 0, 0, 0.02);
   border-radius: 12px;
-  margin-bottom: 12px;
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -787,7 +955,6 @@ onMounted(() => {
 
 /* Operator Rewards Section (subtle) */
 .operator-rewards-section {
-  margin-top: 24px;
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.02);
   border-radius: 8px;
@@ -833,6 +1000,7 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 .reward-highlight-box {
@@ -840,7 +1008,6 @@ onMounted(() => {
   padding: 20px 12px;
   background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(24, 144, 255, 0.02) 100%);
   border-radius: 12px;
-  margin-bottom: 12px;
   border: 1px solid rgba(24, 144, 255, 0.1);
 }
 
@@ -864,6 +1031,42 @@ onMounted(() => {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
   margin-top: 6px;
+}
+
+/* Chart Card Styles */
+.chart-card {
+  background: #ffffff;
+  border-radius: 12px;
+  height: 100%;
+}
+
+.chart-card :deep(.ant-card-body) {
+  padding: 24px;
+  position: relative;
+}
+
+/* Delegations Card Styles */
+.delegations-card {
+  background: #ffffff;
+  border-radius: 12px;
+  height: 100%;
+}
+
+.delegations-card :deep(.ant-card-body) {
+  padding: 24px;
+}
+
+.delegator-address {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+
+.empty-delegations {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
 }
 
 /* No Data State */
@@ -901,7 +1104,8 @@ onMounted(() => {
   }
 
   .info-card :deep(.ant-card-body),
-  .metrics-card :deep(.ant-card-body) {
+  .metrics-card :deep(.ant-card-body),
+  .chart-card :deep(.ant-card-body) {
     padding: 16px;
   }
 

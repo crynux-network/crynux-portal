@@ -9,6 +9,10 @@ class V2DelegatedStakingAPI extends BaseAPI {
     getNodeDetails(address) {
         return v2.get(`/node/${address}`)
     }
+
+    getNodeDelegations(nodeAddress, network, page = 1, pageSize = 10) {
+        return v2.get(`/node/${nodeAddress}/delegations?network=${network}&page=${page}&page_size=${pageSize}`)
+    }
 }
 
 const v2DelegatedStakingAPI = new V2DelegatedStakingAPI()
