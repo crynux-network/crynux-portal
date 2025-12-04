@@ -2,8 +2,8 @@ import BaseAPI from '../base-api'
 import v2 from './v2'
 
 class V2DelegatedStakingAPI extends BaseAPI {
-    getDelegatedNodes() {
-        return v2.get('/nodes/delegated')
+    getDelegatedNodes(page = 1, pageSize = 30) {
+        return v2.get(`/nodes/delegated?page=${page}&page_size=${pageSize}`)
     }
 
     getNodeDetails(address) {

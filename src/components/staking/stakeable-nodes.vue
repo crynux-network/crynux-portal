@@ -9,6 +9,9 @@ import NetworkTag from '@/components/network-tag.vue'
 
 const nodes = ref([])
 const loading = ref(false)
+const nodesTotal = ref(0)
+const nodesPage = ref(1)
+const nodesPageSize = 30
 
 const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1920)
 const handleResize = () => {
@@ -102,17 +105,23 @@ const formatBigInt18Compact = (value) => {
 }
 
 
-const fetchData = async () => {
+const fetchData = async (page = 1) => {
   loading.value = true
   try {
-    const delegated = await v2DelegatedStakingAPI.getDelegatedNodes()
+    const delegated = await v2DelegatedStakingAPI.getDelegatedNodes(page, nodesPageSize)
     nodes.value = (delegated && delegated.nodes) ? delegated.nodes : []
+    nodesTotal.value = delegated?.total || 0
+    nodesPage.value = page
   } catch (e) {
     message.error('Failed to load nodes: ' + e.message)
     console.error(e)
   } finally {
     loading.value = false
   }
+}
+
+const onNodesPageChange = (page) => {
+  fetchData(page)
 }
 
 onMounted(() => {
@@ -134,7 +143,12 @@ onUnmounted(() => {
       <a-list
         :data-source="nodes"
         :loading="loading"
-        :pagination="{ pageSize: 20 }"
+        :pagination="{
+          current: nodesPage,
+          pageSize: nodesPageSize,
+          total: nodesTotal,
+          onChange: onNodesPageChange
+        }"
         row-key="address"
         :split="false"
         :grid="{ gutter: 8, xs: 1, sm: 1, md: 2, lg: 3, xl: 3, xxl: 3 }"
