@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
+import { ethers } from 'ethers'
 import config from '@/config.json'
+import { useAuthStore } from '@/stores/auth'
 
 export const useWalletStore = defineStore('wallet', {
 	state: () => ({
 		address: null,
-		chainId: null,
 		selectedNetworkKey: 'dymension',
 		balanceWei: '0x0',
 		isConnected: false
@@ -19,16 +20,9 @@ export const useWalletStore = defineStore('wallet', {
 			if (!this.address) return ''
 			return this.address.slice(0, 6) + '…' + this.address.slice(-4)
 		},
-		setSelectedNetwork(key) {
-			if (!config.networks[key]) return
-			this.selectedNetworkKey = key
-		},
 		setAccount(address) {
 			this.address = address
 			this.isConnected = !!address
-		},
-		setChainId(chainId) {
-			this.chainId = chainId
 		},
 		setBalanceWei(weiHex) {
 			this.balanceWei = weiHex || '0x0'
@@ -49,6 +43,7 @@ export const useWalletStore = defineStore('wallet', {
 					method: 'wallet_switchEthereumChain',
 					params: [{ chainId: hexId }]
 				})
+				this.selectedNetworkKey = key
 				return true
 			} catch (err) {
 				if (err && err.code === 4902) {
@@ -72,6 +67,7 @@ export const useWalletStore = defineStore('wallet', {
 							method: 'wallet_switchEthereumChain',
 							params: [{ chainId: hexId }]
 						})
+						this.selectedNetworkKey = key
 						return true
 					} catch (_) {
 						return false
@@ -94,6 +90,88 @@ export const useWalletStore = defineStore('wallet', {
 				this.setBalanceWei('0x0')
 				return '0x0'
 			}
+		},
+
+		async refreshAccountAndBalance() {
+			const auth = useAuthStore()
+			const provider = window.ethereum
+			if (!provider) return { address: null, changed: false }
+
+			const accounts = await provider.request({ method: 'eth_accounts' })
+			let address = accounts && accounts.length ? accounts[0] : null
+			if (address) {
+				try {
+					address = ethers.getAddress(address)
+				} catch {
+					address = null
+				}
+			}
+
+			const prevAddress = this.address
+			this.setAccount(address)
+
+			if (address) {
+				await this.fetchBalance()
+			} else {
+				this.setBalanceWei('0x0')
+				auth.clearSession()
+			}
+
+			const sessionAddr = auth.sessionAddress || null
+			const mismatchWithSession = !!(address && sessionAddr && sessionAddr.toLowerCase() !== address.toLowerCase())
+			const addressChanged = !!(address && prevAddress && address !== prevAddress)
+
+			return {
+				address,
+				changed: mismatchWithSession || addressChanged
+			}
+		},
+
+		/**
+		 * Connect to MetaMask wallet (minimal - just get address)
+		 * For full authentication with Relay, use auth.authenticate()
+		 */
+		async connect() {
+			const provider = window.ethereum
+			if (!provider) {
+				return { success: false, reason: 'no_provider' }
+			}
+
+			try {
+				const accounts = await provider.request({ method: 'eth_requestAccounts' })
+				const acct = accounts && accounts.length ? accounts[0] : null
+				if (!acct) throw new Error('No account connected')
+
+				const address = ethers.getAddress(acct)
+				this.setAccount(address)
+				await this.fetchBalance()
+
+				return { success: true, address }
+			} catch (e) {
+				console.error('Wallet connect error:', e)
+				this.setAccount(null)
+				this.setBalanceWei('0x0')
+				return { success: false, reason: 'connect_failed', error: e }
+			}
+		},
+
+		async disconnect() {
+			const auth = useAuthStore()
+			const provider = window.ethereum
+			if (provider && provider.request) {
+				try {
+					await provider.request({
+						method: 'wallet_revokePermissions',
+						params: [{ eth_accounts: {} }]
+					})
+				} catch (e) {
+					console.error('Failed to revoke permissions:', e)
+					return { success: false, reason: 'revoke_failed', error: e }
+				}
+			}
+			auth.$reset()
+			this.$reset()
+			return { success: true }
 		}
 	},
 	persist: true

@@ -4,9 +4,9 @@ import {
   createBrowserSigner,
   getContractAddress,
   getNativeDecimals,
-  parseTokenAmount,
-  toBigInt
+  parseTokenAmount
 } from './contract'
+import { toBigInt } from './token'
 import delegatedStakingAbi from '@/abi/delegated-staking.json'
 
 /**
@@ -110,14 +110,16 @@ export async function getNodeDelegatorShare(networkKey, nodeAddress) {
  * Stake tokens on a node
  * @param {string} networkKey - The network key
  * @param {string} nodeAddress - The node address to stake on
- * @param {number|string} amount - The amount to stake in token units (not wei)
+ * @param {number|string} totalAmount - The final total stake amount (contract parameter)
+ * @param {number|string} additionalAmount - The additional tokens to send (transaction value)
  * @returns {Promise<ethers.TransactionReceipt>}
  */
-export async function stake(networkKey, nodeAddress, amount) {
+export async function stake(networkKey, nodeAddress, totalAmount, additionalAmount) {
   const contract = await getWriteContract(networkKey)
   const decimals = getNativeDecimals(networkKey)
-  const amountWei = parseTokenAmount(amount, decimals)
-  const tx = await contract.stake(nodeAddress, amountWei, { value: amountWei })
+  const totalAmountWei = parseTokenAmount(totalAmount, decimals)
+  const additionalAmountWei = parseTokenAmount(additionalAmount, decimals)
+  const tx = await contract.stake(nodeAddress, totalAmountWei, { value: additionalAmountWei })
   return tx.wait()
 }
 

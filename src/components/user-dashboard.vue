@@ -13,7 +13,8 @@ import { walletAPI } from '@/api/v1/wallet'
 import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
 import moment from 'moment'
 import NetworkTag from '@/components/network-tag.vue'
-import { createReadProvider, isUserRejectedError, formatBigInt18, toBigInt } from '@/services/contract'
+import { createReadProvider, isUserRejectedError } from '@/services/contract'
+import { formatBigInt18Precise, toBigInt } from '@/services/token'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -36,34 +37,29 @@ const creditsContractAddress = computed(() => {
     return config.networks[wallet.selectedNetworkKey].contracts.credits
 })
 
-const formatWeiHexToDisplay = (hex) => {
-	const bn = toBigInt(hex || '0x0')
-	return formatBigInt18(bn, 6)
-}
-
 const formattedBalance = computed(() => {
-	return formatWeiHexToDisplay(wallet.balanceWei)
+	return formatBigInt18Precise(toBigInt(wallet.balanceWei || '0x0'))
 })
 
 const benefitBalanceWei = ref('0x0')
 const formattedBenefitBalance = computed(() => {
-	return formatWeiHexToDisplay(benefitBalanceWei.value)
+	return formatBigInt18Precise(toBigInt(benefitBalanceWei.value || '0x0'))
 })
 
 const stakedBalanceWei = ref('0x0')
 const stakedCredits = ref(0n)
 const formattedStakedBalance = computed(() => {
-    return formatWeiHexToDisplay(stakedBalanceWei.value)
+    return formatBigInt18Precise(toBigInt(stakedBalanceWei.value || '0x0'))
 })
 const formattedStakedCredits = computed(() => {
-    return formatBigInt18(stakedCredits.value, 6)
+    return formatBigInt18Precise(stakedCredits.value)
 })
 const isFetchingStake = ref(false)
 const hasStakeInfoLoaded = ref(false)
 
 const creditsBalance = ref(0n)
 const formattedCreditsBalance = computed(() => {
-    return formatBigInt18(creditsBalance.value, 6)
+    return formatBigInt18Precise(creditsBalance.value)
 })
 const isFetchingCredits = ref(false)
 const hasCreditsLoaded = ref(false)

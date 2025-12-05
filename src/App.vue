@@ -2,7 +2,6 @@
 /* global VANTA */
 import { RouterView, useRouter } from 'vue-router'
 import v1 from './api/v1/v1'
-import { walletAPI } from '@/api/v1/wallet'
 import config from '@/config.json'
 import { useAuthStore } from '@/stores/auth'
 import { useWalletStore } from '@/stores/wallet'
@@ -71,13 +70,12 @@ onBeforeUnmount(() => {
 
 const auth = useAuthStore()
 const wallet = useWalletStore()
-let isAuthenticating = false
 let reauthModalVisible = false
 const mobileMenuOpen = ref(false)
 
 function reauthWithFocusAndDelay() {
   if (typeof window !== 'undefined' && window.focus) window.focus()
-  return new Promise(resolve => setTimeout(resolve, 200)).then(() => authenticate({ navigate: false }))
+  return new Promise(resolve => setTimeout(resolve, 200)).then(() => connect())
 }
 
 const networks = [
@@ -109,91 +107,10 @@ function handleClickOutside() {
 const isDashboard = computed(() => router.currentRoute.value?.name === 'dashboard')
 
 async function refreshAccountAndBalance() {
-  const provider = window.ethereum
-  if (!provider) return
-  const accounts = await provider.request({ method: 'eth_accounts' })
-  let address = accounts && accounts.length ? accounts[0] : null
-  if (address) {
-    try {
-      address = ethers.getAddress(address)
-    } catch (e) {
-      address = null
-    }
-  }
-  const prevAddress = wallet.address
-  wallet.setAccount(address)
-  if (address) {
-    let chainId = null
-    try {
-      chainId = await provider.request({ method: 'eth_chainId' })
-    } catch (e) {
-      chainId = null
-    }
-    wallet.setChainId(chainId)
-    await wallet.fetchBalance()
-  } else {
-    wallet.setBalanceWei('0x0')
-    auth.clearSession()
-  }
-  const sessionAddr = auth.sessionAddress || null
-  const mismatchWithSession = !!(address && sessionAddr && sessionAddr.toLowerCase() !== address.toLowerCase())
-  const addressChanged = !!(address && prevAddress && address !== prevAddress)
-  if (address && (mismatchWithSession || addressChanged)) {
+  const result = await wallet.refreshAccountAndBalance()
+  if (result.address && result.changed) {
     promptReauth()
   }
-}
-
-function authenticate(options = { navigate: false }) {
-  if (isAuthenticating) return Promise.resolve()
-  const provider = window.ethereum
-  if (!provider) {
-    messageApi.error('Please install MetaMask in your browser.')
-    return Promise.reject(new Error('No provider'))
-  }
-  isAuthenticating = true
-  const timestamp = Math.floor(Date.now() / 1000)
-  const action = 'Connect Wallet'
-  return provider.request({ method: 'eth_requestAccounts' })
-    .then((accounts) => {
-      const acct = (accounts && accounts.length) ? accounts[0] : null
-      if (!acct) throw new Error('No account connected')
-      const addressToAuth = ethers.getAddress(acct)
-      const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${addressToAuth}\nTimestamp: ${timestamp}`
-      return provider.request({
-        method: 'personal_sign',
-        params: [messageToSign, addressToAuth]
-      }).then(signature => ({ signature, addressToAuth }))
-    })
-    .then(({ signature, addressToAuth }) => walletAPI.connectWallet({ address: addressToAuth, signature, timestamp })
-      .then(resp => ({ resp, addressToAuth })))
-    .then(({ resp, addressToAuth }) => {
-      auth.setSession(resp.token, resp.expires_at, addressToAuth)
-      wallet.setAccount(addressToAuth)
-      return wallet.ensureNetworkOnWallet(wallet.selectedNetworkKey)
-        .then(() => refreshAccountAndBalance())
-        .then(() => {
-          if (options.navigate) {
-            router.push('/dashboard')
-          }
-        })
-    })
-    .catch(async (e) => {
-      console.error('Authentication error:', e)
-      try {
-        await provider.request({
-          method: 'wallet_revokePermissions',
-          params: [{ eth_accounts: {} }]
-        })
-      } catch (err) { console.error('Failed to revoke wallet permissions:', err) }
-      wallet.setAccount(null)
-      wallet.setBalanceWei('0x0')
-      auth.clearSession()
-      try { messageApi.error('Authentication failed or was rejected') } catch (err) { console.error('Failed to show auth error message:', err) }
-    })
-    .finally(() => {
-      isAuthenticating = false
-      reauthModalVisible = false
-    })
 }
 
 function promptReauth() {
@@ -211,7 +128,16 @@ function promptReauth() {
 }
 
 async function connect() {
-  return authenticate({ navigate: false })
+  const result = await auth.authenticate()
+  if (!result.success) {
+    if (result.reason === 'no_provider') {
+      messageApi.error('Please install MetaMask in your browser.')
+    } else if (result.reason === 'auth_failed') {
+      messageApi.error('Authentication failed or was rejected')
+    }
+  }
+  reauthModalVisible = false
+  return result
 }
 
 async function changeNetwork(val) {
@@ -220,25 +146,14 @@ async function changeNetwork(val) {
     messageApi.error('Failed to switch network in wallet')
     return
   }
-  wallet.setSelectedNetwork(val)
   await refreshAccountAndBalance()
 }
 
 async function performSignOut() {
-  const provider = window.ethereum
-  if (provider && provider.request) {
-    try {
-      await provider.request({
-        method: 'wallet_revokePermissions',
-        params: [{ eth_accounts: {} }]
-      })
-    } catch (e) {
-      console.error('Failed to revoke permissions:', e)
-      messageApi.error('Could not disconnect from wallet. Please switch accounts in MetaMask manually.')
-    }
+  const result = await wallet.disconnect()
+  if (!result.success) {
+    messageApi.error('Could not disconnect from wallet. Please switch accounts in MetaMask manually.')
   }
-  auth.$reset()
-  wallet.$reset()
   router.push('/')
 }
 

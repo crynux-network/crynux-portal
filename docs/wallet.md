@@ -1,0 +1,131 @@
+# Wallet Store & MetaMask
+
+This document explains the wallet store and its relationship with MetaMask.
+
+## Wallet Store (`stores/wallet.js`)
+
+Manages MetaMask wallet connection and state. **This is the central place for all wallet operations.**
+
+**State:**
+- `address` - Connected wallet address
+- `selectedNetworkKey` - Currently selected network ('dymension' | 'near')
+- `balanceWei` - Wallet balance in wei (hex string)
+- `isConnected` - Whether wallet is connected
+
+**Key Actions:**
+
+| Action | Description |
+|--------|-------------|
+| `connect()` | Minimal: just connect MetaMask and get address |
+| `disconnect()` | Revoke permissions, clear auth & wallet state |
+| `refreshAccountAndBalance()` | Sync wallet state with MetaMask |
+| `ensureNetworkOnWallet(networkKey)` | Switch MetaMask to specified network and update store |
+| `fetchBalance()` | Fetch and update wallet balance |
+
+**Usage:**
+```javascript
+import { useWalletStore } from '@/stores/wallet'
+import { useAuthStore } from '@/stores/auth'
+
+const wallet = useWalletStore()
+const auth = useAuthStore()
+
+// Just connect wallet (no auth)
+await wallet.connect()
+
+// Full authentication (connect + sign + get token)
+await auth.authenticate()
+```
+
+## Wallet vs Auth Separation
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     wallet.connect()                         │
+│                  (Minimal - MetaMask only)                   │
+├─────────────────────────────────────────────────────────────┤
+│  eth_requestAccounts → get address → set wallet state       │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    auth.authenticate()                       │
+│              (Full authentication with Relay)                │
+├─────────────────────────────────────────────────────────────┤
+│  1. wallet.connect()          (get address)                  │
+│  2. personal_sign             (sign message)                 │
+│  3. walletAPI.connectWallet() (exchange for token)           │
+│  4. auth.setSession()         (store JWT)                    │
+│  5. ensureNetworkOnWallet()   (switch network)               │
+│  6. refreshAccountAndBalance()(sync state)                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**When to use which:**
+- `wallet.connect()` - just need wallet address, no Relay API calls needed
+- `auth.authenticate()` - need to call authenticated Relay APIs (v1)
+
+For detailed auth token explanation, see **[docs/auth.md](./auth.md)**.
+
+## Wallet Store vs MetaMask
+
+```
+┌────────────────────┐          ┌────────────────────┐
+│     config.json    │          │     MetaMask       │
+├────────────────────┤          │  (Browser wallet)  │
+│ networks:          │          ├────────────────────┤
+│  - dymension       │          │ - accounts         │
+│  - near            │          │ - active chain     │
+│  (chainId, rpc...) │          │ - balance          │
+└────────────────────┘          └────────────────────┘
+        │                                ▲
+        │                                │
+        ▼                                │
+┌────────────────────┐                   │
+│   Wallet Store     │                   │
+│   (Pinia state)    │                   │
+├────────────────────┤                   │
+│ - selectedNetworkKey│──────────────────┘
+│ - address          │◄──── read from MetaMask
+│ - balanceWei       │◄──── read from MetaMask
+│ - isConnected      │
+└────────────────────┘
+```
+
+**Key relationships:**
+
+| Wallet Store Field | Source | Description |
+|--------------------|--------|-------------|
+| `selectedNetworkKey` | config.json | Which network is active, used to switch MetaMask chain |
+| `address` | MetaMask | Connected account address |
+| `balanceWei` | MetaMask | Account balance on current chain |
+| `isConnected` | Derived | Whether wallet is connected |
+
+## Network Switching Flow
+
+```
+config.json                    Wallet Store               MetaMask
+    │                              │                          │
+    │  networks.dymension.chainId  │                          │
+    └─────────────────────────────►│  ensureNetworkOnWallet() │
+                                   │─────────────────────────►│
+                                   │  wallet_switchEthereumChain
+                                   │                          │
+                                   │  selectedNetworkKey =    │
+                                   │  'dymension'             │
+```
+
+**Important:**
+- `selectedNetworkKey` is the source of truth for current network
+- `config.json` defines chainId, RPC URLs, contract addresses for each network
+- `ensureNetworkOnWallet()` uses config's chainId to tell MetaMask which chain to switch to
+- We read `address` and `balanceWei` from MetaMask, but never read chainId - we already know it from config
+- MetaMask events (`accountsChanged`, `chainChanged`) trigger `refreshAccountAndBalance()` in App.vue
+
+## Related Files
+
+| File | Purpose |
+|------|---------|
+| `stores/wallet.js` | Wallet store - connection, network switching, balance |
+| `stores/auth.js` | Auth store - session token from Relay API |
+| `config.json` | Network configuration (chainId, RPC URLs, contracts) |
+| `App.vue` | Listens to MetaMask events, triggers refresh |

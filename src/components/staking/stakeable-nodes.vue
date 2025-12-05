@@ -5,7 +5,7 @@ import { PlayCircleOutlined, PauseCircleOutlined, MinusCircleOutlined, FunnelPlo
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
 import { useWalletStore } from '@/stores/wallet'
 import config from '@/config.json'
-import { formatBigInt18Compact } from '@/services/contract'
+import { formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 
 const nodes = ref([])

@@ -24,9 +24,8 @@ import {
   DollarOutlined
 } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
-import { useWalletStore } from '@/stores/wallet'
 import config from '@/config.json'
-import { formatBigInt18Compact } from '@/services/contract'
+import { formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
 import NodeStakingChart from '@/components/staking/node-staking-chart.vue'
@@ -35,7 +34,6 @@ import NodeDelegatorsChart from '@/components/staking/node-delegators-chart.vue'
 import MyDelegation from '@/components/staking/my-delegation.vue'
 
 const route = useRoute()
-const wallet = useWalletStore()
 
 const nodeAddress = computed(() => route.params.address)
 const node = ref(null)
@@ -47,7 +45,8 @@ const delegationsPage = ref(1)
 const delegationsPageSize = 10
 
 const networkName = computed(() => {
-  const key = wallet.selectedNetworkKey
+  const key = node.value?.network
+  if (!key) return ''
   return (config.networks[key] && config.networks[key].chainName) || key
 })
 
@@ -256,7 +255,7 @@ onMounted(async () => {
             <a-divider />
 
             <!-- My Delegation Section -->
-            <MyDelegation :node-address="nodeAddress" @staking-changed="handleStakingChanged" />
+            <MyDelegation :node-address="nodeAddress" :network="node?.network" @staking-changed="handleStakingChanged" />
           </a-card>
         </a-col>
 

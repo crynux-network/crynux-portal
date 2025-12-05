@@ -37,6 +37,15 @@ class WalletAPI extends BaseAPI {
 			signature: signature
 		})
 	}
+
+	getDelegation(userAddress, nodeAddress, network) {
+		return v1.get(`/delegator/${userAddress}/delegation`, {
+			params: {
+				node_address: nodeAddress,
+				network: network
+			}
+		})
+	}
 }
 
 export const walletAPI = new WalletAPI();
