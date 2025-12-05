@@ -174,8 +174,6 @@ function authenticate(options = { navigate: false }) {
         .then(() => {
           if (options.navigate) {
             router.push('/dashboard')
-          } else {
-            messageApi.success('Re-authenticated')
           }
         })
     })
@@ -213,7 +211,7 @@ function promptReauth() {
 }
 
 async function connect() {
-  return authenticate({ navigate: true })
+  return authenticate({ navigate: false })
 }
 
 async function changeNetwork(val) {

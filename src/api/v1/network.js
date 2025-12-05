@@ -10,8 +10,8 @@ class NetworkAPI extends BaseAPI {
         return v1.get('/network/nodes/number')
     }
 
-    getAllNodesData(start, total) {
-        return v1.get('/network/nodes/data?start=' + start + '&total=' + total)
+    getAllNodesData(page, pageSize) {
+        return v1.get('/network/nodes/data?page=' + page + '&page_size=' + pageSize)
     }
 
     getAllTasksNumber() {

@@ -3,15 +3,15 @@ import v2 from './v2'
 
 class V2DelegatedStakingAPI extends BaseAPI {
     getDelegatedNodes(page = 1, pageSize = 30) {
-        return v2.get(`/nodes/delegated?page=${page}&page_size=${pageSize}`)
+        return v2.get(`/delegated_staking/nodes?page=${page}&page_size=${pageSize}`)
     }
 
     getNodeDetails(address) {
-        return v2.get(`/node/${address}`)
+        return v2.get(`/delegated_staking/nodes/${address}`)
     }
 
     getNodeDelegations(nodeAddress, network, page = 1, pageSize = 10) {
-        return v2.get(`/node/${nodeAddress}/delegations?network=${network}&page=${page}&page_size=${pageSize}`)
+        return v2.get(`/delegated_staking/nodes/${nodeAddress}/delegations?network=${network}&page=${page}&page_size=${pageSize}`)
     }
 }
 
