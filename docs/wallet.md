@@ -114,12 +114,41 @@ config.json                    Wallet Store               MetaMask
                                    │  'dymension'             │
 ```
 
-**Important:**
-- `selectedNetworkKey` is the source of truth for current network
-- `config.json` defines chainId, RPC URLs, contract addresses for each network
-- `ensureNetworkOnWallet()` uses config's chainId to tell MetaMask which chain to switch to
-- We read `address` and `balanceWei` from MetaMask, but never read chainId - we already know it from config
-- MetaMask events (`accountsChanged`, `chainChanged`) trigger `refreshAccountAndBalance()` in App.vue
+**Important: App Network is Independent of MetaMask**
+
+The app's `selectedNetworkKey` is the **single source of truth** for the current network:
+
+| What | Source | Synced from MetaMask? |
+|------|--------|----------------------|
+| `address` | MetaMask | ✅ Yes |
+| `balanceWei` | MetaMask | ✅ Yes |
+| `selectedNetworkKey` | App only | ❌ No - never read from MetaMask |
+
+- We **never read** MetaMask's current chainId
+- We **only write** to MetaMask via `ensureNetworkOnWallet()` to switch it to our selected network
+- If user switches network in MetaMask, the app ignores it - `selectedNetworkKey` stays unchanged
+- `chainChanged` event only triggers `refreshAccountAndBalance()` (for balance), not network sync
+
+## User Switches Network in MetaMask
+
+If user manually switches to a different network in MetaMask:
+
+| Aspect | Impact |
+|--------|--------|
+| Auth session | ✅ Not affected (token proves address ownership, not network) |
+| App state | ✅ `wallet.selectedNetworkKey` unchanged |
+| Browsing | ✅ User can continue browsing normally |
+| Transactions | ⚠️ Would fail on wrong network |
+
+**How it's handled:** All blockchain operations call `ensureNetworkOnWallet()` before executing:
+
+```javascript
+// Before any transaction
+await wallet.ensureNetworkOnWallet(requiredNetwork)
+await someBlockchainOperation()
+```
+
+This automatically switches MetaMask back to the correct network before the transaction.
 
 ## Related Files
 

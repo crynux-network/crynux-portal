@@ -83,10 +83,7 @@ const networks = [
   { key: 'near', name: config.networks.near.chainName, logo: '/near-square.png' }
 ]
 
-const selectedNetworkKey = computed({
-  get: () => wallet.selectedNetworkKey,
-  set: (val) => wallet.setSelectedNetwork(val)
-})
+const selectedNetworkKey = computed(() => wallet.selectedNetworkKey)
 
 const selectedNetwork = computed(() => {
   return networks.find(n => n.key === selectedNetworkKey.value) || networks[0]
