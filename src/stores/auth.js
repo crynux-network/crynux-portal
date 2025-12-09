@@ -13,6 +13,9 @@ export const useAuthStore = defineStore('auth', {
 	getters: {
 		isAuthenticated(state) {
 			return !!state.sessionToken && Number(state.sessionExpiresAt) > Math.floor(Date.now() / 1000)
+		},
+		isAuthenticating(state) {
+			return state._isAuthenticating
 		}
 	},
 	actions: {
@@ -88,10 +91,6 @@ export const useAuthStore = defineStore('auth', {
 			} finally {
 				this._isAuthenticating = false
 			}
-		},
-
-		isAuthenticating() {
-			return this._isAuthenticating
 		}
 	},
 	persist: true

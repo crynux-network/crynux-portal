@@ -711,11 +711,9 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 </script>
 
 <template>
-    <a-row class="top-row"></a-row>
+	<div class="top-spacer"></div>
 	<a-row :gutter="[16, 16]">
-		<a-col :span="20" :offset="2">
-			<a-row :gutter="[16, 16]" align="stretch">
-				<a-col :span="16" style="display: flex; flex-direction: column">
+		<a-col :xs="24" :lg="16" style="display: flex; flex-direction: column">
 					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
 						<a-descriptions :column="2" bordered :label-style="{ 'width': '160px' }">
 							<a-descriptions-item :span="2" label="Network">{{ networkName }}</a-descriptions-item>
@@ -779,9 +777,9 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 							</a-descriptions-item>
 
 						</a-descriptions>
-					</a-card>
-				</a-col>
-				<a-col :span="8" style="display: flex; flex-direction: column">
+			</a-card>
+		</a-col>
+		<a-col :xs="24" :lg="8" style="display: flex; flex-direction: column">
 					<a-card :title="`Relay Account`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1; display: flex; flex-direction: column" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, paddingBottom: '32px' }">
 							<a-row justify="center" style="margin-top: 48px;">
 							<a-col>
@@ -799,21 +797,20 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 							</a-row>
 						</div>
 					</a-card>
-				</a-col>
-			</a-row>
 		</a-col>
 	</a-row>
 
 	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
-		<a-col :span="20" :offset="2">
-			<a-row :gutter="[16, 16]">
-				<a-col :span="24">
-					<a-card :title="`Relay Account Earnings`" :bordered="false" style="opacity: 0.9">
-						<RelayAccountEarningsChart :address="wallet.address" />
-					</a-card>
-				</a-col>
-				<a-col :span="24">
-					<a-card :title="`Relay Account Transactions`" :bordered="false" style="opacity: 0.9">
+		<a-col :span="24">
+			<a-card :title="`Relay Account Earnings`" :bordered="false" style="opacity: 0.9">
+				<RelayAccountEarningsChart :address="wallet.address" />
+			</a-card>
+		</a-col>
+	</a-row>
+
+	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
+		<a-col :span="24">
+			<a-card :title="`Relay Account Transactions`" :bordered="false" style="opacity: 0.9">
 						<a-tabs default-active-key="withdrawals" type="card">
 							<a-tab-pane key="withdrawals" tab="Withdrawals">
 								<a-table
@@ -863,9 +860,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 								</a-table>
 							</a-tab-pane>
 						</a-tabs>
-					</a-card>
-				</a-col>
-			</a-row>
+			</a-card>
 		</a-col>
 	</a-row>
 
@@ -1010,6 +1005,6 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 </template>
 
 <style scoped lang="stylus">
-.top-row
-    height 20px
+.top-spacer
+	height 20px
 </style>

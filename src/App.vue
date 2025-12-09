@@ -104,7 +104,7 @@ function handleClickOutside() {
   showNetworkDropdown.value = false
 }
 
-const isDashboard = computed(() => router.currentRoute.value?.name === 'dashboard')
+const isDashboard = computed(() => router.currentRoute.value?.path?.startsWith('/dashboard'))
 
 async function refreshAccountAndBalance() {
   const result = await wallet.refreshAccountAndBalance()
@@ -114,7 +114,7 @@ async function refreshAccountAndBalance() {
 }
 
 function promptReauth() {
-  if (reauthModalVisible || isAuthenticating) return
+  if (reauthModalVisible || auth.isAuthenticating) return
   reauthModalVisible = true
   Modal.confirm({
     title: 'Authentication Required',
@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
                         <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'netstats' }" @click="router.push({ name: 'netstats' })">Netstats</a-button>
                         <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'staking' }" @click="router.push({ name: 'staking' })">Staking</a-button>
                       </template>
-                      <template v-if="auth.isAuthenticated && wallet.isConnected">
+                      <template v-if="auth.isAuthenticated">
                         <div v-if="isDashboard" class="network-selector" @click.stop="toggleNetworkDropdown">
                           <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
                           <span class="network-name">{{ selectedNetwork.name }}</span>
@@ -263,7 +263,8 @@ onBeforeUnmount(() => {
                           </a-button>
                           <template #overlay>
                             <a-menu>
-                              <a-menu-item key="dashboard" @click="router.push('/dashboard')">Dashboard</a-menu-item>
+                              <a-menu-item key="relay-account" @click="router.push({ name: 'relay-account' })">Relay Account</a-menu-item>
+                              <a-menu-item key="delegated-staking" @click="router.push({ name: 'delegated-staking' })">Delegated Staking</a-menu-item>
                               <a-menu-divider style="margin: 10px 0" />
                               <a-menu-item key="signout" @click="confirmSignOut">Sign Out</a-menu-item>
                             </a-menu>
@@ -309,7 +310,7 @@ onBeforeUnmount(() => {
         >
           <template #extra>
             <span
-              v-if="auth.isAuthenticated && wallet.isConnected"
+              v-if="auth.isAuthenticated"
               class="drawer-address"
             >{{ wallet.shortAddress() }}</span>
           </template>
@@ -322,17 +323,24 @@ onBeforeUnmount(() => {
               :class="{ active: router.currentRoute.value.name === 'staking' }"
               @click="router.push({ name: 'staking' }); mobileMenuOpen = false"
             >Staking</a-button>
-            <template v-if="auth.isAuthenticated && wallet.isConnected">
+            <template v-if="auth.isAuthenticated">
               <a-button
                 type="text"
                 block
                 class="drawer-nav-btn"
-                :class="{ active: router.currentRoute.value.name === 'dashboard' }"
-                @click="router.push({ name: 'dashboard' }); mobileMenuOpen = false"
-              >Dashboard</a-button>
+                :class="{ active: router.currentRoute.value.name === 'relay-account' }"
+                @click="router.push({ name: 'relay-account' }); mobileMenuOpen = false"
+              >Relay Account</a-button>
+              <a-button
+                type="text"
+                block
+                class="drawer-nav-btn"
+                :class="{ active: router.currentRoute.value.name === 'delegated-staking' }"
+                @click="router.push({ name: 'delegated-staking' }); mobileMenuOpen = false"
+              >Delegated Staking</a-button>
             </template>
             <div class="drawer-separator"></div>
-            <template v-if="auth.isAuthenticated && wallet.isConnected">
+            <template v-if="auth.isAuthenticated">
               <div class="network-selector" @click.stop="toggleNetworkDropdown">
                 <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
                 <span class="network-name">{{ selectedNetwork.name }}</span>

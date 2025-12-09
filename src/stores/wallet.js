@@ -108,18 +108,21 @@ export const useWalletStore = defineStore('wallet', {
 			}
 
 			const prevAddress = this.address
+			const sessionAddr = auth.sessionAddress || null
+			const mismatchWithSession = !!(address && sessionAddr && sessionAddr.toLowerCase() !== address.toLowerCase())
+			const addressChanged = !!(address && prevAddress && address !== prevAddress)
+
 			this.setAccount(address)
 
 			if (address) {
 				await this.fetchBalance()
+				if (mismatchWithSession) {
+					auth.clearSession()
+				}
 			} else {
 				this.setBalanceWei('0x0')
 				auth.clearSession()
 			}
-
-			const sessionAddr = auth.sessionAddress || null
-			const mismatchWithSession = !!(address && sessionAddr && sessionAddr.toLowerCase() !== address.toLowerCase())
-			const addressChanged = !!(address && prevAddress && address !== prevAddress)
 
 			return {
 				address,

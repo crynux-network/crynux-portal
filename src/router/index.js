@@ -1,7 +1,9 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import NetstatsView from '@/components/netstats/netstats-view.vue'
 import StakeableNodes from '@/components/staking/stakeable-nodes.vue'
-import UserDashboard from '@/components/user-dashboard.vue'
+import Dashboard from '@/components/dashboard/the-dashboard.vue'
+import RelayAccount from '@/components/dashboard/relay-account/relay-account.vue'
+import DelegatedStaking from '@/components/dashboard/delegated-staking/delegated-staking.vue'
 import NodeDetails from '@/components/staking/node-details.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWalletStore } from '@/stores/wallet'
@@ -26,9 +28,21 @@ const router = createRouter({
     },
     {
       path: '/dashboard',
-      name: 'dashboard',
-      component: UserDashboard,
-      meta: { requiresAuth: true }
+      component: Dashboard,
+      meta: { requiresAuth: true },
+      redirect: { name: 'relay-account' },
+      children: [
+        {
+          path: 'relay-account',
+          name: 'relay-account',
+          component: RelayAccount
+        },
+        {
+          path: 'delegated-staking',
+          name: 'delegated-staking',
+          component: DelegatedStaking
+        }
+      ]
     }
   ]
 })

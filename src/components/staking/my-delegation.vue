@@ -18,6 +18,7 @@ import {
 import { useWalletStore } from '@/stores/wallet'
 import { useAuthStore } from '@/stores/auth'
 import { walletAPI } from '@/api/v1/wallet'
+import ApiError from '@/api/api-error'
 import config from '@/config.json'
 import delegatedStakingService from '@/services/delegated-staking'
 import { isUserRejectedError, getBalanceForNetwork } from '@/services/contract'
@@ -197,7 +198,9 @@ async function fetchDelegation() {
     todayEarnings.value = toBigInt(resp.today_earnings || 0)
     totalEarnings.value = toBigInt(resp.total_earnings || 0)
   } catch (e) {
-    console.error('Failed to fetch delegation:', e)
+    if (!(e instanceof ApiError && e.type === ApiError.Type.NotFound)) {
+      console.error('Failed to fetch delegation:', e)
+    }
     stakingAmount.value = 0n
     stakedAt.value = null
     todayEarnings.value = 0n
@@ -292,9 +295,9 @@ async function submitUnstake() {
 }
 
 watch(
-  () => wallet.isConnected,
-  (connected) => {
-    if (connected && props.network) {
+  () => auth.isAuthenticated,
+  (authenticated) => {
+    if (authenticated && props.network) {
       fetchDelegation()
       fetchMinStakeAmount()
     } else {
@@ -306,7 +309,7 @@ watch(
 watch(
   () => props.network,
   () => {
-    if (wallet.isConnected && props.network) {
+    if (auth.isAuthenticated && props.network) {
       fetchDelegation()
       fetchMinStakeAmount()
     }
@@ -316,7 +319,7 @@ watch(
 watch(
   () => props.nodeAddress,
   () => {
-    if (wallet.isConnected) {
+    if (auth.isAuthenticated) {
       fetchDelegation()
     }
   }
@@ -325,7 +328,7 @@ watch(
 onMounted(() => {
   if (props.network) {
     fetchMinStakeAmount()
-    if (wallet.isConnected) {
+    if (auth.isAuthenticated) {
       fetchDelegation()
     }
   }
@@ -336,7 +339,7 @@ onMounted(() => {
   <div class="my-delegation">
     <a-spin :spinning="loading">
       <!-- Not connected state -->
-      <template v-if="!wallet.isConnected">
+      <template v-if="!auth.isAuthenticated">
         <div class="not-connected">
           <p>Connect your wallet to stake on this node</p>
           <a-button type="primary" @click="connect">
