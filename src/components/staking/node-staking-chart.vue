@@ -62,6 +62,7 @@ const options = {
         },
         tooltip: {
             mode: 'index',
+            itemSort: (a, b) => b.datasetIndex - a.datasetIndex,
             callbacks: {
                 label: (context) => {
                     return context.dataset.label + ': CNX ' + formatCompact(context.parsed.y);
