@@ -24,7 +24,7 @@ import {
   MenuDivider as AMenuDivider,
   Input as AInput
 } from 'ant-design-vue'
-import { SearchOutlined, MenuOutlined } from '@ant-design/icons-vue'
+import { SearchOutlined, MenuOutlined, WalletOutlined, DollarOutlined, LogoutOutlined } from '@ant-design/icons-vue'
 import { onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import GithubButton from 'vue-github-button'
 
@@ -260,10 +260,19 @@ onBeforeUnmount(() => {
                           </a-button>
                           <template #overlay>
                             <a-menu>
-                              <a-menu-item key="relay-account" @click="router.push({ name: 'relay-account' })">Relay Account</a-menu-item>
-                              <a-menu-item key="delegated-staking" @click="router.push({ name: 'delegated-staking' })">Delegated Staking</a-menu-item>
+                              <a-menu-item key="relay-account" @click="router.push({ name: 'relay-account' })">
+                                <template #icon><WalletOutlined /></template>
+                                Relay Account
+                              </a-menu-item>
+                              <a-menu-item key="delegated-staking" @click="router.push({ name: 'delegated-staking' })">
+                                <template #icon><DollarOutlined /></template>
+                                Delegated Staking
+                              </a-menu-item>
                               <a-menu-divider style="margin: 10px 0" />
-                              <a-menu-item key="signout" @click="confirmSignOut">Sign Out</a-menu-item>
+                              <a-menu-item key="signout" @click="confirmSignOut">
+                                <template #icon><LogoutOutlined /></template>
+                                Sign Out
+                              </a-menu-item>
                             </a-menu>
                           </template>
                         </a-dropdown>
@@ -806,4 +815,9 @@ onBeforeUnmount(() => {
   :deep(.ant-drawer-body)
     background #fff
 
+</style>
+
+<style lang="stylus">
+.ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item
+  padding 10px 16px
 </style>
