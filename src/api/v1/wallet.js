@@ -46,6 +46,10 @@ class WalletAPI extends BaseAPI {
 			}
 		})
 	}
+
+	getIncomeStats(address) {
+		return v1.get(`/client/${address}/income/stats`)
+	}
 }
 
 export const walletAPI = new WalletAPI();
