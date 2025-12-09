@@ -283,7 +283,7 @@ onBeforeUnmount(() => {
                     </a-space>
                   </div>
                   <div class="menu-toggle">
-                    <a-button type="text" ghost @click="mobileMenuOpen = true" aria-label="Open menu">
+                    <a-button type="text" @click="mobileMenuOpen = true" aria-label="Open menu">
                       <MenuOutlined style="font-size: 22px; color: #fff;" />
                     </a-button>
                   </div>

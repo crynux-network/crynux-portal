@@ -50,6 +50,24 @@ class WalletAPI extends BaseAPI {
 	getIncomeStats(address) {
 		return v1.get(`/client/${address}/income/stats`)
 	}
+
+	getDelegatorStats(userAddress) {
+		return v1.get(`/delegator/${userAddress}`)
+	}
+
+	getDelegatorDelegations(userAddress) {
+		return v1.get(`/delegator/${userAddress}/delegations`)
+	}
+
+	getDelegatorEarningsChart(userAddress) {
+		return v1.get(`/stats/line_chart/delegator/${userAddress}/earnings`)
+	}
+
+	getDelegationIncomeChart(userAddress, nodeAddress, network) {
+		return v1.get(`/stats/line_chart/delegation/${userAddress}/${nodeAddress}/earnings`, {
+			params: { network }
+		})
+	}
 }
 
 export const walletAPI = new WalletAPI();

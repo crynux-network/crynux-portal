@@ -1,5 +1,6 @@
 import { ethers } from 'ethers'
 import config from '@/config.json'
+import beneficialAbi from '@/abi/beneficial-address.json'
 
 /**
  * Create a read-only JSON-RPC provider for the specified network
@@ -85,4 +86,43 @@ export function parseTokenAmount(amount, decimals = 18) {
 export async function getBalanceForNetwork(networkKey, address) {
   const provider = createReadProvider(networkKey)
   return provider.getBalance(address)
+}
+
+/**
+ * Check if an address is the zero address
+ * @param {string} addr - The address to check
+ * @returns {boolean}
+ */
+export function isZeroAddress(addr) {
+  if (!addr) return true
+  try {
+    return ethers.ZeroAddress.toLowerCase() === String(addr).toLowerCase()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Get the beneficial address for a wallet on a specific network
+ * @param {string} networkKey - The network key
+ * @param {string} walletAddress - The wallet address to check
+ * @returns {Promise<string>} The beneficial address (or empty string if not set/error)
+ */
+export async function getBeneficialAddress(networkKey, walletAddress) {
+  if (!walletAddress || !networkKey) {
+    return ''
+  }
+  const contractAddress = config.networks[networkKey]?.contracts?.beneficialAddress
+  if (!contractAddress) {
+    return ''
+  }
+  try {
+    const provider = createReadProvider(networkKey)
+    const contract = new ethers.Contract(contractAddress, beneficialAbi, provider)
+    const addr = await contract.getBenefitAddress(walletAddress)
+    return addr
+  } catch (e) {
+    console.error('Failed to fetch beneficial address:', e)
+    return ''
+  }
 }

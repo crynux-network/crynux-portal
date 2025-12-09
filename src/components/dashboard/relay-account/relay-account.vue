@@ -13,7 +13,7 @@ import { walletAPI } from '@/api/v1/wallet'
 import RelayAccountIncomeChart from '@/components/relay-account-income-chart.vue'
 import moment from 'moment'
 import NetworkTag from '@/components/network-tag.vue'
-import { createReadProvider, isUserRejectedError } from '@/services/contract'
+import { createReadProvider, isUserRejectedError, getBeneficialAddress, isZeroAddress } from '@/services/contract'
 import { formatBigInt18Precise, toBigInt } from '@/services/token'
 import { getDelegatorTotalStakeAmount } from '@/services/delegated-staking'
 
@@ -483,11 +483,6 @@ const fetchRelayBalance = async () => {
     }
 }
 
-const isZeroAddress = (addr) => {
-	if (!addr) return true
-	try { return ethers.ZeroAddress.toLowerCase() === String(addr).toLowerCase() } catch { return false }
-}
-
 const fetchBenefitAddress = async () => {
 	benefitError.value = ''
 	isFetchingBenefit.value = true
@@ -497,10 +492,7 @@ const fetchBenefitAddress = async () => {
 		return
 	}
 	try {
-		const provider = createReadProvider(wallet.selectedNetworkKey)
-		const contract = new ethers.Contract(beneficialAddressContractAddress.value, abi, provider)
-		const addr = await contract.getBenefitAddress(wallet.address)
-		benefitAddress.value = addr
+		benefitAddress.value = await getBeneficialAddress(wallet.selectedNetworkKey, wallet.address)
 	} catch (e) {
 		console.error(e)
 		benefitAddress.value = ''
