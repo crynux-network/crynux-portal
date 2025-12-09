@@ -224,13 +224,13 @@ async function fetchNetworkBalance() {
 }
 
 async function openStakeModal() {
-  await fetchNetworkBalance()
+  await Promise.all([fetchDelegation(), fetchNetworkBalance()])
   stakeInputAmount.value = currentStakingAmountCNX.value > 0 ? currentStakingAmountCNX.value : null
   isStakeModalOpen.value = true
 }
 
 async function openUnstakeModal() {
-  await fetchNetworkBalance()
+  await Promise.all([fetchDelegation(), fetchNetworkBalance()])
   isUnstakeModalOpen.value = true
 }
 

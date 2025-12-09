@@ -66,6 +66,9 @@ const options = {
             title: {
                 display: true,
                 text: 'Delegators'
+            },
+            ticks: {
+                precision: 0
             }
         }
     }
