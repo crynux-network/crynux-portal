@@ -160,7 +160,7 @@ const delegationsColumns = [
     width: 150
   },
   {
-    title: 'Staking',
+    title: 'Stake',
     dataIndex: 'staking_amount',
     key: 'staking_amount',
     width: 100,
@@ -328,19 +328,19 @@ onMounted(async () => {
                     <a-col :xs="8">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(totalStaking) }}</div>
-                        <div class="metric-label">Total Staked</div>
+                        <div class="metric-label">Total Stake</div>
                       </div>
                     </a-col>
                     <a-col :xs="8">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(node.operator_staking) }}</div>
-                        <div class="metric-label">Operator Staked</div>
+                        <div class="metric-label">Operator Stake</div>
                       </div>
                     </a-col>
                     <a-col :xs="8">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(node.delegator_staking) }}</div>
-                        <div class="metric-label">Delegators Staked</div>
+                        <div class="metric-label">Delegator Stake</div>
                       </div>
                     </a-col>
                   </a-row>
@@ -404,7 +404,7 @@ onMounted(async () => {
           </a-card>
         </a-col>
         <a-col :xs="24" :lg="12">
-          <a-card class="chart-card" title="Node Staking" :bordered="false" style="opacity: 0.9">
+          <a-card class="chart-card" title="Node Stake" :bordered="false" style="opacity: 0.9">
             <NodeStakingChart :address="nodeAddress" />
           </a-card>
         </a-col>

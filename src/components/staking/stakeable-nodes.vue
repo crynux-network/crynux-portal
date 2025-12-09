@@ -251,7 +251,7 @@ onUnmounted(() => {
                               {{ formatBigInt18Compact(item.delegator_staking) }} / {{ formatBigInt18Compact(item.operator_staking) }}
                             </div>
                           </a-tooltip>
-                          <div class="kpi-label">CNX Staked</div>
+                          <div class="kpi-label">CNX Stake</div>
                         </div>
                       </a-col>
                       <a-col :xs="7" :sm="7" :md="7" :lg="6" :xl="6" :xxl="6">

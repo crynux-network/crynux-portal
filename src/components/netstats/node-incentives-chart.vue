@@ -42,7 +42,7 @@ const columns = [
         key: 'prob_weight'
     },
     {
-        title: 'Staking',
+        title: 'Stake',
         dataIndex: 'staking',
         key: 'staking'
     },

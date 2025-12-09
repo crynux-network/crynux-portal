@@ -10,11 +10,12 @@ import creditsAbi from '@/abi/credits.json'
 import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
-import RelayAccountEarningsChart from '@/components/relay-account-earnings-chart.vue'
+import RelayAccountIncomeChart from '@/components/relay-account-income-chart.vue'
 import moment from 'moment'
 import NetworkTag from '@/components/network-tag.vue'
 import { createReadProvider, isUserRejectedError } from '@/services/contract'
 import { formatBigInt18Precise, toBigInt } from '@/services/token'
+import { getDelegatorTotalStakeAmount } from '@/services/delegated-staking'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -46,16 +47,23 @@ const formattedBenefitBalance = computed(() => {
 	return formatBigInt18Precise(toBigInt(benefitBalanceWei.value || '0x0'))
 })
 
-const stakedBalanceWei = ref('0x0')
+const nodeStakedBalanceWei = ref('0x0')
 const stakedCredits = ref(0n)
-const formattedStakedBalance = computed(() => {
-    return formatBigInt18Precise(toBigInt(stakedBalanceWei.value || '0x0'))
+const formattedNodeStakedBalance = computed(() => {
+    return formatBigInt18Precise(toBigInt(nodeStakedBalanceWei.value || '0x0'))
 })
 const formattedStakedCredits = computed(() => {
     return formatBigInt18Precise(stakedCredits.value)
 })
 const isFetchingStake = ref(false)
 const hasStakeInfoLoaded = ref(false)
+
+const delegatedStakedBalance = ref(0n)
+const formattedDelegatedStakedBalance = computed(() => {
+    return formatBigInt18Precise(delegatedStakedBalance.value)
+})
+const isFetchingDelegatedStake = ref(false)
+const hasDelegatedStakeLoaded = ref(false)
 
 const creditsBalance = ref(0n)
 const formattedCreditsBalance = computed(() => {
@@ -68,6 +76,10 @@ const abi = beneficialAbi
 
 const benefitAddress = ref('')
 const isFetchingBenefit = ref(false)
+
+const isOnChainWalletLoading = computed(() => {
+    return isFetchingBenefit.value || !hasStakeInfoLoaded.value || !hasDelegatedStakeLoaded.value || !hasCreditsLoaded.value
+})
 const isModalOpen = ref(false)
 const inputBenefitAddress = ref('')
 const isSubmitting = ref(false)
@@ -315,9 +327,11 @@ async function refreshDashboard() {
 		benefitAddress.value = ''
         benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
-        stakedBalanceWei.value = '0x0'
+        nodeStakedBalanceWei.value = '0x0'
         stakedCredits.value = '0'
         hasStakeInfoLoaded.value = false
+        delegatedStakedBalance.value = 0n
+        hasDelegatedStakeLoaded.value = false
         creditsBalance.value = '0'
         hasCreditsLoaded.value = false
 		withdrawals.value = []
@@ -330,9 +344,11 @@ async function refreshDashboard() {
 		benefitAddress.value = ''
         benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
-        stakedBalanceWei.value = '0x0'
+        nodeStakedBalanceWei.value = '0x0'
         stakedCredits.value = '0'
         hasStakeInfoLoaded.value = false
+        delegatedStakedBalance.value = 0n
+        hasDelegatedStakeLoaded.value = false
         creditsBalance.value = '0'
         hasCreditsLoaded.value = false
 		withdrawals.value = []
@@ -346,6 +362,7 @@ async function refreshDashboard() {
         benefitBalanceWei.value = '0x0'
     }
     await fetchNodeStakingInfo()
+    await fetchDelegatedStakingInfo()
     await fetchCreditsBalance()
 	await fetchRelayBalance()
 	await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
@@ -509,7 +526,7 @@ const fetchBenefitBalance = async () => {
 const fetchNodeStakingInfo = async () => {
     hasStakeInfoLoaded.value = false
     if (!wallet.address || !nodeStakingContractAddress.value) {
-        stakedBalanceWei.value = '0x0'
+        nodeStakedBalanceWei.value = '0x0'
         stakedCredits.value = 0n
         return
     }
@@ -526,7 +543,7 @@ const fetchNodeStakingInfo = async () => {
         } catch {
             balanceHex = '0x0'
         }
-        stakedBalanceWei.value = balanceHex
+        nodeStakedBalanceWei.value = balanceHex
         try {
             stakedCredits.value = (typeof creditsRaw === 'bigint') ? creditsRaw : BigInt(creditsRaw ?? 0)
         } catch {
@@ -534,11 +551,30 @@ const fetchNodeStakingInfo = async () => {
         }
     } catch (e) {
         console.error(e)
-        stakedBalanceWei.value = '0x0'
+        nodeStakedBalanceWei.value = '0x0'
         stakedCredits.value = 0n
     } finally {
         isFetchingStake.value = false
         hasStakeInfoLoaded.value = true
+    }
+}
+
+const fetchDelegatedStakingInfo = async () => {
+    hasDelegatedStakeLoaded.value = false
+    if (!wallet.address) {
+        delegatedStakedBalance.value = 0n
+        return
+    }
+    isFetchingDelegatedStake.value = true
+    try {
+        const res = await getDelegatorTotalStakeAmount(wallet.selectedNetworkKey, wallet.address)
+        delegatedStakedBalance.value = res
+    } catch (e) {
+        console.error(e)
+        delegatedStakedBalance.value = 0n
+    } finally {
+        isFetchingDelegatedStake.value = false
+        hasDelegatedStakeLoaded.value = true
     }
 }
 
@@ -715,54 +751,47 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 	<a-row :gutter="[16, 16]">
 		<a-col :xs="24" :lg="16" style="display: flex; flex-direction: column">
 					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
-						<a-descriptions :column="2" bordered :label-style="{ 'width': '160px' }">
-							<a-descriptions-item :span="2" label="Network">{{ networkName }}</a-descriptions-item>
-							<a-descriptions-item :span="2" label="Address">{{ wallet.address }}</a-descriptions-item>
-							<a-descriptions-item label="CNX Balance"><span>{{ formattedBalance }}</span></a-descriptions-item>
-							<a-descriptions-item label="CNX Staked">
-								<template v-if="hasStakeInfoLoaded"><span>{{ formattedStakedBalance }}</span></template>
-								<template v-else>Loading...</template>
-							</a-descriptions-item>
-                            <a-descriptions-item>
-                                <template #label>
-                                    <span style="display: inline-flex; align-items: center; white-space: nowrap;">
-                                        <span>Credits Balance</span>
-                                        <a-popover placement="right">
-                                            <template #content>
-                                                <div style="max-width: 300px;">
-                                                    <div>Credits are special node credits that can only be used to start a node. In the Node WebUI, they are combined with your CNX and displayed as CNX Balance or CNX Staked under Node Wallet. Credits are non-transferable. If your node is slashed, credits may be deducted. If credits are depleted, you will need regular CNX to start a node.</div>
-                                                    <div style="margin-top: 8px;">You can get free Credits in our <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>.</div>
-                                                </div>
-                                            </template>
-                                            <QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
-                                        </a-popover>
-                                    </span>
-                                </template>
-                                <template v-if="hasCreditsLoaded">{{ formattedCreditsBalance }}</template>
-                                <template v-else>Loading...</template>
-                            </a-descriptions-item>
-							<a-descriptions-item label="Credits Staked">
-								<template v-if="hasStakeInfoLoaded">{{ formattedStakedCredits }}</template>
-								<template v-else>Loading...</template>
-							</a-descriptions-item>
-							<a-descriptions-item>
-								<template #label>
-									<span style="display: inline-flex; align-items: center; white-space: nowrap;">
-										<span>Beneficial Address</span>
-										<a-popover placement="right">
-											<template #content>
-												<div style="max-width: 300px;">
-													<div>The beneficial address is a dedicated wallet for safely receiving your funds. For security, your operational address should not hold funds. All withdrawals, unstaking payouts, and emissions will be sent to this address. Choose a wallet you control and plan to keep using. Once set, this address is permanent and cannot be changed.</div>
-													<div style="margin-top: 8px">If not set, the operational address will be used for payouts.</div>
-												</div>
-											</template>
-											<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
-										</a-popover>
-									</span>
-								</template>
-								<div>
-									<span v-if="isFetchingBenefit">Loading...</span>
-									<template v-else>
+						<a-spin :spinning="isOnChainWalletLoading">
+							<a-descriptions :column="2" bordered :label-style="{ 'width': '160px' }">
+								<a-descriptions-item :span="2" label="Network">{{ networkName }}</a-descriptions-item>
+								<a-descriptions-item :span="2" label="Address">{{ wallet.address }}</a-descriptions-item>
+								<a-descriptions-item :span="2" label="CNX Balance"><span>{{ formattedBalance }}</span></a-descriptions-item>
+								<a-descriptions-item label="Node Stake"><span>{{ formattedNodeStakedBalance }}</span></a-descriptions-item>
+								<a-descriptions-item label="Delegated Stake"><span>{{ formattedDelegatedStakedBalance }}</span></a-descriptions-item>
+								<a-descriptions-item>
+									<template #label>
+										<span style="display: inline-flex; align-items: center; white-space: nowrap;">
+											<span>Credits Balance</span>
+											<a-popover placement="right">
+												<template #content>
+													<div style="max-width: 300px;">
+														<div>Credits are special node credits that can only be used to start a node. In the Node WebUI, they are combined with your CNX and displayed as CNX Balance or CNX Staked under Node Wallet. Credits are non-transferable. If your node is slashed, credits may be deducted. If credits are depleted, you will need regular CNX to start a node.</div>
+														<div style="margin-top: 8px;">You can get free Credits in our <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>.</div>
+													</div>
+												</template>
+												<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+											</a-popover>
+										</span>
+									</template>
+									{{ formattedCreditsBalance }}
+								</a-descriptions-item>
+								<a-descriptions-item label="Credits Stake">{{ formattedStakedCredits }}</a-descriptions-item>
+								<a-descriptions-item>
+									<template #label>
+										<span style="display: inline-flex; align-items: center; white-space: nowrap;">
+											<span>Beneficial Address</span>
+											<a-popover placement="right">
+												<template #content>
+													<div style="max-width: 300px;">
+														<div>The beneficial address is a dedicated wallet for safely receiving your funds. For security, your operational address should not hold funds. All withdrawals, unstaking payouts, and emissions will be sent to this address. Choose a wallet you control and plan to keep using. Once set, this address is permanent and cannot be changed.</div>
+														<div style="margin-top: 8px">If not set, the operational address will be used for payouts.</div>
+													</div>
+												</template>
+												<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+											</a-popover>
+										</span>
+									</template>
+									<div>
 										<span v-if="benefitError" style="color: #d4380d;">{{ benefitError }}</span>
 										<span v-else-if="benefitAddress && !isZeroAddress(benefitAddress)">
 											{{ benefitAddress }}
@@ -772,38 +801,33 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 											<span style="margin-right: 8px;">Not set</span>
 											<a-button type="primary" size="small" @click="openSetModal">Set Beneficial Address</a-button>
 										</span>
-									</template>
-								</div>
-							</a-descriptions-item>
-
-						</a-descriptions>
+									</div>
+								</a-descriptions-item>
+							</a-descriptions>
+						</a-spin>
 			</a-card>
 		</a-col>
 		<a-col :xs="24" :lg="8" style="display: flex; flex-direction: column">
 					<a-card :title="`Relay Account`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1; display: flex; flex-direction: column" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, paddingBottom: '32px' }">
-							<a-row justify="center" style="margin-top: 48px;">
-							<a-col>
-								<a-statistic title="Balance (CNX)" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
+						<div style="flex: 1; display: flex; align-items: center; justify-content: center; padding-bottom: 24px;">
+							<a-statistic title="Balance (CNX)" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
+						</div>
+						<a-row :gutter="12">
+							<a-col :span="12">
+								<a-button block size="large" @click="openDeposit">Deposit</a-button>
+							</a-col>
+							<a-col :span="12">
+								<a-button block type="primary" size="large" @click="withdrawRelay">Withdraw</a-button>
 							</a-col>
 						</a-row>
-						<div style="margin-top: auto;">
-							<a-row :gutter="12">
-						<a-col :span="12">
-							<a-button block size="large" @click="openDeposit">Deposit</a-button>
-								</a-col>
-								<a-col :span="12">
-									<a-button block type="primary" size="large" @click="withdrawRelay">Withdraw</a-button>
-								</a-col>
-							</a-row>
-						</div>
 					</a-card>
 		</a-col>
 	</a-row>
 
 	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
 		<a-col :span="24">
-			<a-card :title="`Relay Account Earnings`" :bordered="false" style="opacity: 0.9">
-				<RelayAccountEarningsChart :address="wallet.address" />
+			<a-card :title="`Relay Account Income`" :bordered="false" style="opacity: 0.9">
+				<RelayAccountIncomeChart :address="wallet.address" />
 			</a-card>
 		</a-col>
 	</a-row>

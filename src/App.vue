@@ -266,7 +266,7 @@ onBeforeUnmount(() => {
                               </a-menu-item>
                               <a-menu-item key="delegated-staking" @click="router.push({ name: 'delegated-staking' })">
                                 <template #icon><DollarOutlined /></template>
-                                Delegated Staking
+                                Delegated Stake
                               </a-menu-item>
                               <a-menu-divider style="margin: 10px 0" />
                               <a-menu-item key="signout" @click="confirmSignOut">
@@ -343,7 +343,7 @@ onBeforeUnmount(() => {
                 class="drawer-nav-btn"
                 :class="{ active: router.currentRoute.value.name === 'delegated-staking' }"
                 @click="router.push({ name: 'delegated-staking' }); mobileMenuOpen = false"
-              >Delegated Staking</a-button>
+              >Delegated Stake</a-button>
             </template>
             <div class="drawer-separator"></div>
             <template v-if="auth.isAuthenticated">

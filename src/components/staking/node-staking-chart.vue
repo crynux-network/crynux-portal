@@ -86,7 +86,7 @@ const options = {
             beginAtZero: true,
             title: {
                 display: true,
-                text: 'Staking (CNX)'
+                text: 'Stake (CNX)'
             }
         }
     }
@@ -134,7 +134,7 @@ const fetchData = async () => {
             }),
             datasets: [
                 {
-                    label: 'Operator Staking',
+                    label: 'Operator Stake',
                     backgroundColor: 'rgba(82, 196, 26, 0.6)',
                     borderColor: 'rgba(82, 196, 26, 1)',
                     data: resp.operator_stakings.map(formatBigIntValue),
@@ -142,7 +142,7 @@ const fetchData = async () => {
                     fill: true
                 },
                 {
-                    label: 'Delegators Staking',
+                    label: 'Delegator Stake',
                     backgroundColor: 'rgba(24, 144, 255, 0.6)',
                     borderColor: 'rgba(24, 144, 255, 1)',
                     data: resp.delegator_stakings.map(formatBigIntValue),

@@ -365,11 +365,11 @@ onMounted(() => {
         <div class="staking-compact">
           <div class="staking-left">
             <div class="staking-amount">{{ formattedStakingAmount }}</div>
-            <div class="staking-amount-label">My Staking (CNX)</div>
+            <div class="staking-amount-label">My Stake (CNX)</div>
           </div>
           <div class="staking-right">
             <div class="staking-right-row">
-              <span class="right-label">Staked</span>
+              <span class="right-label">Staked At</span>
               <span class="right-value">{{ formattedStakedAt }}</span>
             </div>
             <div class="staking-right-row">

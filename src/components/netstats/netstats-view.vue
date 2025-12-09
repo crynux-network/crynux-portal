@@ -177,7 +177,7 @@ const nodeListColumns = [
         key: 'balance'
     },
     {
-        title: 'Staking',
+        title: 'Stake',
         key: 'staking'
     }
 ];
