@@ -65,9 +65,19 @@ const modalsRef = ref(null)
 const hasData = computed(() => delegationNum.value > 0)
 
 const statisticValueStyle = computed(() => {
-  let fontSize = '36px'
-  if (screens.value.xs) {
+  let fontSize = '28px'
+  if (screens.value.xxl) {
     fontSize = '28px'
+  } else if (screens.value.xl) {
+    fontSize = '26px'
+  } else if (screens.value.lg) {
+    fontSize = '24px'
+  } else if (screens.value.md) {
+    fontSize = '22px'
+  } else if (screens.value.sm) {
+    fontSize = '20px'
+  } else {
+    fontSize = '18px'
   }
   return {
     color: '#1677ff',
@@ -279,7 +289,7 @@ onMounted(() => {
       <a-spin :spinning="loading">
         <!-- Statistics Cards -->
         <a-row :gutter="[16, 16]">
-          <a-col :xs="24" :sm="8">
+          <a-col :xs="24" :md="8">
             <a-card :bordered="false" class="stat-card">
               <a-statistic
                 title="Total Stakes"
@@ -288,7 +298,7 @@ onMounted(() => {
               />
             </a-card>
           </a-col>
-          <a-col :xs="24" :sm="8">
+          <a-col :xs="24" :md="8">
             <a-card :bordered="false" class="stat-card">
               <a-statistic
                 title="Total Stake (CNX)"
@@ -297,7 +307,7 @@ onMounted(() => {
               />
             </a-card>
           </a-col>
-          <a-col :xs="24" :sm="8">
+          <a-col :xs="24" :md="8">
             <a-card :bordered="false" class="stat-card">
               <a-statistic
                 title="Total Rewards (CNX)"
