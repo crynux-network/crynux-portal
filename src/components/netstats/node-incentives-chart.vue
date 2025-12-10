@@ -42,7 +42,7 @@ const columns = [
         key: 'prob_weight'
     },
     {
-        title: 'Staking',
+        title: 'Stake',
         dataIndex: 'staking',
         key: 'staking'
     },
@@ -108,6 +108,7 @@ const fetchData = async () => {
         :pagination="{
             'pageSize': 10
         }"
+        :scroll="{ x: 800 }"
         size="small"
     >
         <template #bodyCell="{ column, record }">

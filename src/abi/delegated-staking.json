@@ -1,22 +1,6 @@
 [
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "creditsContract",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "benefitAddressContract",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "delegatedStakingContract",
-          "type": "address"
-        }
-      ],
+      "inputs": [],
       "stateMutability": "nonpayable",
       "type": "constructor"
     },
@@ -48,73 +32,80 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "delegatorAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
           "name": "nodeAddress",
           "type": "address"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "stakedBalance",
+          "name": "amount",
           "type": "uint256"
+        }
+      ],
+      "name": "DelegatorStaked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "delegatorAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "stakedCredits",
+          "name": "amount",
           "type": "uint256"
+        }
+      ],
+      "name": "DelegatorUnstaked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint8",
+          "name": "share",
+          "type": "uint8"
+        }
+      ],
+      "name": "NodeDelegatorShareChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
         }
       ],
       "name": "NodeSlashed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "nodeAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "stakedBalance",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "stakedCredits",
-          "type": "uint256"
-        }
-      ],
-      "name": "NodeStaked",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "nodeAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "stakedBalance",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "stakedCredits",
-          "type": "uint256"
-        }
-      ],
-      "name": "NodeUnstaked",
       "type": "event"
     },
     {
@@ -138,12 +129,110 @@
     },
     {
       "inputs": [],
+      "name": "getAllDelegatorAddresses",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getAllNodeAddresses",
       "outputs": [
         {
           "internalType": "address[]",
           "name": "",
           "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getAllNodeDelegatorShares",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint8[]",
+          "name": "",
+          "type": "uint8[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "delegatorAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getDelegationStakingAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "delegatorAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getDelegatorStakingInfos",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "delegatorAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getDelegatorTotalStakeAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -170,29 +259,55 @@
           "type": "address"
         }
       ],
-      "name": "getStakingInfo",
+      "name": "getNodeDelegatorShare",
       "outputs": [
         {
-          "components": [
-            {
-              "internalType": "address",
-              "name": "nodeAddress",
-              "type": "address"
-            },
-            {
-              "internalType": "uint256",
-              "name": "stakedBalance",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "stakedCredits",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct NodeStaking.StakingInfo",
+          "internalType": "uint8",
           "name": "",
-          "type": "tuple"
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getNodeStakingInfos",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getNodeTotalStakeAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -221,12 +336,12 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "addr",
-          "type": "address"
+          "internalType": "uint8",
+          "name": "share",
+          "type": "uint8"
         }
       ],
-      "name": "setAdminAddress",
+      "name": "setDelegatorShare",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -248,11 +363,11 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "nodeAddress",
+          "name": "addr",
           "type": "address"
         }
       ],
-      "name": "slashStaking",
+      "name": "setNodeStakingAddress",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -260,8 +375,26 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
+        }
+      ],
+      "name": "slashNode",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "nodeAddress",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
-          "name": "stakedAmount",
+          "name": "amount",
           "type": "uint256"
         }
       ],

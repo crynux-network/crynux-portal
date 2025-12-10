@@ -1,0 +1,4 @@
+---
+alwaysApply: false
+---
+Before making any code changes, you MUST first read and understand the architecture documentation at `docs/architecture.md`. This document explains the project structure, API vs Contract usage, store responsibilities, network handling, and authentication flow.

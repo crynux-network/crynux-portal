@@ -17,6 +17,22 @@ class StatsAPI extends BaseAPI {
     getTaskPrice(taskType) {
         return v1.get('/stats/histogram/task_fee?task_type=' + taskType)
     }
+
+    getNodeEarnings(address) {
+        return v1.get('/stats/line_chart/node/' + address + '/earnings')
+    }
+
+    getNodeStaking(address) {
+        return v1.get('/stats/line_chart/node/' + address + '/staking')
+    }
+
+    getNodeScores(address) {
+        return v1.get('/stats/line_chart/node/' + address + '/scores')
+    }
+
+    getNodeDelegatorNum(address) {
+        return v1.get('/stats/line_chart/node/' + address + '/delegator_num')
+    }
 }
 
 const statsAPI = new StatsAPI()

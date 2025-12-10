@@ -47,7 +47,7 @@ const data = ref({
     labels: [],
     datasets: [
         {
-            label: 'Earnings',
+            label: 'Income',
             backgroundColor: 'rgba(54, 162, 235, 0.5)',
             data: []
         }
@@ -67,7 +67,7 @@ const options = {
             beginAtZero: true,
             title: {
                 display: true,
-                text: 'Earnings (CNX)'
+                text: 'Income (CNX)'
             }
         }
     }
@@ -93,7 +93,7 @@ const fetchData = async () => {
                 labels: empty.labels,
                 datasets: [
                     {
-                        label: 'Earnings',
+                        label: 'Income',
                         backgroundColor: 'rgba(54, 162, 235, 0.5)',
                         data: empty.values
                     }
@@ -128,7 +128,7 @@ const fetchData = async () => {
             labels,
             datasets: [
                 {
-                    label: 'Earnings',
+                    label: 'Income',
                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     data: values
                 }
@@ -140,7 +140,7 @@ const fetchData = async () => {
             labels: empty.labels,
             datasets: [
                 {
-                    label: 'Earnings',
+                    label: 'Income',
                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     data: empty.values
                 }
