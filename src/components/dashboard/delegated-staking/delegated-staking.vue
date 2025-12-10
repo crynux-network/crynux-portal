@@ -10,6 +10,7 @@ import {
   Button as AButton,
   Dropdown as ADropdown,
   Tooltip as ATooltip,
+  Pagination as APagination,
   message,
   Grid
 } from 'ant-design-vue'
@@ -51,6 +52,11 @@ const totalStakingAmount = ref(0n)
 const totalDelegationEarnings = ref(0n)
 const delegations = ref([])
 const expandedKey = ref(null)
+
+// Pagination
+const currentPage = ref(1)
+const pageSize = 20
+const totalDelegations = ref(0)
 
 // Active modal state
 const activeModalDelegation = ref(null)
@@ -118,12 +124,13 @@ async function connect() {
   }
 }
 
-async function fetchData() {
+async function fetchData(page = 1) {
   if (!wallet.address) {
     delegationNum.value = 0
     totalStakingAmount.value = 0n
     totalDelegationEarnings.value = 0n
     delegations.value = []
+    totalDelegations.value = 0
     return
   }
 
@@ -131,12 +138,14 @@ async function fetchData() {
   try {
     const [statsResp, listResp] = await Promise.all([
       walletAPI.getDelegatorStats(wallet.address),
-      walletAPI.getDelegatorDelegations(wallet.address)
+      walletAPI.getDelegatorDelegations(wallet.address, page, pageSize)
     ])
 
     delegationNum.value = statsResp.delegation_num || 0
     totalStakingAmount.value = toBigInt(statsResp.total_staking_amount || 0)
     totalDelegationEarnings.value = toBigInt(statsResp.total_delegation_earnings || 0)
+    totalDelegations.value = listResp?.total || 0
+    currentPage.value = page
 
     const delegationsList = Array.isArray(listResp?.delegations) ? listResp.delegations : []
 
@@ -184,9 +193,14 @@ async function fetchData() {
     totalStakingAmount.value = 0n
     totalDelegationEarnings.value = 0n
     delegations.value = []
+    totalDelegations.value = 0
   } finally {
     loading.value = false
   }
+}
+
+function onPageChange(page) {
+  fetchData(page)
 }
 
 function goToNodeDetails(nodeAddress) {
@@ -252,7 +266,7 @@ onMounted(() => {
     <template v-if="!auth.isAuthenticated">
       <div class="not-connected">
         <wallet-outlined class="not-connected-icon" />
-        <p>Connect your wallet to view delegation details</p>
+        <p>Connect your wallet to view staking details</p>
         <a-button type="primary" size="large" @click="connect">
           <template #icon><wallet-outlined /></template>
           Connect Wallet
@@ -268,7 +282,7 @@ onMounted(() => {
           <a-col :xs="24" :sm="8">
             <a-card :bordered="false" class="stat-card">
               <a-statistic
-                title="Delegations"
+                title="Active Stakes"
                 :value="delegationNum"
                 :value-style="statisticValueStyle"
               />
@@ -297,7 +311,7 @@ onMounted(() => {
         <!-- Earnings Chart -->
         <a-row :gutter="[16, 16]" style="margin-top: 16px">
           <a-col :span="24">
-            <a-card title="Delegation Rewards" :bordered="false" class="chart-card">
+            <a-card title="Staking Rewards" :bordered="false" class="chart-card">
               <DelegatorIncomeChart :address="wallet.address" :height="280" />
             </a-card>
           </a-col>
@@ -306,8 +320,8 @@ onMounted(() => {
         <!-- Delegations List -->
         <a-row :gutter="[16, 16]" style="margin-top: 16px">
           <a-col :span="24">
-            <a-card title="Delegation List" :bordered="false" class="list-card">
-              <a-empty v-if="!hasData" description="No delegations yet" />
+            <a-card title="My Stakes" :bordered="false" class="list-card">
+              <a-empty v-if="!hasData && totalDelegations === 0" description="No stakes yet" />
               <div v-else class="delegations-list">
                 <div
                   v-for="delegation in delegations"
@@ -434,13 +448,26 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
+
+              <!-- Pagination -->
+              <div v-if="totalDelegations > pageSize" class="pagination-wrapper">
+                <a-pagination
+                  :current="currentPage"
+                  :page-size="pageSize"
+                  :total="totalDelegations"
+                  :show-size-changer="false"
+                  :show-quick-jumper="totalDelegations > pageSize * 5"
+                  show-less-items
+                  @change="onPageChange"
+                />
+              </div>
             </a-card>
           </a-col>
         </a-row>
       </a-spin>
     </template>
 
-    <!-- Delegation Modals (shared) -->
+    <!-- Staking Modals (shared) -->
     <DelegationModals
       v-if="activeModalDelegation"
       ref="modalsRef"
@@ -489,6 +516,13 @@ onMounted(() => {
 
 .list-card
   opacity 0.9
+
+.pagination-wrapper
+  display flex
+  justify-content center
+  margin-top 24px
+  padding-top 16px
+  border-top 1px solid rgba(0, 0, 0, 0.06)
 
 .delegations-list
   display flex

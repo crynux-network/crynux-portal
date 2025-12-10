@@ -386,11 +386,15 @@ defineExpose({
         <p class="warning-text">
           Are you sure you want to unstake all your tokens from this node?
         </p>
-        <div class="info-row" style="margin-bottom: 16px;">
+        <div class="info-row">
+          <span class="label">Blockchain</span>
+          <NetworkTag :text="networkName" />
+        </div>
+        <div class="info-row">
           <span class="label">Node Address</span>
           <span class="value address">{{ nodeAddress }}</span>
         </div>
-        <div class="unstake-amount">
+        <div class="unstake-amount" style="margin-top: 16px;">
           <span class="label">Amount to unstake:</span>
           <span class="value">{{ formattedStakingAmount }} CNX</span>
         </div>

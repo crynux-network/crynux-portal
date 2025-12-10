@@ -142,7 +142,7 @@ const fetchData = async () => {
                     fill: true
                 },
                 {
-                    label: 'Delegators Rewards',
+                    label: 'Delegator Rewards',
                     backgroundColor: 'rgba(24, 144, 255, 0.6)',
                     borderColor: 'rgba(24, 144, 255, 1)',
                     data: resp.delegator_earnings.map(formatBigIntValue),

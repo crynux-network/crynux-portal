@@ -29,10 +29,10 @@ const scoreSize = computed(() => {
 })
 
 const wallet = useWalletStore()
-const networkName = computed(() => {
-  const key = wallet.selectedNetworkKey
-  return (config.networks[key] && config.networks[key].chainName) || key
-})
+
+function getNetworkName(networkKey) {
+  return (config.networks[networkKey] && config.networks[networkKey].chainName) || networkKey
+}
 
 const normalizeStatus = (status) => {
   const v = status
@@ -159,7 +159,7 @@ onUnmounted(() => {
                   </div>
                 </div>
                 <div class="info-right">
-                  <NetworkTag :text="networkName" />
+                  <NetworkTag :text="getNetworkName(item.network)" />
                   <a-tag v-if="String(item.gpu_name || '').includes('+docker')" color="blue">Docker</a-tag>
                   <a-tag v-else-if="String(item.gpu_name || '').includes('+Windows')" color="green">Windows</a-tag>
                   <a-tag v-else-if="String(item.gpu_name || '').includes('+Darwin')" color="purple">Mac</a-tag>

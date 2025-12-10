@@ -55,8 +55,13 @@ class WalletAPI extends BaseAPI {
 		return v1.get(`/delegator/${userAddress}`)
 	}
 
-	getDelegatorDelegations(userAddress) {
-		return v1.get(`/delegator/${userAddress}/delegations`)
+	getDelegatorDelegations(userAddress, page = 1, pageSize = 20) {
+		return v1.get(`/delegator/${userAddress}/delegations`, {
+			params: {
+				page: page,
+				page_size: pageSize
+			}
+		})
 	}
 
 	getDelegatorEarningsChart(userAddress) {

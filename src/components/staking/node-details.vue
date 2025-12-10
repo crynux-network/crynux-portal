@@ -254,7 +254,7 @@ onMounted(async () => {
 
             <a-divider />
 
-            <!-- My Delegation Section -->
+            <!-- My Stake Section -->
             <MyDelegation :node-address="nodeAddress" :network="node?.network" @staking-changed="handleStakingChanged" />
           </a-card>
         </a-col>
@@ -373,12 +373,12 @@ onMounted(async () => {
 
                   <div class="reward-highlight-box">
                     <div class="reward-highlight-value">{{ formatBigInt18Compact(node.today_delegator_earnings) }}</div>
-                    <div class="reward-highlight-label">Delegators Rewards Today</div>
+                    <div class="reward-highlight-label">Delegator Rewards Today</div>
                   </div>
 
                   <div class="reward-highlight-box total">
                     <div class="reward-highlight-value">{{ formatBigInt18Compact(node.total_delegator_earnings) }}</div>
-                    <div class="reward-highlight-label">Delegators Rewards Total</div>
+                    <div class="reward-highlight-label">Delegator Rewards Total</div>
                   </div>
                 </div>
               </a-col>
@@ -418,7 +418,7 @@ onMounted(async () => {
           </a-card>
         </a-col>
         <a-col :xs="24" :lg="16">
-          <a-card class="delegations-card" title="Delegations" :bordered="false" style="opacity: 0.9">
+          <a-card class="delegations-card" title="Delegator Stakes" :bordered="false" style="opacity: 0.9">
             <a-spin :spinning="delegationsLoading">
               <a-table
                 v-if="delegations.length > 0"
@@ -456,7 +456,7 @@ onMounted(async () => {
                 </template>
               </a-table>
               <div v-else class="empty-delegations">
-                  <a-empty description="No delegations yet" />
+                  <a-empty description="No stakes yet" />
                 </div>
             </a-spin>
           </a-card>
