@@ -170,7 +170,7 @@ onUnmounted(() => {
               <a-row :gutter="[16, 16]" align="stretch" class="node-main">
                 <a-col :xs="24" :md="24" class="earnings-row">
                   <div class="earnings-inline-compact">
-                    <div class="earnings-inline-label">Delegators Earned Today</div>
+                    <div class="earnings-inline-label">Delegator Rewards Today</div>
                     <div class="earnings-inline-value">{{ formatBigInt18Compact(item.today_delegator_earnings) }}</div>
                   </div>
                 </a-col>
@@ -181,7 +181,7 @@ onUnmounted(() => {
                         <div class="score">
                           <a-progress
                             type="circle"
-                            :percent="percentFromRatio(item.prob_weight)"
+                            :percent="percentFromRatio(item.prob_weight * 2)"
                             :size="scoreSize"
                             :show-info="true"
                             :format="(p) => Math.round(p).toString()"
@@ -246,7 +246,7 @@ onUnmounted(() => {
                       </a-col>
                       <a-col :xs="10" :sm="10" :md="10" :lg="12" :xl="12" :xxl="12">
                         <div class="kpi">
-                          <a-tooltip placement="top" :title="'Delegators / Node'">
+                          <a-tooltip placement="top" :title="'Delegators / Operator'">
                             <div class="kpi-value">
                               {{ formatBigInt18Compact(item.delegator_staking) }} / {{ formatBigInt18Compact(item.operator_staking) }}
                             </div>

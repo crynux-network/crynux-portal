@@ -272,7 +272,7 @@ onMounted(async () => {
                       <div class="score-box score-blue">
                         <a-progress
                           type="circle"
-                          :percent="percentFromRatio(node.prob_weight)"
+                          :percent="percentFromRatio(node.prob_weight * 2)"
                           :size="72"
                           :stroke-color="'#1890ff'"
                           :trail-color="'#e9e9e9'"

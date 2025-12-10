@@ -90,7 +90,7 @@ const fetchData = async () => {
                     label: 'Prob Weight',
                     backgroundColor: 'rgba(24, 144, 255, 0.5)',
                     borderColor: 'rgba(24, 144, 255, 1)',
-                    data: resp.prob_weights.map(v => v * 100),
+                    data: resp.prob_weights.map(v => v * 2 * 100),
                     tension: 0.1
                 },
                 {
