@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import {
   Modal as AModal,
   Form as AForm,
@@ -7,13 +7,14 @@ import {
   InputNumber as AInputNumber,
   TypographyText as ATypographyText,
   Tag as ATag,
+  Spin as ASpin,
   message
 } from 'ant-design-vue'
 import { useWalletStore } from '@/stores/wallet'
 import config from '@/config.json'
 import delegatedStakingService from '@/services/delegated-staking'
 import { isUserRejectedError, getBalanceForNetwork, getBeneficialAddress, isZeroAddress } from '@/services/contract'
-import { formatBigInt18Precise, toBigInt } from '@/services/token'
+import { formatBigInt18Precise } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 
 const props = defineProps({
@@ -45,6 +46,7 @@ const stakeInputAmount = ref(null)
 const minStakeAmount = ref(0n)
 const networkBalanceWei = ref(0n)
 const stakeBeneficialAddress = ref('')
+const isStakeDataLoaded = ref(false)
 
 // Unstake modal data
 const beneficialAddress = ref('')
@@ -112,6 +114,7 @@ const stakeAmountError = computed(() => {
 })
 
 const isStakeValid = computed(() => {
+  if (!isStakeDataLoaded.value) return false
   if (isAmountInputDisabled.value) return false
   if (stakeInputAmount.value === null || stakeInputAmount.value === undefined || stakeInputAmount.value === '') return false
   if (stakeAmountError.value) return false
@@ -211,8 +214,10 @@ async function fetchStakeBeneficialAddress() {
 
 async function openStake() {
   stakeInputAmount.value = currentStakingAmountCNX.value > 0 ? currentStakingAmountCNX.value : null
+  isStakeDataLoaded.value = false
   isStakeModalOpen.value = true
   await Promise.all([fetchMinStakeAmount(), fetchNetworkBalance(), fetchStakeBeneficialAddress()])
+  isStakeDataLoaded.value = true
 }
 
 async function openUnstake() {
@@ -307,60 +312,62 @@ defineExpose({
     :width="520"
     ok-text="Stake"
   >
-    <a-form layout="vertical" :hide-required-mark="true" :style="{ marginTop: '24px', marginBottom: '32px' }">
-      <a-form-item
-        name="amount"
-        :validate-status="isAmountInputDisabled || stakeAmountError ? 'error' : undefined"
-        :help="isAmountInputDisabled ? 'Insufficient balance to meet the minimum after gas reserve.' : (stakeAmountError || undefined)"
-        :style="{ marginBottom: '32px' }"
-      >
-        <a-input-number
-          v-model:value="stakeInputAmount"
-          :min="0"
-          :step="1"
-          :controls="false"
-          :precision="0"
-          style="width: 100%"
-          placeholder="Enter amount"
-          addon-before="CNX"
-          :disabled="isAmountInputDisabled"
-        />
-        <template #extra>
-          <a-typography-text type="secondary" style="font-size: 12px; display: block; margin-top: 12px;">Min: {{ minStakeAmountCNX.toLocaleString() }} CNX · Max: {{ maxStakeAmountCNX.toLocaleString() }} CNX</a-typography-text>
-        </template>
-      </a-form-item>
-    </a-form>
+    <a-spin :spinning="!isStakeDataLoaded" tip="Loading...">
+      <a-form layout="vertical" :hide-required-mark="true" :style="{ marginTop: '24px', marginBottom: '32px' }">
+        <a-form-item
+          name="amount"
+          :validate-status="isStakeDataLoaded && (isAmountInputDisabled || stakeAmountError) ? 'error' : undefined"
+          :help="isStakeDataLoaded ? (isAmountInputDisabled ? 'Insufficient balance to meet the minimum after gas reserve.' : (stakeAmountError || undefined)) : undefined"
+          :style="{ marginBottom: '32px' }"
+        >
+          <a-input-number
+            v-model:value="stakeInputAmount"
+            :min="0"
+            :step="1"
+            :controls="false"
+            :precision="0"
+            style="width: 100%"
+            placeholder="Enter amount"
+            addon-before="CNX"
+            :disabled="!isStakeDataLoaded || isAmountInputDisabled"
+          />
+          <template #extra>
+            <a-typography-text v-if="isStakeDataLoaded" type="secondary" style="font-size: 12px; display: block; margin-top: 12px;">Min: {{ minStakeAmountCNX.toLocaleString() }} CNX · Max: {{ maxStakeAmountCNX.toLocaleString() }} CNX</a-typography-text>
+          </template>
+        </a-form-item>
+      </a-form>
 
-    <div class="info-row">
-      <span class="label">Blockchain</span>
-      <NetworkTag :text="networkName" />
-    </div>
-
-    <div class="info-row">
-      <span class="label">Node Address</span>
-      <span class="value address">{{ nodeAddress }}</span>
-    </div>
-
-    <div class="info-row">
-      <span class="label">Wallet Address</span>
-      <span class="value address">{{ wallet.address }}</span>
-    </div>
-
-    <div class="info-row">
-      <span class="label">Wallet Balance</span>
-      <span class="value">{{ formattedWalletBalance }} CNX</span>
-    </div>
-
-    <!-- Refund notice when reducing stake -->
-    <div v-if="isReducingStake && !stakeAmountError" class="refund-info">
-      <span class="label">{{ refundAmountCNX.toLocaleString() }} CNX will be refunded to:</span>
-      <div class="destination-detail">
-        <a-tag :color="stakeHasBeneficialAddress ? 'green' : 'red'">
-          {{ stakeHasBeneficialAddress ? 'Beneficial' : 'Operational' }}
-        </a-tag>
-        <span class="destination-address">{{ stakeRefundDestinationAddress }}</span>
+      <div class="info-row">
+        <span class="label">Blockchain</span>
+        <NetworkTag :text="networkName" />
       </div>
-    </div>
+
+      <div class="info-row">
+        <span class="label">Node Address</span>
+        <span class="value address">{{ nodeAddress }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="label">Wallet Address</span>
+        <span class="value address">{{ wallet.address }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="label">Wallet Balance</span>
+        <span class="value">{{ isStakeDataLoaded ? formattedWalletBalance : '...' }} CNX</span>
+      </div>
+
+      <!-- Refund notice when reducing stake -->
+      <div v-if="isStakeDataLoaded && isReducingStake && !stakeAmountError" class="refund-info">
+        <span class="label">{{ refundAmountCNX.toLocaleString() }} CNX will be refunded to:</span>
+        <div class="destination-detail">
+          <a-tag :color="stakeHasBeneficialAddress ? 'green' : 'red'">
+            {{ stakeHasBeneficialAddress ? 'Beneficial' : 'Operational' }}
+          </a-tag>
+          <span class="destination-address">{{ stakeRefundDestinationAddress }}</span>
+        </div>
+      </div>
+    </a-spin>
   </a-modal>
 
   <!-- Unstake Modal -->
@@ -374,31 +381,33 @@ defineExpose({
     :ok-button-props="{ danger: true, disabled: !isUnstakeDataLoaded || !hasEnoughGasForUnstake }"
     :mask-closable="false"
   >
-    <div class="unstake-content">
-      <p class="warning-text">
-        Are you sure you want to unstake all your tokens from this node?
-      </p>
-      <div class="info-row" style="margin-bottom: 16px;">
-        <span class="label">Node Address</span>
-        <span class="value address">{{ nodeAddress }}</span>
-      </div>
-      <div class="unstake-amount">
-        <span class="label">Amount to unstake:</span>
-        <span class="value">{{ formattedStakingAmount }} CNX</span>
-      </div>
-      <div class="destination-info">
-        <span class="label">Funds will be sent to:</span>
-        <div class="destination-detail">
-          <a-tag :color="hasBeneficialAddress ? 'green' : 'red'">
-            {{ hasBeneficialAddress ? 'Beneficial' : 'Operational' }}
-          </a-tag>
-          <span class="destination-address">{{ unstakeDestinationAddress }}</span>
+    <a-spin :spinning="!isUnstakeDataLoaded" tip="Loading...">
+      <div class="unstake-content">
+        <p class="warning-text">
+          Are you sure you want to unstake all your tokens from this node?
+        </p>
+        <div class="info-row" style="margin-bottom: 16px;">
+          <span class="label">Node Address</span>
+          <span class="value address">{{ nodeAddress }}</span>
+        </div>
+        <div class="unstake-amount">
+          <span class="label">Amount to unstake:</span>
+          <span class="value">{{ formattedStakingAmount }} CNX</span>
+        </div>
+        <div class="destination-info">
+          <span class="label">Funds will be sent to:</span>
+          <div class="destination-detail">
+            <a-tag :color="hasBeneficialAddress ? 'green' : 'red'">
+              {{ hasBeneficialAddress ? 'Beneficial' : 'Operational' }}
+            </a-tag>
+            <span class="destination-address">{{ isUnstakeDataLoaded ? unstakeDestinationAddress : '...' }}</span>
+          </div>
+        </div>
+        <div v-if="isUnstakeDataLoaded && !hasEnoughGasForUnstake" class="gas-warning">
+          Insufficient wallet balance for gas fee.
         </div>
       </div>
-      <div v-if="isUnstakeDataLoaded && !hasEnoughGasForUnstake" class="gas-warning">
-        Insufficient wallet balance for gas fee.
-      </div>
-    </div>
+    </a-spin>
   </a-modal>
 </template>
 
