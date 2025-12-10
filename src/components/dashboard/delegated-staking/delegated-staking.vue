@@ -9,6 +9,7 @@ import {
   Empty as AEmpty,
   Button as AButton,
   Dropdown as ADropdown,
+  Tooltip as ATooltip,
   message,
   Grid
 } from 'ant-design-vue'
@@ -18,11 +19,16 @@ import {
   UpOutlined,
   EditOutlined,
   MinusOutlined,
-  MoreOutlined
+  MoreOutlined,
+  DollarCircleOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  MinusCircleOutlined as StoppedCircleOutlined
 } from '@ant-design/icons-vue'
 import { useWalletStore } from '@/stores/wallet'
 import { useAuthStore } from '@/stores/auth'
 import { walletAPI } from '@/api/v1/wallet'
+import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
 import ApiError from '@/api/api-error'
 import config from '@/config.json'
 import { formatBigInt18Precise, toBigInt } from '@/services/token'
@@ -71,6 +77,27 @@ function getNetworkName(networkKey) {
   return (config.networks[networkKey] && config.networks[networkKey].chainName) || networkKey
 }
 
+function normalizeStatus(status) {
+  const v = status
+  if (typeof v === 'number') {
+    if (v === 0) return 'stopped'
+    if (v === 5) return 'paused'
+    return 'running'
+  }
+  const s = String(v || '').toLowerCase()
+  if (['quit', 'stopped', 'stop'].includes(s)) return 'stopped'
+  if (['paused', 'pause'].includes(s)) return 'paused'
+  if (['available', 'busy', 'running', 'idle', 'pendingpause', 'pendingquit', 'pending'].includes(s)) return 'running'
+  return 'running'
+}
+
+function getStatusText(status) {
+  const s = normalizeStatus(status)
+  if (s === 'paused') return 'Node is paused'
+  if (s === 'stopped') return 'Node is stopped'
+  return 'Node is running'
+}
+
 function formatStakedAt(timestamp) {
   if (!timestamp) return '-'
   const date = new Date(timestamp * 1000)
@@ -112,15 +139,43 @@ async function fetchData() {
     totalDelegationEarnings.value = toBigInt(statsResp.total_delegation_earnings || 0)
 
     const delegationsList = Array.isArray(listResp?.delegations) ? listResp.delegations : []
-    delegations.value = delegationsList.map((item, index) => ({
-      key: `${item.node_address}-${item.network}-${index}`,
-      nodeAddress: item.node_address,
-      network: item.network,
-      stakingAmount: toBigInt(item.staking_amount || 0),
-      stakedAt: item.staked_at,
-      totalEarnings: toBigInt(item.total_earnings || 0),
-      todayEarnings: toBigInt(item.today_earnings || 0)
-    }))
+
+    // Get unique node addresses to fetch their current networks
+    const uniqueNodeAddresses = [...new Set(delegationsList.map(item => item.node_address))]
+    const nodeDetailsMap = {}
+
+    // Fetch node details in parallel
+    await Promise.all(
+      uniqueNodeAddresses.map(async (nodeAddress) => {
+        try {
+          const nodeDetails = await v2DelegatedStakingAPI.getNodeDetails(nodeAddress)
+          nodeDetailsMap[nodeAddress] = nodeDetails
+        } catch (e) {
+          console.error(`Failed to fetch node details for ${nodeAddress}:`, e)
+          nodeDetailsMap[nodeAddress] = null
+        }
+      })
+    )
+
+    delegations.value = delegationsList.map((item, index) => {
+      const nodeDetails = nodeDetailsMap[item.node_address]
+      const nodeNetwork = nodeDetails?.network || null
+      const nodeStatus = nodeDetails?.status ?? null
+      const isActive = nodeNetwork === item.network
+
+      return {
+        key: `${item.node_address}-${item.network}-${index}`,
+        nodeAddress: item.node_address,
+        network: item.network,
+        nodeNetwork: nodeNetwork,
+        nodeStatus: nodeStatus,
+        isActive: isActive,
+        stakingAmount: toBigInt(item.staking_amount || 0),
+        stakedAt: item.staked_at,
+        totalEarnings: toBigInt(item.total_earnings || 0),
+        todayEarnings: toBigInt(item.today_earnings || 0)
+      }
+    })
   } catch (e) {
     if (!(e instanceof ApiError && e.type === ApiError.Type.NotFound)) {
       console.error('Failed to fetch delegator data:', e)
@@ -266,7 +321,6 @@ onMounted(() => {
                       <span class="node-address" @click="goToNodeDetails(delegation.nodeAddress)">
                         {{ delegation.nodeAddress }}
                       </span>
-                      <NetworkTag :text="getNetworkName(delegation.network)" />
                     </div>
                     <div class="header-actions">
                       <a-dropdown trigger="click">
@@ -286,6 +340,43 @@ onMounted(() => {
                           </div>
                         </template>
                       </a-dropdown>
+                    </div>
+                  </div>
+
+                  <!-- Network & Status Row -->
+                  <div :class="['network-status-row', { 'network-mismatch': !delegation.isActive }]">
+                    <div class="status-icons">
+                      <a-tooltip :title="getStatusText(delegation.nodeStatus)">
+                        <span :class="['node-status-icon', normalizeStatus(delegation.nodeStatus)]">
+                          <play-circle-outlined v-if="normalizeStatus(delegation.nodeStatus) === 'running'" />
+                          <pause-circle-outlined v-else-if="normalizeStatus(delegation.nodeStatus) === 'paused'" />
+                          <stopped-circle-outlined v-else />
+                        </span>
+                      </a-tooltip>
+                      <a-tooltip :title="delegation.isActive ? 'Active: Stake network matches node current network' : 'Inactive: Stake network differs from node current network'">
+                        <span :class="['status-indicator', delegation.isActive ? 'active' : 'inactive']">
+                          <dollar-circle-outlined />
+                        </span>
+                      </a-tooltip>
+                    </div>
+
+                    <!-- Same network: show single tag -->
+                    <div v-if="delegation.isActive" class="network-display">
+                      <NetworkTag :text="getNetworkName(delegation.network)" />
+                    </div>
+
+                    <!-- Different networks: show both with alert style -->
+                    <div v-else class="network-mismatch-display">
+                      <div class="network-pair">
+                        <span class="network-pair-label">Stake</span>
+                        <NetworkTag :text="getNetworkName(delegation.network)" />
+                      </div>
+                      <span class="network-arrow">→</span>
+                      <div class="network-pair">
+                        <span class="network-pair-label">Node</span>
+                        <NetworkTag v-if="delegation.nodeNetwork" :text="getNetworkName(delegation.nodeNetwork)" />
+                        <span v-else class="network-unknown">Unknown</span>
+                      </div>
                     </div>
                   </div>
 
@@ -491,6 +582,86 @@ onMounted(() => {
 .node-address:hover
   color #4096ff
 
+// Node Status Icon
+.node-status-icon
+  display flex
+  align-items center
+  font-size 16px
+  color rgba(0, 0, 0, 0.45)
+
+.node-status-icon.running
+  color #52c41a
+
+.node-status-icon.paused
+  color #faad14
+
+.node-status-icon.stopped
+  color rgba(0, 0, 0, 0.25)
+
+
+// Network & Status Row
+.network-status-row
+  display flex
+  align-items center
+  gap 12px
+  padding 10px 20px
+  background rgba(0, 0, 0, 0.02)
+  border-bottom 1px solid rgba(0, 0, 0, 0.06)
+
+.network-status-row.network-mismatch
+  background rgba(255, 77, 79, 0.04)
+  border-bottom-color rgba(255, 77, 79, 0.1)
+
+.status-icons
+  display flex
+  align-items center
+  gap 6px
+
+// Status Indicator
+.status-indicator
+  display flex
+  align-items center
+  font-size 16px
+
+.status-indicator.active
+  color #52c41a
+
+.status-indicator.inactive
+  color #ff4d4f
+
+.network-display
+  display flex
+  align-items center
+
+.network-mismatch-display
+  display flex
+  align-items center
+  gap 8px
+  padding 4px 12px
+  background rgba(255, 77, 79, 0.08)
+  border-radius 6px
+  border 1px dashed rgba(255, 77, 79, 0.3)
+
+.network-pair
+  display flex
+  align-items center
+  gap 6px
+
+.network-pair-label
+  font-size 11px
+  color rgba(0, 0, 0, 0.45)
+  font-weight 500
+
+.network-arrow
+  color rgba(255, 77, 79, 0.6)
+  font-size 12px
+  font-weight 600
+
+.network-unknown
+  font-size 12px
+  color rgba(0, 0, 0, 0.25)
+  font-style italic
+
 // Card Body
 .card-body
   display flex
@@ -601,6 +772,13 @@ onMounted(() => {
   .node-address
     font-size 12px
     word-break break-all
+
+  .network-status-row
+    flex-wrap wrap
+    padding 8px 16px
+
+  .network-mismatch-display
+    flex-wrap wrap
 
   .card-body
     flex-direction column

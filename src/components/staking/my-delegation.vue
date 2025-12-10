@@ -3,20 +3,24 @@ import { ref, computed, watch, onMounted } from 'vue'
 import {
   Button as AButton,
   Spin as ASpin,
+  Alert as AAlert,
   message
 } from 'ant-design-vue'
 import {
   DollarOutlined,
   EditOutlined,
   MinusOutlined,
-  WalletOutlined
+  WalletOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons-vue'
 import { useWalletStore } from '@/stores/wallet'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 import { walletAPI } from '@/api/v1/wallet'
 import ApiError from '@/api/api-error'
 import { formatBigInt18Compact, toBigInt } from '@/services/token'
 import DelegationModals from '@/components/delegation-modals.vue'
+import config from '@/config.json'
 
 const props = defineProps({
   nodeAddress: {
@@ -31,6 +35,7 @@ const props = defineProps({
 
 const emit = defineEmits(['staking-changed'])
 
+const router = useRouter()
 const wallet = useWalletStore()
 const auth = useAuthStore()
 
@@ -40,8 +45,10 @@ const stakedAt = ref(null)
 const todayEarnings = ref(0n)
 const totalEarnings = ref(0n)
 const modalsRef = ref(null)
+const otherNetworkStakes = ref([])
 
 const hasStaking = computed(() => stakingAmount.value > 0n)
+const hasOtherNetworkStakes = computed(() => otherNetworkStakes.value.length > 0)
 
 const formattedStakedAt = computed(() => {
   if (!stakedAt.value) return '-'
@@ -93,6 +100,41 @@ async function fetchDelegation() {
   }
 }
 
+async function fetchOtherNetworkStakes() {
+  if (!wallet.address || !props.nodeAddress || !props.network) {
+    otherNetworkStakes.value = []
+    return
+  }
+
+  const allNetworks = Object.keys(config.networks)
+  const otherNetworks = allNetworks.filter(n => n !== props.network)
+
+  const results = []
+  for (const network of otherNetworks) {
+    try {
+      const resp = await walletAPI.getDelegation(wallet.address, props.nodeAddress, network)
+      const amount = toBigInt(resp.staking_amount || 0)
+      if (amount > 0n) {
+        results.push({
+          network,
+          networkName: config.networks[network]?.chainName || network,
+          stakingAmount: amount
+        })
+      }
+    } catch (e) {
+      // Ignore not found errors - means no delegation on this network
+      if (!(e instanceof ApiError && e.type === ApiError.Type.NotFound)) {
+        console.error(`Failed to fetch delegation for network ${network}:`, e)
+      }
+    }
+  }
+  otherNetworkStakes.value = results
+}
+
+function goToDelegatedStaking() {
+  router.push({ name: 'delegated-staking' })
+}
+
 function openStakeModal() {
   modalsRef.value?.openStake()
 }
@@ -112,8 +154,10 @@ watch(
   (authenticated) => {
     if (authenticated && props.network) {
       fetchDelegation()
+      fetchOtherNetworkStakes()
     } else {
       stakingAmount.value = 0n
+      otherNetworkStakes.value = []
     }
   }
 )
@@ -123,6 +167,7 @@ watch(
   () => {
     if (auth.isAuthenticated && props.network) {
       fetchDelegation()
+      fetchOtherNetworkStakes()
     }
   }
 )
@@ -132,6 +177,7 @@ watch(
   () => {
     if (auth.isAuthenticated) {
       fetchDelegation()
+      fetchOtherNetworkStakes()
     }
   }
 )
@@ -139,6 +185,7 @@ watch(
 onMounted(() => {
   if (props.network && auth.isAuthenticated) {
     fetchDelegation()
+    fetchOtherNetworkStakes()
   }
 })
 </script>
@@ -165,6 +212,19 @@ onMounted(() => {
             <template #icon><dollar-outlined /></template>
             Stake Now
           </a-button>
+        </div>
+
+        <!-- Alert for inactive stakes on other networks -->
+        <div v-if="hasOtherNetworkStakes" class="other-network-alert">
+          <a-alert type="info" show-icon>
+            <template #icon><info-circle-outlined /></template>
+            <template #message>
+              <div>
+                <div>You have inactive stake on this node in other networks.</div>
+                <a class="view-details-link" @click="goToDelegatedStaking">View details</a>
+              </div>
+            </template>
+          </a-alert>
         </div>
       </template>
 
@@ -294,5 +354,29 @@ onMounted(() => {
 
 .staking-actions .ant-btn {
   flex: 1;
+}
+
+.other-network-alert {
+  margin-top: 12px;
+}
+
+.other-network-alert :deep(.ant-alert) {
+  border-radius: 8px;
+}
+
+.other-network-alert :deep(.ant-alert-message) {
+  font-size: 13px;
+}
+
+.view-details-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: #1890ff;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.view-details-link:hover {
+  color: #40a9ff;
 }
 </style>
