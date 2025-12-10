@@ -282,7 +282,7 @@ onMounted(() => {
           <a-col :xs="24" :sm="8">
             <a-card :bordered="false" class="stat-card">
               <a-statistic
-                title="Active Stakes"
+                title="Total Stakes"
                 :value="delegationNum"
                 :value-style="statisticValueStyle"
               />
