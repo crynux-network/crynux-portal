@@ -379,4 +379,128 @@ onMounted(() => {
 .view-details-link:hover {
   color: #40a9ff;
 }
+
+/* Responsive Styles - Tablet: collapsed multi-row layout */
+@media (max-width: 1199px) and (min-width: 992px) {
+  .staking-compact {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .staking-left {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .staking-amount-label {
+    margin-top: 0;
+  }
+
+  .staking-right {
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .staking-right-row {
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  .staking-right-row:last-child {
+    border-bottom: none;
+  }
+
+  .staking-right-row .right-value {
+    text-align: right;
+  }
+
+  .staking-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .staking-actions .ant-btn {
+    width: 100%;
+  }
+}
+
+/* Mobile: restore original large-screen horizontal layout */
+@media (max-width: 991px) {
+  .not-connected,
+  .no-staking {
+    padding: 24px 12px;
+  }
+
+  .not-connected p,
+  .no-staking p {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  .staking-compact {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 14px;
+  }
+
+  .staking-left {
+    flex-shrink: 0;
+    display: block;
+  }
+
+  .staking-amount {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1890ff;
+    line-height: 1.2;
+  }
+
+  .staking-amount-label {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  .staking-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+  }
+
+  .staking-right-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    padding: 0;
+    border-bottom: none;
+    justify-content: flex-end;
+  }
+
+  .staking-right-row .right-value {
+    text-align: right;
+  }
+
+  .staking-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .staking-actions .ant-btn {
+    flex: 1;
+  }
+
+  .other-network-alert :deep(.ant-alert-message) {
+    font-size: 12px;
+  }
+}
 </style>

@@ -234,6 +234,11 @@ onMounted(async () => {
               </div>
               <div class="node-title-section">
                 <div class="gpu-name">{{ gpuDisplayName }}</div>
+                <a-typography-text class="node-address node-address-inline" copyable :content="node.address">
+                  {{ node.address }}
+                </a-typography-text>
+              </div>
+              <div class="node-address-row">
                 <a-typography-text class="node-address" copyable :content="node.address">
                   {{ node.address }}
                 </a-typography-text>
@@ -264,7 +269,7 @@ onMounted(async () => {
           <a-card class="metrics-card" :bordered="false" style="opacity: 0.9">
             <a-row :gutter="[0, 0]" class="metrics-row">
               <!-- Left Section: Scores + Staking + Delegators -->
-              <a-col :xs="24" :md="16" class="metrics-left">
+              <a-col :xs="24" :xl="16" class="metrics-left">
                 <!-- Score Stats (at the top, no title) -->
                 <div class="metrics-section scores-section-top">
                   <a-row :gutter="[16, 16]" align="middle">
@@ -364,7 +369,7 @@ onMounted(async () => {
               </a-col>
 
               <!-- Right Section: Delegators -->
-              <a-col :xs="24" :md="8" class="metrics-right">
+              <a-col :xs="24" :xl="8" class="metrics-right">
                 <div class="delegator-rewards-section">
                   <div class="delegator-num-box">
                     <div class="delegator-num-value">{{ formatIntegerWithThousands(node.delegators_num) }}</div>
@@ -492,7 +497,7 @@ onMounted(async () => {
 .node-header {
   display: flex;
   align-items: stretch;
-  gap: 16px;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
@@ -503,13 +508,13 @@ onMounted(async () => {
 }
 
 .status-icon {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  border-radius: 12px;
+  font-size: 20px;
+  border-radius: 8px;
   color: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(0, 0, 0, 0.06);
   background: #fafafa;
@@ -524,7 +529,7 @@ onMounted(async () => {
   font-size: 20px;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.85);
-  margin-bottom: 4px;
+  margin-bottom: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -538,6 +543,10 @@ onMounted(async () => {
 
 .node-address :deep(.ant-typography-copy) {
   color: rgba(0, 0, 0, 0.45);
+}
+
+.node-address-row {
+  display: none;
 }
 
 .tags-row {
@@ -868,7 +877,108 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-/* Responsive Styles */
+/* Responsive Styles - Tablet: collapsed header layout */
+@media (max-width: 1199px) and (min-width: 992px) {
+  .node-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .status-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+    border-radius: 10px;
+  }
+
+  .node-title-section {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .gpu-name {
+    font-size: 16px;
+    margin-bottom: 0;
+  }
+
+  .node-address-inline {
+    display: none;
+  }
+
+  .node-address-row {
+    display: block;
+    flex-basis: 100%;
+    width: 100%;
+  }
+
+  .node-address-row .node-address {
+    font-size: 11px;
+  }
+}
+
+/* Mobile: restore original large-screen header layout */
+@media (max-width: 991px) {
+  .node-header {
+    flex-wrap: nowrap;
+  }
+
+  .node-title-section {
+    flex: 1;
+    min-width: 0;
+    display: block;
+  }
+
+  .gpu-name {
+    margin-bottom: 4px;
+  }
+
+  .node-address-inline {
+    display: inline;
+  }
+
+  .node-address-row {
+    display: none;
+  }
+}
+
+/* Tablet: stats move to bottom and arrange horizontally */
+@media (max-width: 1199px) and (min-width: 992px) {
+  .metrics-left {
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .metrics-right {
+    border-left: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding-left: 0;
+    padding-top: 24px;
+    margin-top: 24px;
+  }
+
+  .delegator-rewards-section {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .delegator-num-box,
+  .reward-highlight-box {
+    flex: 1;
+    padding: 16px 12px;
+  }
+
+  .delegator-num-value {
+    font-size: 24px;
+  }
+
+  .reward-highlight-value {
+    font-size: 24px;
+  }
+}
+
+/* Mobile: stats arranged vertically with spacing */
 @media (max-width: 991px) {
   .metrics-left {
     padding-right: 0;
@@ -881,6 +991,16 @@ onMounted(async () => {
     padding-left: 0;
     padding-top: 24px;
     margin-top: 24px;
+  }
+
+  .delegator-rewards-section {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .delegator-num-box,
+  .reward-highlight-box {
+    padding: 16px 12px;
   }
 }
 
@@ -895,14 +1015,19 @@ onMounted(async () => {
     padding: 16px;
   }
 
-  .gpu-name {
-    font-size: 18px;
+  .status-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
   }
 
-  .status-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 24px;
+  .gpu-name {
+    font-size: 15px;
+  }
+
+  .node-title-section {
+    flex: 1;
+    min-width: 0;
   }
 
   .metric-value {
@@ -919,6 +1044,43 @@ onMounted(async () => {
 }
 
 @media (max-width: 576px) {
+  .info-card :deep(.ant-card-body) {
+    padding: 14px;
+  }
+
+  .status-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .gpu-name {
+    font-size: 14px;
+  }
+
+  .tags-row {
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .tags-row :deep(.ant-tag) {
+    font-size: 11px;
+    padding: 0 6px;
+    line-height: 20px;
+  }
+
+  .delegator-share-row {
+    padding: 8px 12px;
+  }
+
+  .delegator-share-label {
+    font-size: 12px;
+  }
+
+  .delegator-share-value {
+    font-size: 16px;
+  }
+
   .metric-value {
     font-size: 18px;
   }
