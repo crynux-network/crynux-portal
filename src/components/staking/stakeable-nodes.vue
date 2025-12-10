@@ -3,7 +3,6 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { List as AList, Row as ARow, Col as ACol, Tag as ATag, Card as ACard, Tooltip as ATooltip, message } from 'ant-design-vue'
 import { PlayCircleOutlined, PauseCircleOutlined, MinusCircleOutlined, FunnelPlotOutlined, ThunderboltOutlined, DollarOutlined } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
-import { useWalletStore } from '@/stores/wallet'
 import config from '@/config.json'
 import { formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
@@ -27,8 +26,6 @@ const scoreSize = computed(() => {
   if (w >= 576) return 56
   return 48
 })
-
-const wallet = useWalletStore()
 
 function getNetworkName(networkKey) {
   return (config.networks[networkKey] && config.networks[networkKey].chainName) || networkKey
