@@ -7,6 +7,7 @@ import {
   parseTokenAmount
 } from './contract'
 import { toBigInt } from './token'
+import { useWalletStore } from '@/stores/wallet'
 import delegatedStakingAbi from '@/abi/delegated-staking.json'
 
 /**
@@ -22,10 +23,13 @@ function getReadContract(networkKey) {
 
 /**
  * Get the delegated staking contract instance for writing (with signer)
+ * Ensures MetaMask is on the correct network before creating signer
  * @param {string} networkKey - The network key
  * @returns {Promise<ethers.Contract>}
  */
 async function getWriteContract(networkKey) {
+  const wallet = useWalletStore()
+  await wallet.ensureNetworkOnWallet(networkKey)
   const address = getContractAddress(networkKey, 'delegatedStaking')
   const signer = await createBrowserSigner()
   return new ethers.Contract(address, delegatedStakingAbi, signer)

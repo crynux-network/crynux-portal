@@ -5,7 +5,6 @@ import { useAuthStore } from '@/stores/auth'
 import config from '@/config.json'
 import { ethers } from 'ethers'
 import beneficialAbi from '@/abi/beneficial-address.json'
-import nodeStakingAbi from '@/abi/node-staking.json'
 import creditsAbi from '@/abi/credits.json'
 import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
@@ -16,6 +15,7 @@ import NetworkTag from '@/components/network-tag.vue'
 import { createReadProvider, isUserRejectedError, getBeneficialAddress, isZeroAddress } from '@/services/contract'
 import { formatBigInt18Precise, toBigInt } from '@/services/token'
 import { getDelegatorTotalStakeAmount } from '@/services/delegated-staking'
+import { getStakingInfo as getNodeStakingInfo, tryUnstake, forceUnstake, StakingStatus } from '@/services/node-staking'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -28,10 +28,6 @@ const networkName = computed(() => {
 
 const beneficialAddressContractAddress = computed(() => {
     return config.networks[wallet.selectedNetworkKey].contracts.beneficialAddress
-})
-
-const nodeStakingContractAddress = computed(() => {
-    return config.networks[wallet.selectedNetworkKey].contracts.nodeStaking
 })
 
 const creditsContractAddress = computed(() => {
@@ -49,6 +45,8 @@ const formattedBenefitBalance = computed(() => {
 
 const nodeStakedBalanceWei = ref('0x0')
 const stakedCredits = ref(0n)
+const nodeStakingStatus = ref(0)
+const nodeUnstakeTimestamp = ref(0n)
 const formattedNodeStakedBalance = computed(() => {
     return formatBigInt18Precise(toBigInt(nodeStakedBalanceWei.value || '0x0'))
 })
@@ -57,6 +55,40 @@ const formattedStakedCredits = computed(() => {
 })
 const isFetchingStake = ref(false)
 const hasStakeInfoLoaded = ref(false)
+const isNodeUnstaking = ref(false)
+
+const FORCE_UNSTAKE_DELAY_SECONDS = 30 * 60
+
+const hasNodeStake = computed(() => {
+    const balance = toBigInt(nodeStakedBalanceWei.value || '0x0')
+    return balance > 0n
+})
+
+const canTryUnstake = computed(() => {
+    return hasNodeStake.value && nodeStakingStatus.value === StakingStatus.STAKED
+})
+
+const canForceUnstake = computed(() => {
+    if (nodeStakingStatus.value !== StakingStatus.PENDING_UNSTAKE) return false
+    const now = BigInt(Math.floor(Date.now() / 1000))
+    const threshold = nodeUnstakeTimestamp.value + BigInt(FORCE_UNSTAKE_DELAY_SECONDS)
+    return now >= threshold
+})
+
+const isPendingUnstake = computed(() => {
+    return nodeStakingStatus.value === StakingStatus.PENDING_UNSTAKE && !canForceUnstake.value
+})
+
+const forceUnstakeAvailableTime = computed(() => {
+    if (nodeStakingStatus.value !== StakingStatus.PENDING_UNSTAKE) return ''
+    const threshold = Number(nodeUnstakeTimestamp.value) + FORCE_UNSTAKE_DELAY_SECONDS
+    return moment.unix(threshold).format('YYYY-MM-DD HH:mm:ss')
+})
+
+const pendingUnstakeTooltip = computed(() => {
+    if (!isPendingUnstake.value) return ''
+    return `Unstake request is being processed. If not completed automatically, you can force unstake after ${forceUnstakeAvailableTime.value}.`
+})
 
 const delegatedStakedBalance = ref(0n)
 const formattedDelegatedStakedBalance = computed(() => {
@@ -328,11 +360,13 @@ async function refreshDashboard() {
         benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
         nodeStakedBalanceWei.value = '0x0'
-        stakedCredits.value = '0'
+        stakedCredits.value = 0n
+        nodeStakingStatus.value = 0
+        nodeUnstakeTimestamp.value = 0n
         hasStakeInfoLoaded.value = false
         delegatedStakedBalance.value = 0n
         hasDelegatedStakeLoaded.value = false
-        creditsBalance.value = '0'
+        creditsBalance.value = 0n
         hasCreditsLoaded.value = false
 		withdrawals.value = []
 		deposits.value = []
@@ -345,11 +379,13 @@ async function refreshDashboard() {
         benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
         nodeStakedBalanceWei.value = '0x0'
-        stakedCredits.value = '0'
+        stakedCredits.value = 0n
+        nodeStakingStatus.value = 0
+        nodeUnstakeTimestamp.value = 0n
         hasStakeInfoLoaded.value = false
         delegatedStakedBalance.value = 0n
         hasDelegatedStakeLoaded.value = false
-        creditsBalance.value = '0'
+        creditsBalance.value = 0n
         hasCreditsLoaded.value = false
 		withdrawals.value = []
 		deposits.value = []
@@ -517,34 +553,32 @@ const fetchBenefitBalance = async () => {
 
 const fetchNodeStakingInfo = async () => {
     hasStakeInfoLoaded.value = false
-    if (!wallet.address || !nodeStakingContractAddress.value) {
+    if (!wallet.address) {
         nodeStakedBalanceWei.value = '0x0'
         stakedCredits.value = 0n
+        nodeStakingStatus.value = 0
+        nodeUnstakeTimestamp.value = 0n
         return
     }
     isFetchingStake.value = true
     try {
-        const provider = createReadProvider(wallet.selectedNetworkKey)
-        const contract = new ethers.Contract(nodeStakingContractAddress.value, nodeStakingAbi, provider)
-        const res = await contract.getStakingInfo(wallet.address)
-        const balanceRaw = (res && (res.stakedBalance ?? res[1])) || 0n
-        const creditsRaw = (res && (res.stakedCredits ?? res[2])) || 0n
+        const info = await getNodeStakingInfo(wallet.selectedNetworkKey, wallet.address)
         let balanceHex = '0x0'
         try {
-            balanceHex = '0x' + balanceRaw.toString(16)
+            balanceHex = '0x' + info.stakedBalance.toString(16)
         } catch {
             balanceHex = '0x0'
         }
         nodeStakedBalanceWei.value = balanceHex
-        try {
-            stakedCredits.value = (typeof creditsRaw === 'bigint') ? creditsRaw : BigInt(creditsRaw ?? 0)
-        } catch {
-            stakedCredits.value = 0n
-        }
+        stakedCredits.value = info.stakedCredits
+        nodeStakingStatus.value = info.status
+        nodeUnstakeTimestamp.value = info.unstakeTimestamp
     } catch (e) {
-        console.error(e)
+        console.error('Failed to fetch node staking info:', e)
         nodeStakedBalanceWei.value = '0x0'
         stakedCredits.value = 0n
+        nodeStakingStatus.value = 0
+        nodeUnstakeTimestamp.value = 0n
     } finally {
         isFetchingStake.value = false
         hasStakeInfoLoaded.value = true
@@ -726,6 +760,51 @@ const submitDeposit = async () => {
     }
 }
 
+const handleTryUnstake = async () => {
+    if (!window.ethereum) {
+        message.error('No wallet provider')
+        return
+    }
+    isNodeUnstaking.value = true
+    try {
+        await tryUnstake(wallet.selectedNetworkKey)
+        message.success('Unstake request submitted')
+        await fetchNodeStakingInfo()
+    } catch (e) {
+        console.error('Try unstake error:', e)
+        if (isUserRejectedError(e)) {
+            message.error('Transaction rejected')
+        } else {
+            message.error('Unstake request failed: ' + (e.reason || e.message || 'Unknown error'))
+        }
+    } finally {
+        isNodeUnstaking.value = false
+    }
+}
+
+const handleForceUnstake = async () => {
+    if (!window.ethereum) {
+        message.error('No wallet provider')
+        return
+    }
+    isNodeUnstaking.value = true
+    try {
+        await forceUnstake(wallet.selectedNetworkKey)
+        message.success('Force unstake completed')
+        await fetchNodeStakingInfo()
+        await wallet.fetchBalance()
+    } catch (e) {
+        console.error('Force unstake error:', e)
+        if (isUserRejectedError(e)) {
+            message.error('Transaction rejected')
+        } else {
+            message.error('Force unstake failed: ' + (e.reason || e.message || 'Unknown error'))
+        }
+    } finally {
+        isNodeUnstaking.value = false
+    }
+}
+
 onMounted(async () => {
 	if (wallet.address) {
 		await wallet.fetchBalance()
@@ -748,7 +827,36 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 								<a-descriptions-item :span="2" label="Network">{{ networkName }}</a-descriptions-item>
 								<a-descriptions-item :span="2" label="Address">{{ wallet.address }}</a-descriptions-item>
 								<a-descriptions-item :span="2" label="CNX Balance"><span>{{ formattedBalance }}</span></a-descriptions-item>
-								<a-descriptions-item label="Node Stake"><span>{{ formattedNodeStakedBalance }}</span></a-descriptions-item>
+								<a-descriptions-item label="Node Stake">
+									<span>{{ formattedNodeStakedBalance }}</span>
+									<template v-if="hasNodeStake && hasStakeInfoLoaded">
+										<a-button
+											v-if="canTryUnstake"
+											type="link"
+											size="small"
+											:loading="isNodeUnstaking"
+											@click="handleTryUnstake"
+											style="margin-left: 8px;"
+										>Unstake</a-button>
+										<a-button
+											v-else-if="canForceUnstake"
+											type="link"
+											size="small"
+											danger
+											:loading="isNodeUnstaking"
+											@click="handleForceUnstake"
+											style="margin-left: 8px;"
+										>Force Unstake</a-button>
+										<a-tooltip v-else-if="isPendingUnstake" :title="pendingUnstakeTooltip">
+											<a-button
+												type="link"
+												size="small"
+												disabled
+												style="margin-left: 8px;"
+											>Pending</a-button>
+										</a-tooltip>
+									</template>
+								</a-descriptions-item>
 								<a-descriptions-item label="Delegated Stake"><span>{{ formattedDelegatedStakedBalance }}</span></a-descriptions-item>
 								<a-descriptions-item>
 									<template #label>
