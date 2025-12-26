@@ -14,9 +14,10 @@
             },
             "blockExplorerUrls": [],
             "contracts": {
-                "beneficialAddress": "0x2b70C7d900333Bd0DBc4be0cAfFcFAA931D118FA",
-                "nodeStaking": "0x07E149A0e372C2F54Df6358d021d700703D222D1",
-                "credits": "0xA06ACFDFcb199a0Bb238EB3BfBd87552D0F5f159"
+                "beneficialAddress": "0xa4AC846337794C93d68D387Be77663e32AD415bb",
+                "nodeStaking": "0xf76C3f19c8976d0Bc49d48718669b99747b1837e",
+                "credits": "0xb592ee9c75873E13501e2eF1e2c31604C056f197",
+                "delegatedStaking": "0x4b0946BB12474332D865AfAc5F77554b503C5570"
             }
         },
         "near": {
@@ -32,9 +33,10 @@
             },
             "blockExplorerUrls": [],
             "contracts": {
-                "beneficialAddress": "0x06aCfA4867C94F97F55De91B257a28480DE8D3b1",
-                "nodeStaking": "0xE15b5DD09f9867C8dD0FbC0f57216b440300c99d",
-                "credits": "0xB47E277aE7Cbb93949D7202b6e29e33f541EC262"
+                "beneficialAddress": "0xf57a8f8F7ab52EBD7971A65e9B44C767d3119c4f",
+                "nodeStaking": "0xd20403b243b0109809BEAa93Ac38f0e3b30039C0",
+                "credits": "0xdC54E16BB691C093264A58CcE1d5E357878b3D93",
+                "delegatedStaking": "0x6463776672920939f8F637173F33C25Fa705f6D1"
             }
         }
     },

@@ -248,7 +248,6 @@ async function submitStake() {
 
   isSubmitting.value = true
   try {
-    await wallet.ensureNetworkOnWallet(props.network)
     await delegatedStakingService.stake(props.network, props.nodeAddress, newAmount, additionalAmount)
 
     message.success('Stake successful')
@@ -274,7 +273,6 @@ async function submitUnstake() {
 
   isSubmitting.value = true
   try {
-    await wallet.ensureNetworkOnWallet(props.network)
     await delegatedStakingService.unstake(props.network, props.nodeAddress)
 
     message.success('Unstake successful')
