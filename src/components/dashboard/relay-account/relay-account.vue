@@ -64,6 +64,10 @@ const hasNodeStake = computed(() => {
     return balance > 0n
 })
 
+const hasCreditsStake = computed(() => {
+    return stakedCredits.value > 0n
+})
+
 const canTryUnstake = computed(() => {
     return hasNodeStake.value && nodeStakingStatus.value === StakingStatus.STAKED
 })
@@ -768,7 +772,7 @@ const handleTryUnstake = async () => {
     isNodeUnstaking.value = true
     try {
         await tryUnstake(wallet.selectedNetworkKey)
-        message.success('Unstake request submitted')
+        message.success('Unstake request submitted. Refresh the page later to view the result.')
         await fetchNodeStakingInfo()
     } catch (e) {
         console.error('Try unstake error:', e)
@@ -832,7 +836,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 									<template v-if="hasNodeStake && hasStakeInfoLoaded">
 										<a-button
 											v-if="canTryUnstake"
-											type="link"
+											type="primary"
 											size="small"
 											:loading="isNodeUnstaking"
 											@click="handleTryUnstake"
@@ -840,7 +844,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 										>Unstake</a-button>
 										<a-button
 											v-else-if="canForceUnstake"
-											type="link"
+											type="primary"
 											size="small"
 											danger
 											:loading="isNodeUnstaking"
@@ -849,7 +853,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 										>Force Unstake</a-button>
 										<a-tooltip v-else-if="isPendingUnstake" :title="pendingUnstakeTooltip">
 											<a-button
-												type="link"
+												type="primary"
 												size="small"
 												disabled
 												style="margin-left: 8px;"
@@ -875,7 +879,36 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 									</template>
 									{{ formattedCreditsBalance }}
 								</a-descriptions-item>
-								<a-descriptions-item label="Credits Stake">{{ formattedStakedCredits }}</a-descriptions-item>
+								<a-descriptions-item label="Credits Stake">
+									<span>{{ formattedStakedCredits }}</span>
+									<template v-if="hasCreditsStake && hasStakeInfoLoaded">
+										<a-button
+											v-if="canTryUnstake"
+											type="primary"
+											size="small"
+											:loading="isNodeUnstaking"
+											@click="handleTryUnstake"
+											style="margin-left: 8px;"
+										>Unstake</a-button>
+										<a-button
+											v-else-if="canForceUnstake"
+											type="primary"
+											size="small"
+											danger
+											:loading="isNodeUnstaking"
+											@click="handleForceUnstake"
+											style="margin-left: 8px;"
+										>Force Unstake</a-button>
+										<a-tooltip v-else-if="isPendingUnstake" :title="pendingUnstakeTooltip">
+											<a-button
+												type="primary"
+												size="small"
+												disabled
+												style="margin-left: 8px;"
+											>Pending</a-button>
+										</a-tooltip>
+									</template>
+								</a-descriptions-item>
 								<a-descriptions-item>
 									<template #label>
 										<span style="display: inline-flex; align-items: center; white-space: nowrap;">
