@@ -846,7 +846,6 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 											v-else-if="canForceUnstake"
 											type="primary"
 											size="small"
-											danger
 											:loading="isNodeUnstaking"
 											@click="handleForceUnstake"
 											style="margin-left: 8px;"
@@ -857,7 +856,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 												size="small"
 												disabled
 												style="margin-left: 8px;"
-											>Pending</a-button>
+											>Pending Unstake</a-button>
 										</a-tooltip>
 									</template>
 								</a-descriptions-item>
@@ -894,7 +893,6 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 											v-else-if="canForceUnstake"
 											type="primary"
 											size="small"
-											danger
 											:loading="isNodeUnstaking"
 											@click="handleForceUnstake"
 											style="margin-left: 8px;"
@@ -905,7 +903,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 												size="small"
 												disabled
 												style="margin-left: 8px;"
-											>Pending</a-button>
+											>Pending Unstake</a-button>
 										</a-tooltip>
 									</template>
 								</a-descriptions-item>
