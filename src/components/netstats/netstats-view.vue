@@ -2,8 +2,8 @@
 import {computed, onMounted, reactive, ref} from 'vue'
 import {Grid} from 'ant-design-vue'
 
+import config from '@/config.json'
 import networkAPI from '@/api/v1/network'
-import incentivesAPI from "@/api/v1/incentives";
 import v2NetworkAPI from '@/api/v2/network'
 
 import NetworkIncentivesLineChart from "./network-incentives-line-chart.vue";
@@ -120,16 +120,26 @@ const toEtherValue = (bigNum) => {
     return decimals + '.' + fractions
 }
 
-let totalIncentives = ref(0)
+const circulation = 0
 
 onMounted(async () => {
     await loadNetworkInfo()
-    totalIncentives.value = await incentivesAPI.getIncentivesTotal()
 })
 </script>
 
 <template>
     <a-row :class="topRowClasses"></a-row>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px; margin-bottom: 16px">
+        <a-col :span="20" :offset="2">
+            <a-alert type="warning" show-icon message="Crynux Testnet Sunnet">
+                <template #description>
+                    Crynux Testnet has been sunneted for the Mainnet launch. Please join our
+                    <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>
+                    to get latest updates.
+                </template>
+            </a-alert>
+        </a-col>
+    </a-row>
     <a-row :gutter="[16, 16]">
         <a-col :span="6" :offset="2">
             <a-card title="Total Computing Power" :bordered="false" style="height: 100%; opacity: 0.9">
@@ -178,9 +188,9 @@ onMounted(async () => {
                         </a-statistic>
                     </a-col>
                     <a-col :span="4">
-                        <a-statistic :precision="0" :value="totalIncentives" :value-style="{'text-align':'center'}">
+                        <a-statistic :precision="0" :value="circulation" :value-style="{'text-align':'center'}">
                             <template #title>
-                                <div style="text-align: center">Total Incentives</div>
+                                <div style="text-align: center">Circulation</div>
                             </template>
                         </a-statistic>
                     </a-col>
