@@ -11,7 +11,7 @@ class WalletAPI extends BaseAPI {
     }
 
     getWithdrawals(address, page, pageSize) {
-        return v1.get(`/client/${address}/withdraw/list`, {
+        return v1.get(`/relay_account/${address}/withdraw/list`, {
             params: {
                 page: page,
                 page_size: pageSize,
@@ -20,7 +20,7 @@ class WalletAPI extends BaseAPI {
     }
 
     getDeposits(address, page, pageSize) {
-        return v1.get(`/client/${address}/deposit/list`, {
+        return v1.get(`/relay_account/${address}/deposit/list`, {
             params: {
                 page: page,
                 page_size: pageSize,
@@ -29,7 +29,7 @@ class WalletAPI extends BaseAPI {
     }
 
 	withdraw(address, amount, benefitAddress, network, timestamp, signature) {
-		return v1.post(`/client/${address}/withdraw`, {
+		return v1.post(`/relay_account/${address}/withdraw`, {
 			amount: amount,
 			benefit_address: benefitAddress,
 			network: network,

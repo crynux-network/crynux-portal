@@ -2,8 +2,8 @@
 import {computed, onMounted, reactive, ref} from 'vue'
 import {Grid} from 'ant-design-vue'
 
+import config from '@/config.json'
 import networkAPI from '@/api/v1/network'
-import incentivesAPI from "@/api/v1/incentives";
 import v2NetworkAPI from '@/api/v2/network'
 
 import NetworkIncentivesLineChart from "./network-incentives-line-chart.vue";
@@ -194,16 +194,26 @@ const toEtherValue = (bigNum) => {
     return decimals + '.' + fractions
 }
 
-let totalIncentives = ref(0)
+const circulation = 0
 
 onMounted(async () => {
     await loadNetworkInfo()
-    totalIncentives.value = await incentivesAPI.getIncentivesTotal()
 })
 </script>
 
 <template>
     <div class="top-spacer"></div>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px; margin-bottom: 16px">
+        <a-col :span="20" :offset="2">
+            <a-alert type="warning" show-icon message="Crynux Testnet Sunset">
+                <template #description>
+                    Crynux Testnet has been sunset ahead of the Mainnet launch. Please join our
+                    <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>
+                    for the latest updates.
+                </template>
+            </a-alert>
+        </a-col>
+    </a-row>
     <a-row :gutter="[16, 16]">
         <a-col :xs="24" :sm="24" :md="8" :lg="6">
             <a-card
@@ -248,12 +258,12 @@ onMounted(async () => {
                     </a-statistic>
                 </a-card-grid>
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :precision="0" :value="totalIncentives" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
+                    <a-statistic :precision="0" :value="circulation" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
                             <dollar-circle-outlined :style="kpiIconStyle" />
                         </template>
                         <template #title>
-                            <div style="text-align: center">Total Incentives</div>
+                            <div style="text-align: center">Circulation</div>
                         </template>
                     </a-statistic>
                 </a-card-grid>
