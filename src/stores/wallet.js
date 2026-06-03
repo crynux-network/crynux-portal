@@ -3,19 +3,26 @@ import { ethers } from 'ethers'
 import config from '@/config.json'
 import { useAuthStore } from '@/stores/auth'
 
+const getDefaultNetworkKey = () => Object.keys(config.networks)[0] || ''
+
 export const useWalletStore = defineStore('wallet', {
 	state: () => ({
 		address: null,
-		selectedNetworkKey: 'dymension',
+		selectedNetworkKey: getDefaultNetworkKey(),
 		balanceWei: '0x0',
 		isConnected: false
 	}),
 	getters: {
 		selectedNetwork(state) {
-			return config.networks[state.selectedNetworkKey]
+			return config.networks[state.selectedNetworkKey] || config.networks[getDefaultNetworkKey()]
 		}
 	},
 	actions: {
+		normalizeSelectedNetworkKey() {
+			if (!config.networks[this.selectedNetworkKey]) {
+				this.selectedNetworkKey = getDefaultNetworkKey()
+			}
+		},
 		shortAddress() {
 			if (!this.address) return ''
 			return this.address.slice(0, 6) + '…' + this.address.slice(-4)
@@ -28,7 +35,8 @@ export const useWalletStore = defineStore('wallet', {
 			this.balanceWei = weiHex || '0x0'
 		},
 		async ensureNetworkOnWallet(targetKey) {
-			const key = targetKey || this.selectedNetworkKey
+			this.normalizeSelectedNetworkKey()
+			const key = config.networks[targetKey] ? targetKey : this.selectedNetworkKey
 			const net = config.networks[key]
 			if (!net) return false
 			const provider = window.ethereum

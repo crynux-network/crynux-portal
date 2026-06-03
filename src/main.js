@@ -29,6 +29,16 @@ v1.setAuthTokenGetter(() => {
   }
 })
 
+v2.setAuthTokenGetter(() => {
+  try {
+    const auth = useAuthStore()
+    if (!auth || !auth.isAuthenticated) return null
+    return auth.sessionToken
+  } catch (_) {
+    return null
+  }
+})
+
 const handleUnauthorized = () => {
   try { message.error('Session expired. Please sign in again.') } catch (e) { console.error('Failed to show message:', e) }
   try { const auth = useAuthStore(); if (auth && auth.$reset) auth.$reset() } catch (e) { console.error('Failed to reset auth store:', e) }
@@ -38,5 +48,7 @@ const handleUnauthorized = () => {
 
 v1.apiUnauthorizedErrorHandler = handleUnauthorized
 try { v2.apiUnauthorizedErrorHandler = handleUnauthorized } catch (e) { console.error('Failed to set v2 unauthorized handler:', e) }
+
+try { useWalletStore().normalizeSelectedNetworkKey() } catch (e) { console.error('Failed to normalize wallet network:', e) }
 
 app.mount('#app')

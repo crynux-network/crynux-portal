@@ -5,15 +5,15 @@ import { useAuthStore } from '@/stores/auth'
 import config from '@/config.json'
 import { ethers } from 'ethers'
 import beneficialAbi from '@/abi/beneficial-address.json'
-import creditsAbi from '@/abi/credits.json'
 import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
+import v2RelayAccountAPI from '@/api/v2/relay-account'
 import RelayAccountIncomeChart from '@/components/relay-account-income-chart.vue'
 import moment from 'moment'
 import NetworkTag from '@/components/network-tag.vue'
 import { createReadProvider, isUserRejectedError, getBeneficialAddress, isZeroAddress } from '@/services/contract'
-import { formatBigInt18Precise, toBigInt } from '@/services/token'
+import { formatBigInt18, formatBigInt18Precise, toBigInt } from '@/services/token'
 import { getDelegatorTotalStakeAmount } from '@/services/delegated-staking'
 import { getStakingInfo as getNodeStakingInfo, tryUnstake, forceUnstake, StakingStatus } from '@/services/node-staking'
 
@@ -30,10 +30,6 @@ const beneficialAddressContractAddress = computed(() => {
     return config.networks[wallet.selectedNetworkKey].contracts.beneficialAddress
 })
 
-const creditsContractAddress = computed(() => {
-    return config.networks[wallet.selectedNetworkKey].contracts.credits
-})
-
 const formattedBalance = computed(() => {
 	return formatBigInt18Precise(toBigInt(wallet.balanceWei || '0x0'))
 })
@@ -44,14 +40,10 @@ const formattedBenefitBalance = computed(() => {
 })
 
 const nodeStakedBalanceWei = ref('0x0')
-const stakedCredits = ref(0n)
 const nodeStakingStatus = ref(0)
 const nodeUnstakeTimestamp = ref(0n)
 const formattedNodeStakedBalance = computed(() => {
     return formatBigInt18Precise(toBigInt(nodeStakedBalanceWei.value || '0x0'))
-})
-const formattedStakedCredits = computed(() => {
-    return formatBigInt18Precise(stakedCredits.value)
 })
 const isFetchingStake = ref(false)
 const hasStakeInfoLoaded = ref(false)
@@ -62,10 +54,6 @@ const FORCE_UNSTAKE_DELAY_SECONDS = 30 * 60
 const hasNodeStake = computed(() => {
     const balance = toBigInt(nodeStakedBalanceWei.value || '0x0')
     return balance > 0n
-})
-
-const hasCreditsStake = computed(() => {
-    return stakedCredits.value > 0n
 })
 
 const canTryUnstake = computed(() => {
@@ -101,26 +89,34 @@ const formattedDelegatedStakedBalance = computed(() => {
 const isFetchingDelegatedStake = ref(false)
 const hasDelegatedStakeLoaded = ref(false)
 
-const creditsBalance = ref(0n)
-const formattedCreditsBalance = computed(() => {
-    return formatBigInt18Precise(creditsBalance.value)
-})
-const isFetchingCredits = ref(false)
-const hasCreditsLoaded = ref(false)
-
 const abi = beneficialAbi
 
 const benefitAddress = ref('')
 const isFetchingBenefit = ref(false)
 
 const isOnChainWalletLoading = computed(() => {
-    return isFetchingBenefit.value || !hasStakeInfoLoaded.value || !hasDelegatedStakeLoaded.value || !hasCreditsLoaded.value
+    return isFetchingBenefit.value || !hasStakeInfoLoaded.value || !hasDelegatedStakeLoaded.value
 })
 const isModalOpen = ref(false)
 const inputBenefitAddress = ref('')
 const isSubmitting = ref(false)
 const benefitError = ref('')
 const relayBalance = ref(0)
+const lockedVestingWei = ref('0')
+const isLockedVestingLoading = ref(false)
+const formattedLockedVesting = computed(() => {
+    return formatBigInt18(toBigInt(lockedVestingWei.value || '0'), 2)
+})
+
+const isVestingOpen = ref(false)
+const vestings = ref([])
+const vestingsLoading = ref(false)
+const vestingsPagination = ref({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  showSizeChanger: false,
+})
 
 const isWithdrawOpen = ref(false)
 const withdrawFormRef = ref()
@@ -224,6 +220,10 @@ const formatInt = (n) => {
     const num = Number(n || 0)
     const v = Math.max(0, Math.floor(num))
     try { return v.toLocaleString('en-US') } catch { return String(v) }
+}
+
+const formatTokenAmountWei = (value) => {
+    return `CNX ${formatBigInt18(toBigInt(value || '0'), 2)}`
 }
 
 const destinationAddress = computed(() => {
@@ -335,6 +335,39 @@ const depositColumns = [
   },
 ]
 
+const vestingColumns = [
+  {
+    title: "Total Amount",
+    dataIndex: "total_amount",
+    key: "total_amount",
+  },
+  {
+    title: "Start Time",
+    dataIndex: "start_time",
+    key: "start_time",
+  },
+  {
+    title: "Lock Duration",
+    dataIndex: "duration_days",
+    key: "duration_days",
+  },
+  {
+    title: "Released Amount",
+    dataIndex: "released_amount",
+    key: "released_amount",
+  },
+  {
+    title: "Remaining Amount",
+    dataIndex: "remaining_amount",
+    key: "remaining_amount",
+  },
+  {
+    title: "Status",
+    dataIndex: "status",
+    key: "status",
+  },
+]
+
 const truncateTxHash = (h) => {
 	if (!h) return ''
 	const s = String(h)
@@ -344,10 +377,12 @@ const truncateTxHash = (h) => {
 
 const formatNetworkName = (n) => {
     if (!n) return ''
-    const s = String(n).toLowerCase()
-    if (s === 'dymension') return 'Dymension'
-    if (s === 'near') return 'Near'
-    return n
+    const raw = String(n).trim()
+    const s = raw.toLowerCase()
+    const network = Object.entries(config.networks || {}).find(([key]) => key.toLowerCase() === s)?.[1]
+    if (network?.chainName) return network.chainName
+    if (s.startsWith('crynux on ')) return raw
+    return `Crynux on ${raw.split('-').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')}`
 }
 
 const formatTimestamp = (t) => {
@@ -358,22 +393,32 @@ const formatTimestamp = (t) => {
 	return moment.unix(seconds).format('YYYY-MM-DD HH:mm')
 }
 
+const formatDate = (t) => {
+	if (t === undefined || t === null || t === '') return ''
+	const n = Number(t)
+	if (!Number.isFinite(n)) return String(t)
+	const seconds = n > 1e12 ? Math.floor(n / 1000) : Math.floor(n)
+	return moment.unix(seconds).format('YYYY-MM-DD')
+}
+
 async function refreshDashboard() {
 	if (!wallet.address) {
 		benefitAddress.value = ''
         benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
         nodeStakedBalanceWei.value = '0x0'
-        stakedCredits.value = 0n
         nodeStakingStatus.value = 0
         nodeUnstakeTimestamp.value = 0n
         hasStakeInfoLoaded.value = false
         delegatedStakedBalance.value = 0n
         hasDelegatedStakeLoaded.value = false
-        creditsBalance.value = 0n
-        hasCreditsLoaded.value = false
 		withdrawals.value = []
 		deposits.value = []
+        lockedVestingWei.value = '0'
+        vestings.value = []
+        vestingsPagination.value.current = 1
+        vestingsPagination.value.total = 0
+        isVestingOpen.value = false
 		return
 	}
 	const sessionAddr = auth.sessionAddress || null
@@ -383,16 +428,18 @@ async function refreshDashboard() {
         benefitBalanceWei.value = '0x0'
 		relayBalance.value = 0
         nodeStakedBalanceWei.value = '0x0'
-        stakedCredits.value = 0n
         nodeStakingStatus.value = 0
         nodeUnstakeTimestamp.value = 0n
         hasStakeInfoLoaded.value = false
         delegatedStakedBalance.value = 0n
         hasDelegatedStakeLoaded.value = false
-        creditsBalance.value = 0n
-        hasCreditsLoaded.value = false
 		withdrawals.value = []
 		deposits.value = []
+        lockedVestingWei.value = '0'
+        vestings.value = []
+        vestingsPagination.value.current = 1
+        vestingsPagination.value.total = 0
+        isVestingOpen.value = false
 		return
 	}
     await fetchBenefitAddress()
@@ -403,7 +450,7 @@ async function refreshDashboard() {
     }
     await fetchNodeStakingInfo()
     await fetchDelegatedStakingInfo()
-    await fetchCreditsBalance()
+    await fetchLockedVesting()
 	await fetchRelayBalance()
 	await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
 	await getDeposits(depositsPagination.value.current, depositsPagination.value.pageSize)
@@ -507,6 +554,64 @@ const handleDepositsTableChange = (pagination) => {
   getDeposits(pagination.current, pagination.pageSize);
 }
 
+const fetchLockedVesting = async () => {
+    if (!wallet.address) {
+        lockedVestingWei.value = '0'
+        return
+    }
+    isLockedVestingLoading.value = true
+    try {
+        const res = await v2RelayAccountAPI.getLockedVesting(wallet.address)
+        lockedVestingWei.value = toBigInt(res || '0').toString()
+    } catch (e) {
+        lockedVestingWei.value = '0'
+        message.error(e.message || 'Failed to fetch locked vesting amount')
+    } finally {
+        isLockedVestingLoading.value = false
+    }
+}
+
+const getVestings = async (page = 1, pageSize = 20) => {
+    if (!wallet.address) {
+        vestings.value = []
+        return
+    }
+    vestingsLoading.value = true
+    try {
+        const res = await v2RelayAccountAPI.getVestings(wallet.address, page, pageSize)
+        vestings.value = (res.vesting_records || []).map((record) => ({
+            ...record,
+            start_time: formatDate(record && record.start_time),
+            duration_days: `${record && record.duration_days ? record.duration_days : 0} days`,
+            total_amount: formatTokenAmountWei(record && record.total_amount),
+            released_amount: formatTokenAmountWei(record && record.released_amount),
+            remaining_amount: formatTokenAmountWei(record && record.remaining_amount),
+        }))
+        vestingsPagination.value.total = res.total || 0
+        vestingsPagination.value.current = page
+    } catch (e) {
+        message.error(e.message || 'Failed to fetch vesting records')
+    } finally {
+        vestingsLoading.value = false
+    }
+}
+
+const handleVestingsTableChange = (pagination) => {
+    getVestings(pagination.current, pagination.pageSize)
+}
+
+const openVestingModal = async () => {
+    if (!wallet.address || !auth.isAuthenticated) {
+        return
+    }
+    const sessionAddr = auth.sessionAddress || null
+    if (sessionAddr && sessionAddr.toLowerCase() !== String(wallet.address).toLowerCase()) {
+        return
+    }
+    isVestingOpen.value = true
+    await fetchLockedVesting()
+    await getVestings(vestingsPagination.value.current, vestingsPagination.value.pageSize)
+}
 
 const fetchRelayBalance = async () => {
     if (!wallet.address) {
@@ -559,7 +664,6 @@ const fetchNodeStakingInfo = async () => {
     hasStakeInfoLoaded.value = false
     if (!wallet.address) {
         nodeStakedBalanceWei.value = '0x0'
-        stakedCredits.value = 0n
         nodeStakingStatus.value = 0
         nodeUnstakeTimestamp.value = 0n
         return
@@ -574,13 +678,11 @@ const fetchNodeStakingInfo = async () => {
             balanceHex = '0x0'
         }
         nodeStakedBalanceWei.value = balanceHex
-        stakedCredits.value = info.stakedCredits
         nodeStakingStatus.value = info.status
         nodeUnstakeTimestamp.value = info.unstakeTimestamp
     } catch (e) {
         console.error('Failed to fetch node staking info:', e)
         nodeStakedBalanceWei.value = '0x0'
-        stakedCredits.value = 0n
         nodeStakingStatus.value = 0
         nodeUnstakeTimestamp.value = 0n
     } finally {
@@ -605,31 +707,6 @@ const fetchDelegatedStakingInfo = async () => {
     } finally {
         isFetchingDelegatedStake.value = false
         hasDelegatedStakeLoaded.value = true
-    }
-}
-
-const fetchCreditsBalance = async () => {
-    hasCreditsLoaded.value = false
-    if (!wallet.address || !creditsContractAddress.value) {
-        creditsBalance.value = 0n
-        return
-    }
-    isFetchingCredits.value = true
-    try {
-        const provider = createReadProvider(wallet.selectedNetworkKey)
-        const contract = new ethers.Contract(creditsContractAddress.value, creditsAbi, provider)
-        const res = await contract.getCredits(wallet.address)
-        try {
-            creditsBalance.value = (typeof res === 'bigint') ? res : BigInt(res ?? 0)
-        } catch {
-            creditsBalance.value = 0n
-        }
-    } catch (e) {
-        console.error(e)
-        creditsBalance.value = 0n
-    } finally {
-        isFetchingCredits.value = false
-        hasCreditsLoaded.value = true
     }
 }
 
@@ -864,52 +941,6 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 								<a-descriptions-item>
 									<template #label>
 										<span style="display: inline-flex; align-items: center; white-space: nowrap;">
-											<span>Credits Balance</span>
-											<a-popover placement="right">
-												<template #content>
-													<div style="max-width: 300px;">
-														<div>Credits are special node credits that can only be used to start a node. In the Node WebUI, they are combined with your CNX and displayed as CNX Balance or CNX Staked under Node Wallet. Credits are non-transferable. If your node is slashed, credits may be deducted. If credits are depleted, you will need regular CNX to start a node.</div>
-														<div style="margin-top: 8px;">You can get free Credits in our <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>.</div>
-													</div>
-												</template>
-												<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
-											</a-popover>
-										</span>
-									</template>
-									{{ formattedCreditsBalance }}
-								</a-descriptions-item>
-								<a-descriptions-item label="Credits Stake">
-									<span>{{ formattedStakedCredits }}</span>
-									<template v-if="hasCreditsStake && hasStakeInfoLoaded">
-										<a-button
-											v-if="canTryUnstake"
-											type="primary"
-											size="small"
-											:loading="isNodeUnstaking"
-											@click="handleTryUnstake"
-											style="margin-left: 8px;"
-										>Unstake</a-button>
-										<a-button
-											v-else-if="canForceUnstake"
-											type="primary"
-											size="small"
-											:loading="isNodeUnstaking"
-											@click="handleForceUnstake"
-											style="margin-left: 8px;"
-										>Force Unstake</a-button>
-										<a-tooltip v-else-if="isPendingUnstake" :title="pendingUnstakeTooltip">
-											<a-button
-												type="primary"
-												size="small"
-												disabled
-												style="margin-left: 8px;"
-											>Pending Unstake</a-button>
-										</a-tooltip>
-									</template>
-								</a-descriptions-item>
-								<a-descriptions-item>
-									<template #label>
-										<span style="display: inline-flex; align-items: center; white-space: nowrap;">
 											<span>Beneficial Address</span>
 											<a-popover placement="right">
 												<template #content>
@@ -941,7 +972,17 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 		<a-col :xs="24" :lg="8" style="display: flex; flex-direction: column">
 					<a-card :title="`Relay Account`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1; display: flex; flex-direction: column" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, paddingBottom: '32px' }">
 						<div style="flex: 1; display: flex; align-items: center; justify-content: center; padding-bottom: 24px;">
-							<a-statistic title="Balance (CNX)" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" style="text-align: center" />
+                            <div style="text-align: center;">
+                                <a-statistic title="Balance (CNX)" :value="relayBalance" :precision="6" :value-style="{ fontSize: '32px' }" />
+                                <a-typography-text
+                                    type="secondary"
+                                    style="display: inline-block; margin-top: 8px; font-size: 12px; cursor: pointer;"
+                                    @click="openVestingModal"
+                                >
+                                    <span v-if="isLockedVestingLoading">Locked Amount: Loading...</span>
+                                    <span v-else>Locked Amount: {{ formattedLockedVesting }} CNX</span>
+                                </a-typography-text>
+                            </div>
 						</div>
 						<a-row :gutter="12">
 							<a-col :span="12">
@@ -984,7 +1025,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 											<span v-else>{{ record.status }}</span>
 										</template>
 										<template v-else-if="column.dataIndex === 'network'">
-											<NetworkTag :text="'Crynux on ' + record.network" />
+											<NetworkTag :text="record.network" />
 										</template>
 										<template v-else-if="column.dataIndex === 'to_type'">
 											<a-tag :color="record.to_type_color">{{ record.to_type }}</a-tag>
@@ -1006,7 +1047,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 								>
 									<template #bodyCell="{ column, record }">
 										<template v-if="column.dataIndex === 'network'">
-											<NetworkTag :text="'Crynux on ' + record.network" />
+											<NetworkTag :text="record.network" />
 										</template>
 										<template v-else-if="column.dataIndex === 'tx_hash'">
 											<span>{{ truncateTxHash(record.tx_hash) }}</span>
@@ -1157,6 +1198,34 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 			</a-descriptions-item>
 		</a-descriptions>
 	</a-modal>
+
+    <a-modal
+        v-model:open="isVestingOpen"
+        :title="'Vesting'"
+        :footer="null"
+        :width="920"
+        :mask-closable="true"
+    >
+        <a-typography-text type="secondary" style="display: block; margin-bottom: 16px;">
+            Locked Amount: {{ formattedLockedVesting }} CNX
+        </a-typography-text>
+        <a-table
+            :columns="vestingColumns"
+            :data-source="vestings"
+            :loading="vestingsLoading"
+            :pagination="vestingsPagination"
+            @change="handleVestingsTableChange"
+            row-key="id"
+        >
+            <template #bodyCell="{ column, record }">
+                <template v-if="column.dataIndex === 'status'">
+                    <a-tag v-if="record.status === 0 || record.status === '0'" color="blue">Active</a-tag>
+                    <a-tag v-else-if="record.status === 1 || record.status === '1'" color="green">Completed</a-tag>
+                    <span v-else>{{ record.status }}</span>
+                </template>
+            </template>
+        </a-table>
+    </a-modal>
 </template>
 
 <style scoped lang="stylus">

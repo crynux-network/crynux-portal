@@ -11,7 +11,7 @@ const props = defineProps({
 
 const color = computed(() => {
   const s = String(props.text || '').toLowerCase()
-  if (s.includes('dym')) return 'geekblue'
+  if (s.includes('base')) return 'geekblue'
   if (s.includes('near')) return 'green'
   return undefined
 })
