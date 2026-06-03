@@ -36,6 +36,17 @@ class V2Client {
       ]
     })
 
+    this._getAuthToken = () => null
+
+    this.httpClient.interceptors.request.use((cfg) => {
+      const token = this._getAuthToken && this._getAuthToken()
+      if (token) {
+        cfg.headers = cfg.headers || {}
+        cfg.headers['Authorization'] = `Bearer ${token}`
+      }
+      return cfg
+    })
+
     this.httpClient.interceptors.response.use(
       (response) => {
         if (response.status === 200) {
@@ -88,6 +99,10 @@ class V2Client {
 
   delete(url, config) {
     return this.httpClient.delete(url, config)
+  }
+
+  setAuthTokenGetter(fn) {
+    this._getAuthToken = typeof fn === 'function' ? fn : () => null
   }
 
   processErrorStatus(status, errorData) {

@@ -78,10 +78,11 @@ function reauthWithFocusAndDelay() {
   return new Promise(resolve => setTimeout(resolve, 200)).then(() => connect())
 }
 
-const networks = [
-  { key: 'dymension', name: config.networks.dymension.chainName, logo: '/dymension-square.png' },
-  { key: 'near', name: config.networks.near.chainName, logo: '/near-square.png' }
-]
+const networks = Object.entries(config.networks).map(([key, network]) => ({
+  key,
+  name: network.chainName,
+  logo: network.logo
+}))
 
 const selectedNetworkKey = computed(() => wallet.selectedNetworkKey)
 
@@ -814,6 +815,10 @@ onBeforeUnmount(() => {
     background #fff
   :deep(.ant-drawer-body)
     background #fff
+
+.network-selector .network-name,
+.network-dropdown .network-option-name
+  transform translateY(-2px)
 
 </style>
 
