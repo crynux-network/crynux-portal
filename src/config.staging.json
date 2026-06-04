@@ -1,7 +1,7 @@
 {
     "relay_url": "https://staging.relay.crynux.io",
     "networks": {
-        "base-sepolia": {
+        "crynux-on-base-sepolia": {
             "chainId": "188962142",
             "chainName": "Crynux on Base Sepolia",
             "rpcUrls": [
@@ -22,7 +22,7 @@
             "logo": "/base-square.png"
         }
     },
-    "default_network": "base-sepolia",
+    "default_network": "crynux-on-base-sepolia",
     "withdrawal_fee": 1,
     "withdrawal_min": 100,
     "deposit_address": "0x7bB0A0582893c09ED48397BFACDdbbd478eB4839",
