@@ -1,7 +1,7 @@
 {
     "relay_url": "https://relay.crynux.io",
     "networks": {
-        "base": {
+        "crynux-on-base": {
             "chainId": "18896214",
             "chainName": "Crynux on Base",
             "rpcUrls": [
@@ -22,7 +22,7 @@
             "logo": "/base-square.png"
         }
     },
-    "default_network": "base",
+    "default_network": "crynux-on-base",
     "withdrawal_fee": 1,
     "withdrawal_min": 100,
     "deposit_address": "0x7bB0A0582893c09ED48397BFACDdbbd478eB4839",
