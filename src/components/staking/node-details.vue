@@ -21,12 +21,13 @@ import {
   MinusCircleOutlined,
   FunnelPlotOutlined,
   ThunderboltOutlined,
-  DollarOutlined
+  DollarOutlined,
+  QuestionCircleOutlined
 } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
-import config from '@/config.json'
-import { formatBigInt18Compact } from '@/services/token'
+import { formatBigInt18, formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
+import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
 import NodeStakingChart from '@/components/staking/node-staking-chart.vue'
 import NodeScoresChart from '@/components/staking/node-scores-chart.vue'
@@ -47,7 +48,7 @@ const delegationsPageSize = 10
 const networkName = computed(() => {
   const key = node.value?.network
   if (!key) return ''
-  return (config.networks[key] && config.networks[key].chainName) || key
+  return formatConfiguredNetworkName(key)
 })
 
 
@@ -174,14 +175,14 @@ const delegationsColumns = [
     align: 'center'
   },
   {
-    title: 'Rewards Today',
+    title: 'Task Fee Today',
     dataIndex: 'today_earnings',
     key: 'today_earnings',
     width: 120,
     align: 'right'
   },
   {
-    title: 'Rewards Total',
+    title: 'Task Fee Total',
     dataIndex: 'total_earnings',
     key: 'total_earnings',
     width: 120,
@@ -191,6 +192,10 @@ const delegationsColumns = [
 
 const formatStakingAmount = (value) => {
   return formatBigInt18Compact(value)
+}
+
+const formatTaskFeeAmount = (value) => {
+  return formatBigInt18(value, 2)
 }
 
 const formatDate = (timestamp) => {
@@ -351,17 +356,17 @@ onMounted(async () => {
                   </a-row>
                 </div>
 
-                <!-- Operator Rewards (subtle display) -->
+                <!-- Operator Task Fee (subtle display) -->
                 <div class="operator-rewards-section">
-                  <div class="operator-rewards-title">Operator Rewards</div>
+                  <div class="operator-rewards-title">Operator Task Fee</div>
                   <div class="operator-rewards-row">
                     <div class="operator-reward-item">
-                      <span class="operator-reward-value">{{ formatBigInt18Compact(node.today_operator_earnings) }}</span>
+                      <span class="operator-reward-value">{{ formatTaskFeeAmount(node.today_operator_earnings) }}</span>
                       <span class="operator-reward-label">Today</span>
                     </div>
                     <div class="operator-reward-divider"></div>
                     <div class="operator-reward-item">
-                      <span class="operator-reward-value">{{ formatBigInt18Compact(node.total_operator_earnings) }}</span>
+                      <span class="operator-reward-value">{{ formatTaskFeeAmount(node.total_operator_earnings) }}</span>
                       <span class="operator-reward-label">Total</span>
                     </div>
                   </div>
@@ -378,12 +383,12 @@ onMounted(async () => {
 
                   <div class="reward-highlight-box">
                     <div class="reward-highlight-value">{{ formatBigInt18Compact(node.today_delegator_earnings) }}</div>
-                    <div class="reward-highlight-label">Delegator Rewards Today</div>
+                    <div class="reward-highlight-label">Delegator Task Fee Today</div>
                   </div>
 
                   <div class="reward-highlight-box total">
                     <div class="reward-highlight-value">{{ formatBigInt18Compact(node.total_delegator_earnings) }}</div>
-                    <div class="reward-highlight-label">Delegator Rewards Total</div>
+                    <div class="reward-highlight-label">Delegator Task Fee Total</div>
                   </div>
                 </div>
               </a-col>
@@ -392,10 +397,18 @@ onMounted(async () => {
         </a-col>
       </a-row>
 
-      <!-- Node Rewards Chart -->
+      <!-- Node Task Fee Chart -->
       <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
         <a-col :span="24">
-          <a-card class="chart-card" title="Node Rewards" :bordered="false" style="opacity: 0.9">
+          <a-card class="chart-card" :bordered="false" style="opacity: 0.9">
+            <template #title>
+              <span class="card-title-with-tooltip">
+                Node Task Fee
+                <a-tooltip title="Task Fee is not the full reward amount. It is used as the basis for calculating Emission rewards, and Emission rewards are not included here.">
+                  <question-circle-outlined class="reward-info-icon" />
+                </a-tooltip>
+              </span>
+            </template>
             <NodeRewardsChart :address="nodeAddress" />
           </a-card>
         </a-col>
@@ -453,10 +466,10 @@ onMounted(async () => {
                     <span>{{ formatDate(record.staked_at) }}</span>
                   </template>
                   <template v-else-if="column.key === 'today_earnings'">
-                    <span>{{ formatStakingAmount(record.today_earnings) }}</span>
+                    <span>{{ formatTaskFeeAmount(record.today_earnings) }}</span>
                   </template>
                   <template v-else-if="column.key === 'total_earnings'">
-                    <span>{{ formatStakingAmount(record.total_earnings) }}</span>
+                    <span>{{ formatTaskFeeAmount(record.total_earnings) }}</span>
                   </template>
                 </template>
               </a-table>
@@ -833,6 +846,17 @@ onMounted(async () => {
   background: #ffffff;
   border-radius: 12px;
   height: 100%;
+}
+
+.card-title-with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reward-info-icon {
+  color: rgba(0, 0, 0, 0.45);
+  cursor: help;
 }
 
 .chart-card :deep(.ant-card-body) {

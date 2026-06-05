@@ -11,11 +11,11 @@ import {
   message
 } from 'ant-design-vue'
 import { useWalletStore } from '@/stores/wallet'
-import config from '@/config.json'
 import delegatedStakingService from '@/services/delegated-staking'
 import { isUserRejectedError, getBalanceForNetwork, getBeneficialAddress, isZeroAddress } from '@/services/contract'
 import { formatBigInt18Precise } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
+import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 
 const props = defineProps({
   nodeAddress: {
@@ -56,7 +56,7 @@ const isUnstakeDataLoaded = ref(false)
 // Computed
 const networkName = computed(() => {
   const key = props.network
-  return (config.networks[key] && config.networks[key].chainName) || key
+  return formatConfiguredNetworkName(key)
 })
 
 const currentStakingAmountCNX = computed(() => {

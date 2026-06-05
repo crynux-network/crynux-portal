@@ -78,30 +78,6 @@ function reauthWithFocusAndDelay() {
   return new Promise(resolve => setTimeout(resolve, 200)).then(() => connect())
 }
 
-const networks = Object.entries(config.networks).map(([key, network]) => ({
-  key,
-  name: network.chainName,
-  logo: network.logo
-}))
-
-const selectedNetworkKey = computed(() => wallet.selectedNetworkKey)
-
-const selectedNetwork = computed(() => {
-  return networks.find(n => n.key === selectedNetworkKey.value) || networks[0]
-})
-
-const showNetworkDropdown = ref(false)
-function toggleNetworkDropdown() {
-  showNetworkDropdown.value = !showNetworkDropdown.value
-}
-function selectNetwork(key) {
-  showNetworkDropdown.value = false
-  changeNetwork(key)
-}
-function handleClickOutside() {
-  showNetworkDropdown.value = false
-}
-
 const isDashboard = computed(() => router.currentRoute.value?.path?.startsWith('/dashboard'))
 
 async function refreshAccountAndBalance() {
@@ -136,15 +112,6 @@ async function connect() {
   }
   reauthModalVisible = false
   return result
-}
-
-async function changeNetwork(val) {
-  const switched = await wallet.ensureNetworkOnWallet(val)
-  if (!switched) {
-    messageApi.error('Failed to switch network in wallet')
-    return
-  }
-  await refreshAccountAndBalance()
 }
 
 async function performSignOut() {
@@ -188,12 +155,6 @@ onMounted(async () => {
   }
 })
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <template>
@@ -239,22 +200,6 @@ onBeforeUnmount(() => {
                         <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'staking' }" @click="router.push({ name: 'staking' })">Staking</a-button>
                       </template>
                       <template v-if="auth.isAuthenticated">
-                        <div v-if="isDashboard" class="network-selector" @click.stop="toggleNetworkDropdown">
-                          <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
-                          <span class="network-name">{{ selectedNetwork.name }}</span>
-                          <span class="dropdown-arrow">▼</span>
-                          <div class="network-dropdown" v-if="showNetworkDropdown" @click.stop>
-                            <div
-                              v-for="n in networks"
-                              :key="n.key"
-                              class="network-option"
-                              @click="selectNetwork(n.key)"
-                            >
-                              <img :src="n.logo" :alt="n.name" class="network-option-logo">
-                              <span class="network-option-name">{{ n.name }}</span>
-                            </div>
-                          </div>
-                        </div>
                         <a-dropdown :trigger="['hover']">
                           <a-button ghost size="large" class="connect-button-ghost">
                             {{ wallet.shortAddress() }}
@@ -348,22 +293,6 @@ onBeforeUnmount(() => {
             </template>
             <div class="drawer-separator"></div>
             <template v-if="auth.isAuthenticated">
-              <div class="network-selector" @click.stop="toggleNetworkDropdown">
-                <img :src="selectedNetwork.logo" alt="Network Logo" class="network-logo">
-                <span class="network-name">{{ selectedNetwork.name }}</span>
-                <span class="dropdown-arrow">▼</span>
-                <div class="network-dropdown" v-if="showNetworkDropdown" @click.stop>
-                  <div
-                    v-for="n in networks"
-                    :key="n.key"
-                    class="network-option"
-                    @click="selectNetwork(n.key)"
-                  >
-                    <img :src="n.logo" :alt="n.name" class="network-option-logo">
-                    <span class="network-option-name">{{ n.name }}</span>
-                  </div>
-                </div>
-              </div>
               <a-button block danger type="primary" ghost style="margin-top: 4px;" @click="confirmSignOut(); mobileMenuOpen = false">Sign Out</a-button>
             </template>
             <template v-else>
@@ -461,52 +390,6 @@ onBeforeUnmount(() => {
     font-size 12px
     user-select text
 
-  /* Light theme overrides for network selector inside white drawer */
-  .ant-drawer-body .network-selector
-    background-color #f5f5f5
-    color #111
-    border none
-    border-radius 10px
-    padding 0 12px
-    height 40px
-    display flex
-    width 100%
-    justify-content space-between
-    align-items center
-    gap 8px
-    transition background-color .2s ease
-    box-sizing border-box
-    margin-top 4px
-
-  .ant-drawer-body .network-selector .dropdown-arrow
-    color #555
-    opacity 0.9
-
-  .ant-drawer-body .network-dropdown
-    background #fff
-    border 1px solid #eaeaea
-    border-radius 10px
-    box-shadow 0 8px 24px rgba(0,0,0,0.08)
-    left 0
-    right auto
-    min-width 0
-    width 100%
-    top calc(100% + 6px)
-    z-index 1001
-
-  .ant-drawer-body .network-option
-    &:hover
-      background-color #f5f5f5
-
-  .ant-drawer-body .network-option-name
-    color #333
-
-  .ant-drawer-body .network-name
-    white-space nowrap
-    overflow hidden
-    text-overflow ellipsis
-    flex 1
-    min-width 0
 </style>
 <style lang="stylus" scoped>
 .app-header
@@ -655,80 +538,6 @@ onBeforeUnmount(() => {
   color #fff !important
   border-color #fff !important
 
-.network-selector
-  position relative
-  top 1px
-  cursor pointer
-  background-color rgba(0, 0, 0, 0.3)
-  border none
-  border-radius 10px
-  padding 0 12px
-  height 32px
-  line-height normal
-  display inline-flex
-  align-items center
-  gap 8px
-  color #fff
-  align-self center
-  white-space nowrap
-
-.network-logo
-  height 16px
-  width 16px
-  object-fit contain
-  display block
-
-.network-name
-  font-size 14px
-  line-height 1
-  opacity 0.95
-  white-space nowrap
-
-.dropdown-arrow
-  margin-left 6px
-  font-size 10px
-  color #fff
-  opacity 0.8
-
-.network-dropdown
-  position absolute
-  top calc(100% + 6px)
-  right 0
-  background rgba(0, 0, 0, 0.75)
-  border 1px solid rgba(255, 255, 255, 0.18)
-  border-radius 10px
-  min-width 240px
-  padding 6px
-  z-index 1000
-  box-shadow 0 6px 20px rgba(0,0,0,0.3)
-
-.network-option
-  display flex
-  align-items center
-  gap 8px
-  padding 10px 10px
-  border-radius 8px
-  transition background-color 0.2s
-  white-space nowrap
-
-  &:hover
-    background-color rgba(255, 255, 255, 0.12)
-
-.network-option-logo
-  height 18px
-  width 18px
-  object-fit contain
-  display block
-
-.network-option-name
-  font-size 13px
-  color #fff
-  white-space nowrap
-  overflow hidden
-  text-overflow ellipsis
-  flex 1
-  min-width 0
-
 .header-search-input
   width 400px
   background-color transparent
@@ -815,10 +624,6 @@ onBeforeUnmount(() => {
     background #fff
   :deep(.ant-drawer-body)
     background #fff
-
-.network-selector .network-name,
-.network-dropdown .network-option-name
-  transform translateY(-2px)
 
 </style>
 

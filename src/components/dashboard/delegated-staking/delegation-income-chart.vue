@@ -44,18 +44,14 @@ const data = ref({
   datasets: []
 })
 
-const formatCompact = (value) => {
-  const num = Math.abs(value)
-  const toOneDecimal = (val, unit) => {
-    const scaled = Math.floor(val * 10 / unit)
-    const whole = Math.floor(scaled / 10)
-    const frac = scaled % 10
-    return frac === 0 ? `${whole}` : `${whole}.${frac}`
-  }
-  if (num >= 1e9) return toOneDecimal(num, 1e9) + 'B'
-  if (num >= 1e6) return toOneDecimal(num, 1e6) + 'M'
-  if (num >= 1e3) return toOneDecimal(num, 1e3) + 'K'
-  return Math.floor(num).toString()
+const formatCnxValue = (value) => {
+  const num = Number(value || 0)
+  const abs = Math.abs(num)
+  const sign = num < 0 ? '-' : ''
+  if (abs >= 1e9) return sign + (abs / 1e9).toFixed(2) + 'B'
+  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2) + 'M'
+  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(2) + 'K'
+  return num.toFixed(2)
 }
 
 const formatBigIntValue = (value) => {
@@ -77,7 +73,7 @@ const options = {
     tooltip: {
       callbacks: {
         label: (context) => {
-          return 'Rewards: CNX ' + formatCompact(context.parsed.y)
+          return 'Task Fee: CNX ' + formatCnxValue(context.parsed.y)
         }
       }
     }
@@ -85,9 +81,12 @@ const options = {
   scales: {
     y: {
       beginAtZero: true,
+      ticks: {
+        callback: (value) => formatCnxValue(value)
+      },
       title: {
         display: true,
-        text: 'Rewards (CNX)'
+        text: 'Task Fee (CNX)'
       }
     }
   }
@@ -105,7 +104,7 @@ const buildEmptyDatasets = () => {
     labels,
     datasets: [
       {
-        label: 'Rewards',
+        label: 'Task Fee',
         backgroundColor: 'rgba(82, 196, 26, 0.4)',
         borderColor: 'rgba(82, 196, 26, 1)',
         data: [...emptyValues],
@@ -136,7 +135,7 @@ const fetchData = async () => {
       labels,
       datasets: [
         {
-          label: 'Rewards',
+          label: 'Task Fee',
           backgroundColor: 'rgba(82, 196, 26, 0.4)',
           borderColor: 'rgba(82, 196, 26, 1)',
           data: values,

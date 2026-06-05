@@ -2,7 +2,6 @@
 import {computed, onMounted, reactive, ref} from 'vue'
 import {Grid} from 'ant-design-vue'
 
-import config from '@/config.json'
 import networkAPI from '@/api/v1/network'
 import v2NetworkAPI from '@/api/v2/network'
 
@@ -173,10 +172,6 @@ const nodeListColumns = [
         key: 'v_ram',
     },
     {
-        title: 'Balance',
-        key: 'balance'
-    },
-    {
         title: 'Stake',
         key: 'staking'
     }
@@ -203,17 +198,6 @@ onMounted(async () => {
 
 <template>
     <div class="top-spacer"></div>
-    <a-row :gutter="[16, 16]" style="margin-top: 16px; margin-bottom: 16px">
-        <a-col :span="20" :offset="2">
-            <a-alert type="warning" show-icon message="Crynux Testnet Sunset">
-                <template #description>
-                    Crynux Testnet has been sunset ahead of the Mainnet launch. Please join our
-                    <a :href="config.social_links.discord" target="_blank" rel="noopener noreferrer">Discord</a>
-                    for the latest updates.
-                </template>
-            </a-alert>
-        </a-col>
-    </a-row>
     <a-row :gutter="[16, 16]">
         <a-col :xs="24" :sm="24" :md="8" :lg="6">
             <a-card
@@ -308,14 +292,14 @@ onMounted(async () => {
             </a-card>
         </a-col>
         <a-col :xs="24" :lg="12">
-            <a-card title="Network Incentives" :bordered="false" style="height: 100%; opacity: 0.9">
+            <a-card title="Total Task Fee" :bordered="false" style="height: 100%; opacity: 0.9">
                 <network-incentives-line-chart></network-incentives-line-chart>
             </a-card>
         </a-col>
     </a-row>
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="24">
-            <a-card title="Top Incentivized Nodes" :bordered="false" style="height: 100%; opacity: 0.9">
+            <a-card title="Top Nodes by Task Fee" :bordered="false" style="height: 100%; opacity: 0.9">
                 <node-incentives-chart></node-incentives-chart>
             </a-card>
         </a-col>
@@ -345,9 +329,6 @@ onMounted(async () => {
                             </template>
                             <template v-else-if="column.key === 'v_ram'">
                                 <span>{{ record.v_ram }} GB</span>
-                            </template>
-                            <template v-else-if="column.key === 'balance'">
-                                    CNX {{ toEtherValue(BigInt(record.balance)) }}
                             </template>
                             <template v-else-if="column.key === 'staking'">
                                     CNX {{ toEtherValue(BigInt(record.staking)) }}

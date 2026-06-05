@@ -84,9 +84,12 @@ const options = {
         y: {
             stacked: true,
             beginAtZero: true,
+            ticks: {
+                callback: (value) => formatCompact(value)
+            },
             title: {
                 display: true,
-                text: 'Rewards (CNX)'
+                text: 'Task Fee (CNX)'
             }
         }
     }
@@ -107,17 +110,13 @@ const formatBigIntValue = (value) => {
 };
 
 const formatCompact = (value) => {
-    const num = Math.abs(value);
-    const toOneDecimal = (val, unit) => {
-        const scaled = Math.floor(val * 10 / unit);
-        const whole = Math.floor(scaled / 10);
-        const frac = scaled % 10;
-        return frac === 0 ? `${whole}` : `${whole}.${frac}`;
-    };
-    if (num >= 1e9) return toOneDecimal(num, 1e9) + 'B';
-    if (num >= 1e6) return toOneDecimal(num, 1e6) + 'M';
-    if (num >= 1e3) return toOneDecimal(num, 1e3) + 'K';
-    return Math.floor(num).toString();
+    const num = Number(value || 0);
+    const abs = Math.abs(num);
+    const sign = num < 0 ? '-' : '';
+    if (abs >= 1e9) return sign + (abs / 1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2) + 'M';
+    if (abs >= 1e3) return sign + (abs / 1e3).toFixed(2) + 'K';
+    return num.toFixed(2);
 };
 
 const fetchData = async () => {
@@ -134,7 +133,7 @@ const fetchData = async () => {
             }),
             datasets: [
                 {
-                    label: 'Operator Rewards',
+                    label: 'Operator Task Fee',
                     backgroundColor: 'rgba(82, 196, 26, 0.6)',
                     borderColor: 'rgba(82, 196, 26, 1)',
                     data: resp.operator_earnings.map(formatBigIntValue),
@@ -142,7 +141,7 @@ const fetchData = async () => {
                     fill: true
                 },
                 {
-                    label: 'Delegator Rewards',
+                    label: 'Delegator Task Fee',
                     backgroundColor: 'rgba(24, 144, 255, 0.6)',
                     borderColor: 'rgba(24, 144, 255, 1)',
                     data: resp.delegator_earnings.map(formatBigIntValue),

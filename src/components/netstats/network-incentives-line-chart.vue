@@ -38,6 +38,8 @@ const loading = ref(true);
 const periodOptions = reactive(['Day', "Week", "Month"]);
 const periodSelected = ref(periodOptions[0]);
 
+const formatCnxValue = (value) => Number(value).toFixed(2);
+
 const data = ref({
     labels: [],
     datasets: [
@@ -54,14 +56,22 @@ const options = {
     plugins: {
       legend: {
           display: false
+      },
+      tooltip: {
+          callbacks: {
+              label: (context) => `${context.dataset.label}: ${formatCnxValue(context.parsed.y)} CNX`
+          }
       }
     },
     scales: {
     y: {
       beginAtZero: true,
+        ticks: {
+          callback: (value) => formatCnxValue(value)
+        },
         title: {
           display: true,
-          text: 'Incentives (CNX)'
+          text: 'Task Fee (CNX)'
         }
 
     }
@@ -91,7 +101,7 @@ const fetchData = async () => {
             }),
             datasets: [
                 {
-                    label: 'Incentives',
+                    label: 'Task Fee',
                     backgroundColor: 'rgba(54, 162, 235, 0.5)',
                     data: resp.incentives
                 }

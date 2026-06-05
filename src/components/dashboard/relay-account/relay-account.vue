@@ -16,22 +16,69 @@ import { createReadProvider, isUserRejectedError, getBeneficialAddress, isZeroAd
 import { formatBigInt18, formatBigInt18Precise, toBigInt } from '@/services/token'
 import { getDelegatorTotalStakeAmount } from '@/services/delegated-staking'
 import { getStakingInfo as getNodeStakingInfo, tryUnstake, forceUnstake, StakingStatus } from '@/services/node-staking'
+import {
+    formatNetworkName as formatConfiguredNetworkName,
+    getAllWalletNetworks,
+    getFundingNetworkConfig,
+    getFundingNetworks,
+    getNetworkConfig,
+    isSystemNetwork
+} from '@/services/network-config'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
 
+const erc20Abi = [
+    'function balanceOf(address account) view returns (uint256)',
+    'function transfer(address recipient, uint256 amount) returns (bool)'
+]
 
 const networkName = computed(() => {
-	const key = wallet.selectedNetworkKey
-	return (config.networks[key] && config.networks[key].chainName) || key
+	const key = wallet.selectedOnChainWalletNetworkKey
+	return formatConfiguredNetworkName(key)
 })
 
 const beneficialAddressContractAddress = computed(() => {
-    return config.networks[wallet.selectedNetworkKey].contracts.beneficialAddress
+    const network = getNetworkConfig(wallet.selectedOnChainWalletNetworkKey)
+    return network?.contracts?.beneficialAddress || network?.benefit_address
 })
 
+const onChainWalletNetworkOptions = computed(() => Object.entries(getAllWalletNetworks()).map(([key, network]) => ({
+    key,
+    name: network.chainName || formatConfiguredNetworkName(key)
+})))
+
+const fundingNetworkOptions = computed(() => Object.entries(getFundingNetworks()).map(([key, network]) => ({
+    key,
+    name: network.chainName || formatConfiguredNetworkName(key)
+})))
+
+const selectedFundingNetwork = computed(() => getFundingNetworkConfig(wallet.selectedDepositWithdrawNetworkKey))
+const selectedFundingNetworkName = computed(() => formatConfiguredNetworkName(wallet.selectedDepositWithdrawNetworkKey))
+const selectedFundingTokenType = computed(() => selectedFundingNetwork.value?.token_type || 'native')
+const selectedFundingNativeSymbol = computed(() => selectedFundingNetwork.value?.nativeCurrency?.symbol || 'native token')
+const selectedFundingDecimals = computed(() => selectedFundingNetwork.value?.nativeCurrency?.decimals ?? 18)
+const hasFundingErc20Token = computed(() => selectedFundingTokenType.value === 'erc20')
+const selectedOnChainWalletNetwork = computed(() => getNetworkConfig(wallet.selectedOnChainWalletNetworkKey))
+const selectedOnChainTokenType = computed(() => selectedOnChainWalletNetwork.value?.token_type || 'native')
+const selectedOnChainNativeSymbol = computed(() => selectedOnChainWalletNetwork.value?.nativeCurrency?.symbol || '')
+const hasOnChainErc20Token = computed(() => selectedOnChainTokenType.value === 'erc20')
+const selectedOnChainIsSystemNetwork = computed(() => isSystemNetwork(wallet.selectedOnChainWalletNetworkKey))
+
+const fundingNativeBalanceWei = ref('0x0')
+const fundingTokenBalanceWei = ref('0x0')
+const onChainNativeBalanceWei = ref('0x0')
 const formattedBalance = computed(() => {
-	return formatBigInt18Precise(toBigInt(wallet.balanceWei || '0x0'))
+	return formatBigInt18Precise(toBigInt(onChainNativeBalanceWei.value || '0x0'))
+})
+const onChainTokenBalanceWei = ref('0x0')
+const formattedOnChainCnxBalance = computed(() => {
+    const balance = hasOnChainErc20Token.value ? onChainTokenBalanceWei.value : onChainNativeBalanceWei.value
+    return formatBigInt18Precise(toBigInt(balance || '0x0'))
+})
+const nativeBalanceLabel = computed(() => {
+    const symbol = selectedOnChainNativeSymbol.value
+    return symbol ? `${symbol} Balance` : 'Native Token Balance'
 })
 
 const benefitBalanceWei = ref('0x0')
@@ -92,6 +139,7 @@ const hasDelegatedStakeLoaded = ref(false)
 const abi = beneficialAbi
 
 const benefitAddress = ref('')
+const withdrawBenefitAddress = ref('')
 const isFetchingBenefit = ref(false)
 
 const isOnChainWalletLoading = computed(() => {
@@ -130,11 +178,24 @@ const depositModel = reactive({ amount: null })
 const isDepositSubmitting = ref(false)
 const depositAddress = computed(() => String(config.deposit_address).trim())
 const minDepositCNX = computed(() => {
-    const n = Number(config.deposit_min)
+    const n = Number(selectedFundingNetwork.value?.deposit_min ?? config.deposit_min)
     return Math.floor(n)
 })
+const depositBalanceWei = computed(() => hasFundingErc20Token.value ? fundingTokenBalanceWei.value : fundingNativeBalanceWei.value)
 const maxDepositCNX = computed(() => {
-    return Math.max(0, Math.floor(Number(ethers.formatEther(wallet.balanceWei))))
+    return Math.max(0, Math.floor(Number(ethers.formatUnits(depositBalanceWei.value || '0x0', selectedFundingDecimals.value))))
+})
+const isFundingErc20WithoutGas = computed(() => hasFundingErc20Token.value && toBigInt(fundingNativeBalanceWei.value || '0x0') === 0n)
+const isDepositInputDisabled = computed(() => maxDepositCNX.value < minDepositCNX.value || isFundingErc20WithoutGas.value)
+const depositDisabledMessage = computed(() => {
+    const messages = []
+    if (maxDepositCNX.value < minDepositCNX.value) {
+        messages.push(`Your CNX balance on ${selectedFundingNetworkName.value} is below the minimum deposit amount of ${formatInt(minDepositCNX.value)} CNX.`)
+    }
+    if (isFundingErc20WithoutGas.value) {
+        messages.push(`Your ${selectedFundingNativeSymbol.value} balance is 0. Add ${selectedFundingNativeSymbol.value} to pay network fees before depositing CNX.`)
+    }
+    return messages.join(' ')
 })
 const hasDepositValue = computed(() => depositModel.amount !== null && depositModel.amount !== undefined && depositModel.amount !== '')
 const depositAmountError = computed(() => {
@@ -145,9 +206,10 @@ const depositAmountError = computed(() => {
     if (amt > maxDepositCNX.value) return 'Exceeds maximum available'
     return ''
 })
-const depositValidateStatus = computed(() => (depositAmountError.value ? 'error' : undefined))
-const depositHelpMessage = computed(() => (depositAmountError.value || undefined))
+const depositValidateStatus = computed(() => (depositDisabledMessage.value || depositAmountError.value ? 'error' : undefined))
+const depositHelpMessage = computed(() => (depositDisabledMessage.value || depositAmountError.value || undefined))
 const isDepositValid = computed(() => {
+    if (isDepositInputDisabled.value) return false
     if (!hasDepositValue.value) return false
     return !depositAmountError.value
 })
@@ -160,6 +222,7 @@ const depositRules = {
                 if (value === null || value === undefined || value === '') return Promise.reject('Enter amount')
                 if (!Number.isInteger(amt)) return Promise.reject('Amount must be an integer')
                 if (amt < min) return Promise.reject(`Minimum is ${min} CNX`)
+                if (amt > maxDepositCNX.value) return Promise.reject('Exceeds maximum available')
                 return Promise.resolve()
             },
             trigger: ['change', 'blur']
@@ -186,7 +249,7 @@ const withdrawRules = {
 }
 
 const withdrawalFeeCNX = computed(() => {
-    const n = Number(config.withdrawal_fee || 0)
+    const n = Number(selectedFundingNetwork.value?.withdrawal_fee ?? config.withdrawal_fee ?? 0)
     return isNaN(n) ? 0 : n
 })
 
@@ -206,7 +269,7 @@ const actualDeductionInt = computed(() => {
 })
 
 const minWithdrawCNX = computed(() => {
-    const n = Number(config.withdrawal_min || 0)
+    const n = Number(selectedFundingNetwork.value?.withdrawal_min ?? config.withdrawal_min ?? 0)
     return isNaN(n) ? 0 : Math.floor(n)
 })
 const maxWithdrawCNX = computed(() => {
@@ -227,16 +290,16 @@ const formatTokenAmountWei = (value) => {
 }
 
 const destinationAddress = computed(() => {
-    if (benefitAddress.value && !isZeroAddress(benefitAddress.value)) return benefitAddress.value
+    if (withdrawBenefitAddress.value && !isZeroAddress(withdrawBenefitAddress.value)) return withdrawBenefitAddress.value
     return wallet.address || ''
 })
 
 const receivingTypeLabel = computed(() => {
-    return (benefitAddress.value && !isZeroAddress(benefitAddress.value)) ? 'Beneficial' : 'Operational'
+    return (withdrawBenefitAddress.value && !isZeroAddress(withdrawBenefitAddress.value)) ? 'Beneficial' : 'Operational'
 })
 
 const receivingTagColor = computed(() => {
-    return (benefitAddress.value && !isZeroAddress(benefitAddress.value)) ? 'green' : 'red'
+    return (withdrawBenefitAddress.value && !isZeroAddress(withdrawBenefitAddress.value)) ? 'green' : 'red'
 })
 
 const isWithdrawValid = computed(() => {
@@ -375,15 +438,7 @@ const truncateTxHash = (h) => {
 	return s.slice(0, 10) + '...' + s.slice(-8)
 }
 
-const formatNetworkName = (n) => {
-    if (!n) return ''
-    const raw = String(n).trim()
-    const s = raw.toLowerCase()
-    const network = Object.entries(config.networks || {}).find(([key]) => key.toLowerCase() === s)?.[1]
-    if (network?.chainName) return network.chainName
-    if (s.startsWith('crynux on ')) return raw
-    return `Crynux on ${raw.split('-').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')}`
-}
+const formatNetworkName = (n) => formatConfiguredNetworkName(n)
 
 const formatTimestamp = (t) => {
 	if (t === undefined || t === null || t === '') return ''
@@ -404,7 +459,11 @@ const formatDate = (t) => {
 async function refreshDashboard() {
 	if (!wallet.address) {
 		benefitAddress.value = ''
+        fundingNativeBalanceWei.value = '0x0'
+        fundingTokenBalanceWei.value = '0x0'
         benefitBalanceWei.value = '0x0'
+        onChainNativeBalanceWei.value = '0x0'
+        onChainTokenBalanceWei.value = '0x0'
 		relayBalance.value = 0
         nodeStakedBalanceWei.value = '0x0'
         nodeStakingStatus.value = 0
@@ -423,6 +482,9 @@ async function refreshDashboard() {
 	}
 	const sessionAddr = auth.sessionAddress || null
 	const hasMismatch = !!(sessionAddr && sessionAddr.toLowerCase() !== String(wallet.address).toLowerCase())
+    await fetchFundingBalances()
+    await fetchOnChainNativeBalance()
+    await fetchOnChainTokenBalance()
 	if (!auth.isAuthenticated || hasMismatch) {
 		benefitAddress.value = ''
         benefitBalanceWei.value = '0x0'
@@ -637,7 +699,7 @@ const fetchBenefitAddress = async () => {
 		return
 	}
 	try {
-		benefitAddress.value = await getBeneficialAddress(wallet.selectedNetworkKey, wallet.address)
+		benefitAddress.value = await getBeneficialAddress(wallet.selectedOnChainWalletNetworkKey, wallet.address)
 	} catch (e) {
 		console.error(e)
 		benefitAddress.value = ''
@@ -647,17 +709,102 @@ const fetchBenefitAddress = async () => {
 	}
 }
 
+const fetchWithdrawBenefitAddress = async () => {
+    if (!wallet.address) {
+        withdrawBenefitAddress.value = ''
+        return
+    }
+    withdrawBenefitAddress.value = await getBeneficialAddress(wallet.selectedDepositWithdrawNetworkKey, wallet.address)
+}
+
 const fetchBenefitBalance = async () => {
 	const addr = benefitAddress.value
 	if (!addr || isZeroAddress(addr)) return
 	try {
-		const provider = createReadProvider(wallet.selectedNetworkKey)
+		const provider = createReadProvider(wallet.selectedOnChainWalletNetworkKey)
 		const bn = await provider.getBalance(addr)
 		const hex = '0x' + bn.toString(16)
 		benefitBalanceWei.value = hex
 	} catch (e) {
 		console.error(e)
 	}
+}
+
+const fetchOnChainNativeBalance = async () => {
+    if (!wallet.address) {
+        onChainNativeBalanceWei.value = '0x0'
+        return
+    }
+    try {
+        const provider = createReadProvider(wallet.selectedOnChainWalletNetworkKey)
+        const balance = await provider.getBalance(wallet.address)
+        onChainNativeBalanceWei.value = '0x' + balance.toString(16)
+    } catch (e) {
+        console.error('Failed to fetch native balance:', e)
+        onChainNativeBalanceWei.value = '0x0'
+    }
+}
+
+const fetchOnChainTokenBalance = async () => {
+    if (!wallet.address || !hasOnChainErc20Token.value) {
+        onChainTokenBalanceWei.value = '0x0'
+        return
+    }
+    const tokenAddress = selectedOnChainWalletNetwork.value?.token_address || selectedOnChainWalletNetwork.value?.contracts?.tokenAddress
+    if (!tokenAddress) {
+        onChainTokenBalanceWei.value = '0x0'
+        return
+    }
+    try {
+        const provider = createReadProvider(wallet.selectedOnChainWalletNetworkKey)
+        const contract = new ethers.Contract(tokenAddress, erc20Abi, provider)
+        const balance = await contract.balanceOf(wallet.address)
+        onChainTokenBalanceWei.value = '0x' + balance.toString(16)
+    } catch (e) {
+        console.error('Failed to fetch token balance:', e)
+        onChainTokenBalanceWei.value = '0x0'
+    }
+}
+
+const fetchFundingNativeBalance = async () => {
+    if (!wallet.address) {
+        fundingNativeBalanceWei.value = '0x0'
+        return
+    }
+    try {
+        const provider = createReadProvider(wallet.selectedDepositWithdrawNetworkKey)
+        const balance = await provider.getBalance(wallet.address)
+        fundingNativeBalanceWei.value = '0x' + balance.toString(16)
+    } catch (e) {
+        console.error('Failed to fetch funding native balance:', e)
+        fundingNativeBalanceWei.value = '0x0'
+    }
+}
+
+const fetchFundingTokenBalance = async () => {
+    if (!wallet.address || !hasFundingErc20Token.value) {
+        fundingTokenBalanceWei.value = '0x0'
+        return
+    }
+    const tokenAddress = selectedFundingNetwork.value?.token_address || selectedFundingNetwork.value?.contracts?.tokenAddress
+    if (!tokenAddress) {
+        fundingTokenBalanceWei.value = '0x0'
+        return
+    }
+    try {
+        const provider = createReadProvider(wallet.selectedDepositWithdrawNetworkKey)
+        const contract = new ethers.Contract(tokenAddress, erc20Abi, provider)
+        const balance = await contract.balanceOf(wallet.address)
+        fundingTokenBalanceWei.value = '0x' + balance.toString(16)
+    } catch (e) {
+        console.error('Failed to fetch funding token balance:', e)
+        fundingTokenBalanceWei.value = '0x0'
+    }
+}
+
+const fetchFundingBalances = async () => {
+    await fetchFundingNativeBalance()
+    await fetchFundingTokenBalance()
 }
 
 const fetchNodeStakingInfo = async () => {
@@ -670,7 +817,13 @@ const fetchNodeStakingInfo = async () => {
     }
     isFetchingStake.value = true
     try {
-        const info = await getNodeStakingInfo(wallet.selectedNetworkKey, wallet.address)
+        if (!selectedOnChainIsSystemNetwork.value) {
+            nodeStakedBalanceWei.value = '0x0'
+            nodeStakingStatus.value = 0
+            nodeUnstakeTimestamp.value = 0n
+            return
+        }
+        const info = await getNodeStakingInfo(wallet.selectedOnChainWalletNetworkKey, wallet.address)
         let balanceHex = '0x0'
         try {
             balanceHex = '0x' + info.stakedBalance.toString(16)
@@ -699,7 +852,11 @@ const fetchDelegatedStakingInfo = async () => {
     }
     isFetchingDelegatedStake.value = true
     try {
-        const res = await getDelegatorTotalStakeAmount(wallet.selectedNetworkKey, wallet.address)
+        if (!selectedOnChainIsSystemNetwork.value) {
+            delegatedStakedBalance.value = 0n
+            return
+        }
+        const res = await getDelegatorTotalStakeAmount(wallet.selectedOnChainWalletNetworkKey, wallet.address)
         delegatedStakedBalance.value = res
     } catch (e) {
         console.error(e)
@@ -730,7 +887,7 @@ const submitSetBenefit = async () => {
 	}
 	isSubmitting.value = true
 	try {
-		await wallet.ensureNetworkOnWallet()
+		await wallet.ensureNetworkOnWallet(wallet.selectedOnChainWalletNetworkKey)
 		const provider = new ethers.BrowserProvider(window.ethereum)
 		const signer = await provider.getSigner()
 		const contract = new ethers.Contract(beneficialAddressContractAddress.value, abi, signer)
@@ -747,15 +904,29 @@ const submitSetBenefit = async () => {
 	}
 }
 
+const changeOnChainWalletNetwork = async () => {
+    await wallet.ensureNetworkOnWallet(wallet.selectedOnChainWalletNetworkKey)
+    await wallet.fetchBalance()
+    await refreshDashboard()
+}
+
+const changeFundingNetwork = async () => {
+    await wallet.ensureNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
+    await wallet.fetchBalance()
+    await fetchFundingBalances()
+    await fetchWithdrawBenefitAddress()
+}
+
 const withdrawRelay = async () => {
     withdrawModel.amount = null
+    await fetchWithdrawBenefitAddress()
     isWithdrawOpen.value = true
 }
 
 const submitWithdraw = async () => {
     const amt = Number(withdrawModel.amount)
 
-    const decimals = config.networks[wallet.selectedNetworkKey].nativeCurrency.decimals
+    const decimals = selectedFundingNetwork.value?.nativeCurrency?.decimals ?? 18
     let amountWeiStr = '0'
     try {
         amountWeiStr = ethers.parseUnits(String(amt), decimals).toString()
@@ -764,14 +935,14 @@ const submitWithdraw = async () => {
         return
     }
 
-    const benefitToSend = (benefitAddress.value && !isZeroAddress(benefitAddress.value)) ? benefitAddress.value : wallet.address
+    const benefitToSend = destinationAddress.value
 
     isWithdrawSubmitting.value = true
     try {
-        await wallet.ensureNetworkOnWallet()
+        await wallet.ensureNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
         const provider = window.ethereum
         const timestamp = Math.floor(Date.now() / 1000)
-        const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefitToSend} on ${wallet.selectedNetworkKey}`
+        const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefitToSend} on ${wallet.selectedDepositWithdrawNetworkKey}`
         const messageToSign = `Crynux Relay\nAction: ${action}\nAddress: ${wallet.address}\nTimestamp: ${timestamp}`
         const signature = await provider.request({
             method: 'personal_sign',
@@ -782,7 +953,7 @@ const submitWithdraw = async () => {
             wallet.address,
             amountWeiStr,
             benefitToSend,
-            wallet.selectedNetworkKey,
+            wallet.selectedDepositWithdrawNetworkKey,
             timestamp,
             signature
         )
@@ -805,12 +976,13 @@ const submitWithdraw = async () => {
 
 const openDeposit = async () => {
     depositModel.amount = null
+    await fetchFundingBalances()
     isDepositOpen.value = true
 }
 
 const submitDeposit = async () => {
     const amt = Number(depositModel.amount)
-    const decimals = (config.networks[wallet.selectedNetworkKey]?.nativeCurrency?.decimals) ?? 18
+    const decimals = selectedFundingNetwork.value?.nativeCurrency?.decimals ?? 18
     let valueWei
     try {
         valueWei = ethers.parseUnits(String(amt), decimals)
@@ -820,14 +992,22 @@ const submitDeposit = async () => {
     }
     isDepositSubmitting.value = true
     try {
-        await wallet.ensureNetworkOnWallet()
+        await wallet.ensureNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
         const provider = new ethers.BrowserProvider(window.ethereum)
         const signer = await provider.getSigner()
-        const tx = await signer.sendTransaction({ to: depositAddress.value, value: valueWei })
+        let tx
+        if (selectedFundingTokenType.value === 'erc20') {
+            const tokenAddress = selectedFundingNetwork.value?.token_address
+            const contract = new ethers.Contract(tokenAddress, erc20Abi, signer)
+            tx = await contract.transfer(depositAddress.value, valueWei)
+        } else {
+            tx = await signer.sendTransaction({ to: depositAddress.value, value: valueWei })
+        }
         await tx.wait()
         message.success('Deposit sent')
         isDepositOpen.value = false
         await wallet.fetchBalance()
+        await fetchFundingBalances()
         await fetchRelayBalance()
     } catch (e) {
         console.error('Deposit error:', e)
@@ -848,7 +1028,7 @@ const handleTryUnstake = async () => {
     }
     isNodeUnstaking.value = true
     try {
-        await tryUnstake(wallet.selectedNetworkKey)
+        await tryUnstake(wallet.selectedOnChainWalletNetworkKey)
         message.success('Unstake request submitted. Refresh the page later to view the result.')
         await fetchNodeStakingInfo()
     } catch (e) {
@@ -870,7 +1050,7 @@ const handleForceUnstake = async () => {
     }
     isNodeUnstaking.value = true
     try {
-        await forceUnstake(wallet.selectedNetworkKey)
+        await forceUnstake(wallet.selectedOnChainWalletNetworkKey)
         message.success('Force unstake completed')
         await fetchNodeStakingInfo()
         await wallet.fetchBalance()
@@ -893,7 +1073,7 @@ onMounted(async () => {
 	await refreshDashboard()
 })
 
-watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
+watch(() => [wallet.address, wallet.selectedNetworkKey, wallet.selectedOnChainWalletNetworkKey, wallet.selectedDepositWithdrawNetworkKey, beneficialAddressContractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
 	await refreshDashboard()
 })
 </script>
@@ -905,10 +1085,15 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 					<a-card :title="`On-chain Wallet`" :bordered="false" style="opacity: 0.9; width: 100%; flex: 1">
 						<a-spin :spinning="isOnChainWalletLoading">
 							<a-descriptions :column="2" bordered :label-style="{ 'width': '160px' }">
-								<a-descriptions-item :span="2" label="Network">{{ networkName }}</a-descriptions-item>
+								<a-descriptions-item :span="2" label="Network">
+									<a-select v-model:value="wallet.selectedOnChainWalletNetworkKey" style="min-width: 260px" @change="changeOnChainWalletNetwork">
+										<a-select-option v-for="n in onChainWalletNetworkOptions" :key="n.key" :value="n.key">{{ n.name }}</a-select-option>
+									</a-select>
+								</a-descriptions-item>
 								<a-descriptions-item :span="2" label="Address">{{ wallet.address }}</a-descriptions-item>
-								<a-descriptions-item :span="2" label="CNX Balance"><span>{{ formattedBalance }}</span></a-descriptions-item>
-								<a-descriptions-item label="Node Stake">
+								<a-descriptions-item :span="2" label="CNX Balance"><span>{{ formattedOnChainCnxBalance }}</span></a-descriptions-item>
+								<a-descriptions-item v-if="hasOnChainErc20Token" :span="2" :label="nativeBalanceLabel"><span>{{ formattedBalance }}</span></a-descriptions-item>
+								<a-descriptions-item v-if="selectedOnChainIsSystemNetwork" label="Node Stake">
 									<span>{{ formattedNodeStakedBalance }}</span>
 									<template v-if="hasNodeStake && hasStakeInfoLoaded">
 										<a-button
@@ -937,7 +1122,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 										</a-tooltip>
 									</template>
 								</a-descriptions-item>
-								<a-descriptions-item label="Delegated Stake"><span>{{ formattedDelegatedStakedBalance }}</span></a-descriptions-item>
+								<a-descriptions-item v-if="selectedOnChainIsSystemNetwork" label="Delegated Stake"><span>{{ formattedDelegatedStakedBalance }}</span></a-descriptions-item>
 								<a-descriptions-item>
 									<template #label>
 										<span style="display: inline-flex; align-items: center; white-space: nowrap;">
@@ -998,7 +1183,15 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 
 	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
 		<a-col :span="24">
-			<a-card :title="`Relay Account Income`" :bordered="false" style="opacity: 0.9">
+			<a-card :bordered="false" style="opacity: 0.9">
+				<template #title>
+					<span class="card-title-with-tooltip">
+						Relay Account Income
+						<a-tooltip title="This income only includes Node Task Fee and Delegator Task Fee. Emission rewards and Vesting unlocks are not included.">
+							<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+						</a-tooltip>
+					</span>
+				</template>
 				<RelayAccountIncomeChart :address="wallet.address" />
 			</a-card>
 		</a-col>
@@ -1101,8 +1294,13 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 			</a-tooltip>
 		</template>
 		<a-form layout="vertical" :model="depositModel" :rules="depositRules" ref="depositFormRef" :hide-required-mark="true" :style="{ marginTop: '24px', marginBottom: '32px' }">
+			<a-form-item label="Network">
+				<a-select v-model:value="wallet.selectedDepositWithdrawNetworkKey" @change="changeFundingNetwork">
+					<a-select-option v-for="n in fundingNetworkOptions" :key="n.key" :value="n.key">{{ n.name }}</a-select-option>
+				</a-select>
+			</a-form-item>
 			<a-form-item name="amount" :help="depositHelpMessage" :validate-status="depositValidateStatus" :style="{ marginBottom: '32px' }">
-				<a-input-number v-model:value="depositModel.amount" :step="1" :controls="false" :precision="0" style="width: 100%" placeholder="Enter amount" addon-before="CNX" />
+				<a-input-number v-model:value="depositModel.amount" :min="minDepositCNX" :step="1" :controls="false" :precision="0" style="width: 100%" placeholder="Enter amount" addon-before="CNX" :disabled="isDepositInputDisabled" />
 				<template #extra>
 					<a-typography-text type="secondary" style="font-size: 12px; display: block; margin-top: 12px; margin-bottom: 16px;">Min: {{ formatInt(minDepositCNX) }} CNX · Max: {{ formatInt(maxDepositCNX) }} CNX</a-typography-text>
 				</template>
@@ -1131,7 +1329,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 				<span>{{ wallet.address }}</span>
 			</a-descriptions-item>
 			<a-descriptions-item label="Network">
-				<NetworkTag :text="networkName" />
+				<NetworkTag :text="selectedFundingNetworkName" />
 			</a-descriptions-item>
 			<a-descriptions-item>
 				<template #label>
@@ -1167,6 +1365,11 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 		:ok-button-props="{ disabled: !isWithdrawValid }"
 	>
 		<a-form layout="vertical" :model="withdrawModel" :rules="withdrawRules" ref="withdrawFormRef" :hide-required-mark="true" :style="{ marginTop: '24px', marginBottom: '32px' }">
+			<a-form-item label="Network">
+				<a-select v-model:value="wallet.selectedDepositWithdrawNetworkKey" @change="changeFundingNetwork">
+					<a-select-option v-for="n in fundingNetworkOptions" :key="n.key" :value="n.key">{{ n.name }}</a-select-option>
+				</a-select>
+			</a-form-item>
 			<a-form-item name="amount" :help="isAmountInputDisabled ? 'Insufficient balance to meet the minimum after fee.' : undefined" :validate-status="isAmountInputDisabled ? 'error' : undefined" :style="{ marginBottom: '32px' }">
 				<a-input-number v-model:value="withdrawModel.amount" :min="minWithdrawCNX" :step="1" :controls="false" :precision="0" style="width: 100%" placeholder="Enter amount" addon-before="CNX" :disabled="isAmountInputDisabled" />
 				<template #extra>
@@ -1184,7 +1387,7 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 				</a-statistic>
 			</a-descriptions-item>
 			<a-descriptions-item label="Network">
-				<NetworkTag :text="networkName" />
+				<NetworkTag :text="selectedFundingNetworkName" />
 			</a-descriptions-item>
 			<a-descriptions-item label="Receiving Address">
 				<a-space size="small">
@@ -1231,4 +1434,8 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, beneficialAddressContrac
 <style scoped lang="stylus">
 .top-spacer
 	height 20px
+
+.card-title-with-tooltip
+	display inline-flex
+	align-items center
 </style>
