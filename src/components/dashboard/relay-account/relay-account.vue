@@ -1183,7 +1183,15 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, wallet.selectedOnChainWa
 
 	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
 		<a-col :span="24">
-			<a-card :title="`Relay Account Income`" :bordered="false" style="opacity: 0.9">
+			<a-card :bordered="false" style="opacity: 0.9">
+				<template #title>
+					<span class="card-title-with-tooltip">
+						Relay Account Income
+						<a-tooltip title="This income only includes Node Task Fee and Delegator Task Fee. Emission rewards and Vesting unlocks are not included.">
+							<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
+						</a-tooltip>
+					</span>
+				</template>
 				<RelayAccountIncomeChart :address="wallet.address" />
 			</a-card>
 		</a-col>
@@ -1426,4 +1434,8 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, wallet.selectedOnChainWa
 <style scoped lang="stylus">
 .top-spacer
 	height 20px
+
+.card-title-with-tooltip
+	display inline-flex
+	align-items center
 </style>

@@ -18,7 +18,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { walletAPI } from '@/api/v1/wallet'
 import ApiError from '@/api/api-error'
-import { formatBigInt18Compact, toBigInt } from '@/services/token'
+import { formatBigInt18, formatBigInt18Compact, toBigInt } from '@/services/token'
 import DelegationModals from '@/components/delegation-modals.vue'
 import { formatNetworkName, getSystemNetworks } from '@/services/network-config'
 
@@ -57,6 +57,10 @@ const formattedStakedAt = computed(() => {
 })
 
 const formattedStakingAmount = computed(() => formatBigInt18Compact(stakingAmount.value))
+
+const formatTaskFeeAmount = (value) => {
+  return formatBigInt18(value, 2)
+}
 
 async function connect() {
   const result = await auth.authenticate()
@@ -241,8 +245,8 @@ onMounted(() => {
               <span class="right-value">{{ formattedStakedAt }}</span>
             </div>
             <div class="staking-right-row">
-              <span class="right-label">Rewards</span>
-              <span class="right-value">{{ formatBigInt18Compact(todayEarnings) }} <span class="right-sub">today</span> / {{ formatBigInt18Compact(totalEarnings) }} <span class="right-sub">total</span></span>
+              <span class="right-label">Task Fee</span>
+              <span class="right-value">{{ formatTaskFeeAmount(todayEarnings) }} <span class="right-sub">today</span> / {{ formatTaskFeeAmount(totalEarnings) }} <span class="right-sub">total</span></span>
             </div>
           </div>
         </div>

@@ -24,7 +24,8 @@ import {
   DollarCircleOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
-  MinusCircleOutlined as StoppedCircleOutlined
+  MinusCircleOutlined as StoppedCircleOutlined,
+  QuestionCircleOutlined
 } from '@ant-design/icons-vue'
 import { useWalletStore } from '@/stores/wallet'
 import { useAuthStore } from '@/stores/auth'
@@ -310,10 +311,18 @@ onMounted(() => {
           <a-col :xs="24" :md="8">
             <a-card :bordered="false" class="stat-card">
               <a-statistic
-                title="Total Rewards (CNX)"
                 :value="formattedTotalEarnings"
                 :value-style="statisticValueStyle"
-              />
+              >
+                <template #title>
+                  <span class="stat-title-with-tooltip">
+                    Total Task Fee (CNX)
+                    <a-tooltip title="Task Fee is not the full reward amount. It is used to calculate Emission rewards, which are released weekly through Vesting and can be viewed in the Vesting list of the Relay Account.">
+                      <question-circle-outlined class="reward-info-icon" />
+                    </a-tooltip>
+                  </span>
+                </template>
+              </a-statistic>
             </a-card>
           </a-col>
         </a-row>
@@ -321,7 +330,15 @@ onMounted(() => {
         <!-- Earnings Chart -->
         <a-row :gutter="[16, 16]" style="margin-top: 16px">
           <a-col :span="24">
-            <a-card title="Staking Rewards" :bordered="false" class="chart-card">
+            <a-card :bordered="false" class="chart-card">
+              <template #title>
+                <span class="card-title-with-tooltip">
+                  Staking Task Fee Income
+                  <a-tooltip title="Task Fee is not the full reward amount. It is used to calculate Emission rewards, which are released weekly through Vesting and can be viewed in the Vesting list of the Relay Account.">
+                    <question-circle-outlined class="reward-info-icon" />
+                  </a-tooltip>
+                </span>
+              </template>
               <DelegatorIncomeChart :address="wallet.address" :height="280" />
             </a-card>
           </a-col>
@@ -424,16 +441,16 @@ onMounted(() => {
                     <!-- Divider -->
                     <div class="section-divider"></div>
 
-                    <!-- Rewards Section -->
+                    <!-- Task Fee Section -->
                     <div class="data-section rewards-section">
-                      <div class="section-title">Rewards</div>
+                      <div class="section-title">Task Fee</div>
                       <div class="data-grid">
                         <div class="data-item">
-                          <span class="data-label">Total Rewards</span>
+                          <span class="data-label">Total Task Fee</span>
                           <span class="data-value success">{{ formatBigInt18Precise(delegation.totalEarnings) }} <span class="unit">CNX</span></span>
                         </div>
                         <div class="data-item">
-                          <span class="data-label">Today Rewards</span>
+                          <span class="data-label">Today Task Fee</span>
                           <span class="data-value highlight">+{{ formatBigInt18Precise(delegation.todayEarnings) }} <span class="unit">CNX</span></span>
                         </div>
                       </div>
@@ -442,7 +459,7 @@ onMounted(() => {
 
                   <!-- Expand Toggle -->
                   <div class="card-footer" @click="toggleExpand(delegation.key)">
-                    <span class="expand-text">{{ isExpanded(delegation.key) ? 'Hide Chart' : 'Show Rewards Chart' }}</span>
+                    <span class="expand-text">{{ isExpanded(delegation.key) ? 'Hide Chart' : 'Show Task Fee Chart' }}</span>
                     <up-outlined v-if="isExpanded(delegation.key)" class="expand-icon" />
                     <down-outlined v-else class="expand-icon" />
                   </div>
@@ -520,6 +537,21 @@ onMounted(() => {
   text-align center
   font-size 14px
   color rgba(0, 0, 0, 0.65)
+
+.stat-title-with-tooltip
+  display inline-flex
+  align-items center
+  justify-content center
+  gap 4px
+
+.card-title-with-tooltip
+  display inline-flex
+  align-items center
+  gap 6px
+
+.reward-info-icon
+  color rgba(0, 0, 0, 0.45)
+  cursor help
 
 .chart-card
   opacity 0.9
