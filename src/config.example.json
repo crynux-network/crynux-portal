@@ -1,6 +1,6 @@
 {
     "relay_url": "https://relay.crynux.io",
-    "networks": {
+    "system_networks": {
         "crynux-on-base": {
             "chainId": "18896214",
             "chainName": "Crynux on Base",
@@ -19,14 +19,38 @@
                 "delegatedStaking": "0x8f31Ff3Ac3923442eAbA765e3422848d25FA2496",
                 "nodeStaking": "0xAE0DDF6cf595F1EACfA76e35D985357E69795712"
             },
+            "withdrawal_fee": 1,
+            "withdrawal_min": 100,
+            "deposit_min": 1000,
+            "logo": "/base-square.png"
+        }
+    },
+    "deposit_withdraw_networks": {
+        "base": {
+            "chainId": "8453",
+            "chainName": "Base",
+            "rpcUrls": [
+                "https://mainnet.base.org"
+            ],
+            "nativeCurrency": {
+                "name": "Ether",
+                "symbol": "ETH",
+                "decimals": 18
+            },
+            "blockExplorerUrls": [],
+            "contracts": {
+                "beneficialAddress": "0x0000000000000000000000000000000000000001",
+                "tokenAddress": "0x0000000000000000000000000000000000000002"
+            },
+            "token_type": "erc20",
+            "withdrawal_fee": 1,
+            "withdrawal_min": 100,
+            "deposit_min": 1000,
             "logo": "/base-square.png"
         }
     },
     "default_network": "crynux-on-base",
-    "withdrawal_fee": 1,
-    "withdrawal_min": 100,
     "deposit_address": "0x7bB0A0582893c09ED48397BFACDdbbd478eB4839",
-    "deposit_min": 1000,
     "social_links": {
         "twitter": "https://x.com/crynuxio",
         "discord": "https://discord.gg/Ug2AHUbrrm",

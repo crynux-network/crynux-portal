@@ -1,26 +1,38 @@
 import { defineStore } from 'pinia'
 import { ethers } from 'ethers'
-import config from '@/config.json'
 import { useAuthStore } from '@/stores/auth'
-
-const getDefaultNetworkKey = () => Object.keys(config.networks)[0] || ''
+import { getAllWalletNetworks, getDefaultFundingNetworkKey, getDefaultSystemNetworkKey, getNetworkConfig, getSystemNetworks } from '@/services/network-config'
 
 export const useWalletStore = defineStore('wallet', {
 	state: () => ({
 		address: null,
-		selectedNetworkKey: getDefaultNetworkKey(),
+		selectedNetworkKey: getDefaultSystemNetworkKey(),
+		selectedDepositWithdrawNetworkKey: getDefaultFundingNetworkKey(),
+		selectedOnChainWalletNetworkKey: getDefaultSystemNetworkKey(),
 		balanceWei: '0x0',
 		isConnected: false
 	}),
 	getters: {
 		selectedNetwork(state) {
-			return config.networks[state.selectedNetworkKey] || config.networks[getDefaultNetworkKey()]
+			return getSystemNetworks()[state.selectedNetworkKey] || getSystemNetworks()[getDefaultSystemNetworkKey()]
+		},
+		selectedDepositWithdrawNetwork(state) {
+			return getNetworkConfig(state.selectedDepositWithdrawNetworkKey) || getNetworkConfig(getDefaultFundingNetworkKey())
+		},
+		selectedOnChainWalletNetwork(state) {
+			return getNetworkConfig(state.selectedOnChainWalletNetworkKey) || getNetworkConfig(getDefaultSystemNetworkKey())
 		}
 	},
 	actions: {
 		normalizeSelectedNetworkKey() {
-			if (!config.networks[this.selectedNetworkKey]) {
-				this.selectedNetworkKey = getDefaultNetworkKey()
+			if (!getSystemNetworks()[this.selectedNetworkKey]) {
+				this.selectedNetworkKey = getDefaultSystemNetworkKey()
+			}
+			if (!getNetworkConfig(this.selectedDepositWithdrawNetworkKey)) {
+				this.selectedDepositWithdrawNetworkKey = getDefaultFundingNetworkKey()
+			}
+			if (!getNetworkConfig(this.selectedOnChainWalletNetworkKey)) {
+				this.selectedOnChainWalletNetworkKey = this.selectedNetworkKey || getDefaultSystemNetworkKey()
 			}
 		},
 		shortAddress() {
@@ -36,8 +48,9 @@ export const useWalletStore = defineStore('wallet', {
 		},
 		async ensureNetworkOnWallet(targetKey) {
 			this.normalizeSelectedNetworkKey()
-			const key = config.networks[targetKey] ? targetKey : this.selectedNetworkKey
-			const net = config.networks[key]
+			const networks = getAllWalletNetworks()
+			const key = networks[targetKey] ? targetKey : this.selectedNetworkKey
+			const net = networks[key]
 			if (!net) return false
 			const provider = window.ethereum
 			if (!provider) return false

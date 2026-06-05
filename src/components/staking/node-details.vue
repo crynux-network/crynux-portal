@@ -24,9 +24,9 @@ import {
   DollarOutlined
 } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
-import config from '@/config.json'
 import { formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
+import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
 import NodeStakingChart from '@/components/staking/node-staking-chart.vue'
 import NodeScoresChart from '@/components/staking/node-scores-chart.vue'
@@ -47,7 +47,7 @@ const delegationsPageSize = 10
 const networkName = computed(() => {
   const key = node.value?.network
   if (!key) return ''
-  return (config.networks[key] && config.networks[key].chainName) || key
+  return formatConfiguredNetworkName(key)
 })
 
 

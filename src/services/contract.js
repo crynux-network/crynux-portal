@@ -1,6 +1,6 @@
 import { ethers } from 'ethers'
-import config from '@/config.json'
 import beneficialAbi from '@/abi/beneficial-address.json'
+import { getNetworkConfig } from '@/services/network-config'
 
 /**
  * Create a read-only JSON-RPC provider for the specified network
@@ -8,7 +8,7 @@ import beneficialAbi from '@/abi/beneficial-address.json'
  * @returns {ethers.JsonRpcProvider}
  */
 export function createReadProvider(networkKey) {
-  const url = config.networks[networkKey].rpcUrls[0]
+  const url = getNetworkConfig(networkKey).rpcUrls[0]
   return new ethers.JsonRpcProvider(url)
 }
 
@@ -46,7 +46,7 @@ export function isUserRejectedError(err) {
  * @returns {string}
  */
 export function getContractAddress(networkKey, contractName) {
-  return config.networks[networkKey].contracts[contractName]
+  return getNetworkConfig(networkKey).contracts[contractName]
 }
 
 /**
@@ -55,7 +55,7 @@ export function getContractAddress(networkKey, contractName) {
  * @returns {number}
  */
 export function getNativeDecimals(networkKey) {
-  return config.networks[networkKey].nativeCurrency.decimals
+  return getNetworkConfig(networkKey).nativeCurrency.decimals
 }
 
 /**
@@ -64,7 +64,7 @@ export function getNativeDecimals(networkKey) {
  * @returns {string}
  */
 export function getNativeCurrencySymbol(networkKey) {
-  return config.networks[networkKey].nativeCurrency.symbol
+  return getNetworkConfig(networkKey).nativeCurrency.symbol
 }
 
 /**
@@ -112,7 +112,8 @@ export async function getBeneficialAddress(networkKey, walletAddress) {
   if (!walletAddress || !networkKey) {
     return ''
   }
-  const contractAddress = config.networks[networkKey]?.contracts?.beneficialAddress
+  const network = getNetworkConfig(networkKey)
+  const contractAddress = network?.contracts?.beneficialAddress || network?.benefit_address
   if (!contractAddress) {
     return ''
   }

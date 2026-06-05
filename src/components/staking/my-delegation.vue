@@ -20,7 +20,7 @@ import { walletAPI } from '@/api/v1/wallet'
 import ApiError from '@/api/api-error'
 import { formatBigInt18Compact, toBigInt } from '@/services/token'
 import DelegationModals from '@/components/delegation-modals.vue'
-import config from '@/config.json'
+import { formatNetworkName, getSystemNetworks } from '@/services/network-config'
 
 const props = defineProps({
   nodeAddress: {
@@ -106,7 +106,7 @@ async function fetchOtherNetworkStakes() {
     return
   }
 
-  const allNetworks = Object.keys(config.networks)
+  const allNetworks = Object.keys(getSystemNetworks())
   const otherNetworks = allNetworks.filter(n => n !== props.network)
 
   const results = []
@@ -117,7 +117,7 @@ async function fetchOtherNetworkStakes() {
       if (amount > 0n) {
         results.push({
           network,
-          networkName: config.networks[network]?.chainName || network,
+          networkName: formatNetworkName(network),
           stakingAmount: amount
         })
       }

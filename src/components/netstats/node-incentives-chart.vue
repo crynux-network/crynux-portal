@@ -10,6 +10,8 @@ const periodSelected = ref(periodOptions[0]);
 
 const nodeList = ref([]);
 
+const formatCnxValue = (value) => Number(value).toFixed(2);
+
 const columns = [
     {
         title: 'Address',
@@ -47,7 +49,7 @@ const columns = [
         key: 'staking'
     },
     {
-        title: 'Incentives',
+        title: 'Task Fee',
         dataIndex: 'incentive',
         key: 'incentive'
     }
@@ -93,7 +95,7 @@ const fetchData = async () => {
         style="margin-bottom: 16px"
     >
         <template #description>
-            The values for card, staking, and scores are real-time and change dynamically, so they may differ from what they were when the incentives were earned.
+            The values for card, staking, and scores are real-time and change dynamically, so they may differ from what they were when the task fees were earned.
         </template>
     </a-alert>
     <div style="height:40px">
@@ -116,7 +118,7 @@ const fetchData = async () => {
                     {{ record.node_address.substring(0, 5) }}...{{ record.node_address.substring(record.node_address.length - 5, record.node_address.length) }}
             </template>
             <template v-else-if="column.key === 'incentive'">
-                    CNX {{ record.incentive.toFixed(2) }}
+                    CNX {{ formatCnxValue(record.incentive) }}
             </template>
             <template v-else-if="column.key === 'card_model'">
                 <div style="display: flex; align-items: center">

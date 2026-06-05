@@ -31,13 +31,13 @@ import { useAuthStore } from '@/stores/auth'
 import { walletAPI } from '@/api/v1/wallet'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
 import ApiError from '@/api/api-error'
-import config from '@/config.json'
 import { formatBigInt18Precise, toBigInt } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import DelegatorIncomeChart from './delegator-income-chart.vue'
 import DelegationIncomeChart from './delegation-income-chart.vue'
 import DelegationModals from '@/components/delegation-modals.vue'
 import { useRouter } from 'vue-router'
+import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 
 const useBreakpoint = Grid.useBreakpoint
 const screens = useBreakpoint()
@@ -90,7 +90,7 @@ const formattedTotalStaking = computed(() => formatBigInt18Precise(totalStakingA
 const formattedTotalEarnings = computed(() => formatBigInt18Precise(totalDelegationEarnings.value))
 
 function getNetworkName(networkKey) {
-  return (config.networks[networkKey] && config.networks[networkKey].chainName) || networkKey
+  return formatConfiguredNetworkName(networkKey)
 }
 
 function normalizeStatus(status) {
