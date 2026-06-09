@@ -58,6 +58,17 @@ export const getFundingNetworkConfig = (networkKey) => getFundingNetworks()[netw
 
 export const isSystemNetwork = (networkKey) => Boolean(getSystemNetworks()[networkKey])
 
+export const getNetworkColor = (networkKeyOrName) => {
+  if (!networkKeyOrName) return undefined
+  const raw = String(networkKeyOrName).trim()
+  const normalized = raw.toLowerCase()
+  const networks = getAllWalletNetworks()
+  const network = networks[raw] || Object.entries(networks).find(([key, item]) => (
+    key.toLowerCase() === normalized || String(item.chainName || '').toLowerCase() === normalized
+  ))?.[1]
+  return network?.color
+}
+
 export const formatNetworkName = (networkKey) => {
   if (!networkKey) return ''
   const raw = String(networkKey).trim()

@@ -421,7 +421,7 @@ onMounted(async () => {
             <template #title>
               Node Emission
             </template>
-            <NodeEmissionChart :address="nodeAddress" :network="node.network" />
+            <NodeEmissionChart :address="nodeAddress" />
           </a-card>
         </a-col>
       </a-row>

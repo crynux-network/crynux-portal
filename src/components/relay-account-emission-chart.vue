@@ -59,13 +59,14 @@ const options = {
     },
     tooltip: {
       callbacks: {
-        label: (context) => 'Emission: CNX ' + formatCompact(context.parsed.y)
+        label: (context) => `${context.dataset.label}: CNX ${formatCompact(context.parsed.y)}`
       }
     }
   },
   scales: {
     y: {
       beginAtZero: true,
+      stacked: true,
       ticks: {
         callback: (value) => formatCompact(value)
       },
@@ -73,7 +74,14 @@ const options = {
         display: true,
         text: 'Emission (CNX)'
       }
+    },
+    x: {
+      stacked: true
     }
+  },
+  interaction: {
+    mode: 'index',
+    intersect: false
   }
 }
 
@@ -90,12 +98,22 @@ const buildEmptyDatasets = () => {
     labels,
     datasets: [
       {
-        label: 'Emission',
+        label: 'Node emission',
         backgroundColor: 'rgba(250, 140, 22, 0.25)',
         borderColor: 'rgba(250, 140, 22, 1)',
         data: emptyValues,
         tension: 0.25,
-        fill: true
+        fill: true,
+        stack: 'emission'
+      },
+      {
+        label: 'Delegation emission',
+        backgroundColor: 'rgba(24, 144, 255, 0.25)',
+        borderColor: 'rgba(24, 144, 255, 1)',
+        data: emptyValues,
+        tension: 0.25,
+        fill: true,
+        stack: 'emission'
       }
     ]
   }
@@ -111,18 +129,29 @@ const fetchData = async () => {
 
     const resp = await v2RelayAccountAPI.getEmissionChart(props.address, 24)
     const timestamps = Array.isArray(resp?.timestamps) ? resp.timestamps : []
-    const emissions = Array.isArray(resp?.emission_income) ? resp.emission_income : []
+    const nodeEmissions = Array.isArray(resp?.node_emission_income) ? resp.node_emission_income : []
+    const delegationEmissions = Array.isArray(resp?.delegation_emission_income) ? resp.delegation_emission_income : []
 
     data.value = {
       labels: timestamps.map(ts => moment.unix(ts).format('MMM DD')),
       datasets: [
         {
-          label: 'Emission',
+          label: 'Node emission',
           backgroundColor: 'rgba(250, 140, 22, 0.25)',
           borderColor: 'rgba(250, 140, 22, 1)',
-          data: emissions.map(formatBigIntValue),
+          data: nodeEmissions.map(formatBigIntValue),
           tension: 0.25,
-          fill: true
+          fill: true,
+          stack: 'emission'
+        },
+        {
+          label: 'Delegation emission',
+          backgroundColor: 'rgba(24, 144, 255, 0.25)',
+          borderColor: 'rgba(24, 144, 255, 1)',
+          data: delegationEmissions.map(formatBigIntValue),
+          tension: 0.25,
+          fill: true,
+          stack: 'emission'
         }
       ]
     }

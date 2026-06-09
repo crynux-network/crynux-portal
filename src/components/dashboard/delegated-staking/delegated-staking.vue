@@ -35,6 +35,7 @@ import ApiError from '@/api/api-error'
 import { formatBigInt18Precise, toBigInt } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import DelegatorIncomeChart from './delegator-income-chart.vue'
+import DelegatorEmissionChart from './delegator-emission-chart.vue'
 import DelegationIncomeChart from './delegation-income-chart.vue'
 import DelegationModals from '@/components/delegation-modals.vue'
 import { useRouter } from 'vue-router'
@@ -340,6 +341,19 @@ onMounted(() => {
                 </span>
               </template>
               <DelegatorIncomeChart :address="wallet.address" :height="280" />
+            </a-card>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="[16, 16]" style="margin-top: 16px">
+          <a-col :span="24">
+            <a-card :bordered="false" class="chart-card">
+              <template #title>
+                <span class="card-title-with-tooltip">
+                  Staking Emission Income
+                </span>
+              </template>
+              <DelegatorEmissionChart :address="wallet.address" :height="280" />
             </a-card>
           </a-col>
         </a-row>

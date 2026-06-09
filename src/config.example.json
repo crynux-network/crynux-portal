@@ -22,7 +22,8 @@
             "withdrawal_fee": 1,
             "withdrawal_min": 100,
             "deposit_min": 1000,
-            "logo": "/base-square.png"
+            "logo": "/base-square.png",
+            "color": "geekblue"
         }
     },
     "deposit_withdraw_networks": {
@@ -46,7 +47,8 @@
             "withdrawal_fee": 1,
             "withdrawal_min": 100,
             "deposit_min": 1000,
-            "logo": "/base-square.png"
+            "logo": "/base-square.png",
+            "color": "geekblue"
         }
     },
     "default_network": "crynux-on-base",

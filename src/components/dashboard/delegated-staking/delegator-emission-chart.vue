@@ -13,7 +13,7 @@ import { LoadingOutlined } from '@ant-design/icons-vue'
 import { onMounted, ref, watch } from 'vue'
 import moment from 'moment'
 import { Chart as ChartJS, registerables } from 'chart.js'
-import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
+import v2RelayAccountAPI from '@/api/v2/relay-account'
 import { toBigInt } from '@/services/token'
 
 ChartJS.register(...registerables)
@@ -21,22 +21,28 @@ ChartJS.register(...registerables)
 const props = defineProps({
   address: {
     type: String,
-    required: true
+    default: ''
+  },
+  height: {
+    type: Number,
+    default: 260
   }
 })
 
 const loading = ref(true)
+
 const data = ref({
   labels: [],
   datasets: []
 })
 
-const formatCompact = (value) => {
+const formatCnxValue = (value) => {
   const num = Number(value || 0)
   const abs = Math.abs(num)
-  if (abs >= 1e9) return (num / 1e9).toFixed(2) + 'B'
-  if (abs >= 1e6) return (num / 1e6).toFixed(2) + 'M'
-  if (abs >= 1e3) return (num / 1e3).toFixed(2) + 'K'
+  const sign = num < 0 ? '-' : ''
+  if (abs >= 1e9) return sign + (abs / 1e9).toFixed(2) + 'B'
+  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2) + 'M'
+  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(2) + 'K'
   return num.toFixed(2)
 }
 
@@ -54,12 +60,11 @@ const options = {
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      display: true,
-      position: 'top'
+      display: false
     },
     tooltip: {
       callbacks: {
-        label: (context) => 'Emission: CNX ' + formatCompact(context.parsed.y)
+        label: (context) => 'Emission: CNX ' + formatCnxValue(context.parsed.y)
       }
     }
   },
@@ -67,7 +72,7 @@ const options = {
     y: {
       beginAtZero: true,
       ticks: {
-        callback: (value) => formatCompact(value)
+        callback: (value) => formatCnxValue(value)
       },
       title: {
         display: true,
@@ -90,7 +95,7 @@ const buildEmptyDatasets = () => {
     labels,
     datasets: [
       {
-        label: 'Emission',
+        label: 'Staking emission',
         backgroundColor: 'rgba(250, 140, 22, 0.25)',
         borderColor: 'rgba(250, 140, 22, 1)',
         data: emptyValues,
@@ -109,25 +114,25 @@ const fetchData = async () => {
       return
     }
 
-    const resp = await v2DelegatedStakingAPI.getNodeEmissionChart(props.address, 24)
+    const resp = await v2RelayAccountAPI.getEmissionChart(props.address, 24)
     const timestamps = Array.isArray(resp?.timestamps) ? resp.timestamps : []
-    const emissions = Array.isArray(resp?.node_emission_income) ? resp.node_emission_income : []
+    const delegationEmissions = Array.isArray(resp?.delegation_emission_income) ? resp.delegation_emission_income : []
 
     data.value = {
       labels: timestamps.map(ts => moment.unix(ts).format('MMM DD')),
       datasets: [
         {
-          label: 'Node emission',
+          label: 'Staking emission',
           backgroundColor: 'rgba(250, 140, 22, 0.25)',
           borderColor: 'rgba(250, 140, 22, 1)',
-          data: emissions.map(formatBigIntValue),
+          data: delegationEmissions.map(formatBigIntValue),
           tension: 0.25,
           fill: true
         }
       ]
     }
-  } catch (error) {
-    console.error('Failed to fetch node emission chart:', error)
+  } catch (e) {
+    console.error('Failed to fetch delegator emission chart:', e)
     data.value = buildEmptyDatasets()
   } finally {
     loading.value = false
@@ -146,7 +151,7 @@ onMounted(async () => {
 <style scoped>
 .chart-container {
   position: relative;
-  height: 280px;
+  height: v-bind('height + "px"');
 }
 
 .loading {
