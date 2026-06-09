@@ -13,6 +13,15 @@ class V2DelegatedStakingAPI extends BaseAPI {
     getNodeDelegations(nodeAddress, network, page = 1, pageSize = 10) {
         return v2.get(`/delegated_staking/nodes/${nodeAddress}/delegations?network=${network}&page=${page}&page_size=${pageSize}`)
     }
+
+    getNodeEmissionChart(nodeAddress, network, weeks = 24) {
+        return v2.get(`/delegated_staking/nodes/${nodeAddress}/emission/chart`, {
+            params: {
+                network,
+                weeks
+            }
+        })
+    }
 }
 
 const v2DelegatedStakingAPI = new V2DelegatedStakingAPI()

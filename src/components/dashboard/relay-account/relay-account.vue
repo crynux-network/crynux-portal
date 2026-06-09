@@ -10,6 +10,7 @@ import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
 import v2RelayAccountAPI from '@/api/v2/relay-account'
 import RelayAccountIncomeChart from '@/components/relay-account-income-chart.vue'
+import RelayAccountEmissionChart from '@/components/relay-account-emission-chart.vue'
 import moment from 'moment'
 import NetworkTag from '@/components/network-tag.vue'
 import { createReadProvider, isUserRejectedError, getBeneficialAddress, isZeroAddress } from '@/services/contract'
@@ -1186,13 +1187,24 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, wallet.selectedOnChainWa
 			<a-card :bordered="false" style="opacity: 0.9">
 				<template #title>
 					<span class="card-title-with-tooltip">
-						Relay Account Income
+						Task Fee Income
 						<a-tooltip title="This income only includes Node Task Fee and Delegator Task Fee. Emission rewards and Vesting unlocks are not included.">
 							<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
 						</a-tooltip>
 					</span>
 				</template>
 				<RelayAccountIncomeChart :address="wallet.address" />
+			</a-card>
+		</a-col>
+	</a-row>
+
+	<a-row :gutter="[16, 16]" style="margin-top: 16px;">
+		<a-col :span="24">
+			<a-card :bordered="false" style="opacity: 0.9">
+				<template #title>
+					Emission Income
+				</template>
+				<RelayAccountEmissionChart :address="wallet.address" />
 			</a-card>
 		</a-col>
 	</a-row>

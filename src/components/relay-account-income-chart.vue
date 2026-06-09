@@ -111,7 +111,7 @@ const options = {
             beginAtZero: true,
             title: {
                 display: true,
-                text: 'Income (CNX)'
+                text: 'Task Fee'
             }
         }
     }
