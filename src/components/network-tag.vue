@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Tag as ATag } from 'ant-design-vue'
+import { getNetworkColor } from '@/services/network-config'
 
 const props = defineProps({
   text: {
@@ -10,10 +11,7 @@ const props = defineProps({
 })
 
 const color = computed(() => {
-  const s = String(props.text || '').toLowerCase()
-  if (s.includes('base')) return 'geekblue'
-  if (s.includes('near')) return 'green'
-  return undefined
+  return getNetworkColor(props.text)
 })
 </script>
 

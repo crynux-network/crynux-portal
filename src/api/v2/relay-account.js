@@ -14,6 +14,14 @@ class V2RelayAccountAPI extends BaseAPI {
       },
     })
   }
+
+  getEmissionChart(address, weeks = 24) {
+    return v2.get(`/relay_account/${address}/emission/chart`, {
+      params: {
+        weeks
+      }
+    })
+  }
 }
 
 const v2RelayAccountAPI = new V2RelayAccountAPI()

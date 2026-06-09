@@ -29,6 +29,7 @@ import { formatBigInt18, formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
+import NodeEmissionChart from '@/components/staking/node-emission-chart.vue'
 import NodeStakingChart from '@/components/staking/node-staking-chart.vue'
 import NodeScoresChart from '@/components/staking/node-scores-chart.vue'
 import NodeDelegatorsChart from '@/components/staking/node-delegators-chart.vue'
@@ -410,6 +411,17 @@ onMounted(async () => {
               </span>
             </template>
             <NodeRewardsChart :address="nodeAddress" />
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
+        <a-col :span="24">
+          <a-card class="chart-card" :bordered="false" style="opacity: 0.9">
+            <template #title>
+              Node Emission
+            </template>
+            <NodeEmissionChart :address="nodeAddress" />
           </a-card>
         </a-col>
       </a-row>

@@ -19,7 +19,8 @@
                 "delegatedStaking": "0x8f31Ff3Ac3923442eAbA765e3422848d25FA2496",
                 "nodeStaking": "0xAE0DDF6cf595F1EACfA76e35D985357E69795712"
             },
-            "logo": "/base-square.png"
+            "logo": "/base-square.png",
+            "color": "purple"
         }
     },
     "default_network": "crynux-on-base-sepolia",
