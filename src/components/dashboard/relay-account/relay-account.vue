@@ -644,6 +644,7 @@ const getVestings = async (page = 1, pageSize = 20) => {
         const res = await v2RelayAccountAPI.getVestings(wallet.address, page, pageSize)
         vestings.value = (res.vesting_records || []).map((record) => ({
             ...record,
+            slashed: record && record.slashed === true,
             start_time: formatDate(record && record.start_time),
             duration_days: `${record && record.duration_days ? record.duration_days : 0} days`,
             total_amount: formatTokenAmountWei(record && record.total_amount),
@@ -1434,7 +1435,8 @@ watch(() => [wallet.address, wallet.selectedNetworkKey, wallet.selectedOnChainWa
         >
             <template #bodyCell="{ column, record }">
                 <template v-if="column.dataIndex === 'status'">
-                    <a-tag v-if="record.status === 0 || record.status === '0'" color="blue">Active</a-tag>
+                    <a-tag v-if="record.slashed === true" color="volcano">Slashed</a-tag>
+                    <a-tag v-else-if="record.status === 0 || record.status === '0'" color="blue">Active</a-tag>
                     <a-tag v-else-if="record.status === 1 || record.status === '1'" color="green">Completed</a-tag>
                     <span v-else>{{ record.status }}</span>
                 </template>
