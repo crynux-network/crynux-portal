@@ -22,7 +22,7 @@ const router = createRouter({
       component: StakeableNodes
     },
     {
-      path: '/nodes/:address',
+      path: '/staking/nodes/:address',
       name: 'node-details',
       component: NodeDetails
     },

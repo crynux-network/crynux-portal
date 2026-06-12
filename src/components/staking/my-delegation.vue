@@ -46,9 +46,12 @@ const todayEarnings = ref(0n)
 const totalEarnings = ref(0n)
 const modalsRef = ref(null)
 const otherNetworkStakes = ref([])
+const delegationStatus = ref('')
 
-const hasStaking = computed(() => stakingAmount.value > 0n)
+const isSlashed = computed(() => delegationStatus.value === 'slashed')
+const hasStaking = computed(() => stakingAmount.value > 0n && !isSlashed.value)
 const hasOtherNetworkStakes = computed(() => otherNetworkStakes.value.length > 0)
+const activeStakingAmount = computed(() => isSlashed.value ? 0n : stakingAmount.value)
 
 const formattedStakedAt = computed(() => {
   if (!stakedAt.value) return '-'
@@ -82,6 +85,7 @@ async function fetchDelegation() {
     stakedAt.value = null
     todayEarnings.value = 0n
     totalEarnings.value = 0n
+    delegationStatus.value = ''
     return
   }
   loading.value = true
@@ -91,6 +95,7 @@ async function fetchDelegation() {
     stakedAt.value = resp.staked_at || null
     todayEarnings.value = toBigInt(resp.today_earnings || 0)
     totalEarnings.value = toBigInt(resp.total_earnings || 0)
+    delegationStatus.value = String(resp.status || '').toLowerCase()
   } catch (e) {
     if (!(e instanceof ApiError && e.type === ApiError.Type.NotFound)) {
       console.error('Failed to fetch delegation:', e)
@@ -99,6 +104,7 @@ async function fetchDelegation() {
     stakedAt.value = null
     todayEarnings.value = 0n
     totalEarnings.value = 0n
+    delegationStatus.value = ''
   } finally {
     loading.value = false
   }
@@ -118,7 +124,8 @@ async function fetchOtherNetworkStakes() {
     try {
       const resp = await walletAPI.getDelegation(wallet.address, props.nodeAddress, network)
       const amount = toBigInt(resp.staking_amount || 0)
-      if (amount > 0n) {
+      const status = String(resp.status || '').toLowerCase()
+      if (amount > 0n && status !== 'slashed') {
         results.push({
           network,
           networkName: formatNetworkName(network),
@@ -162,6 +169,7 @@ watch(
     } else {
       stakingAmount.value = 0n
       otherNetworkStakes.value = []
+      delegationStatus.value = ''
     }
   }
 )
@@ -218,6 +226,14 @@ onMounted(() => {
           </a-button>
         </div>
 
+        <div v-if="isSlashed" class="other-network-alert">
+          <a-alert
+            type="warning"
+            show-icon
+            message="Your previous stake on this node was slashed and cannot be unstaked."
+          />
+        </div>
+
         <!-- Alert for inactive stakes on other networks -->
         <div v-if="hasOtherNetworkStakes" class="other-network-alert">
           <a-alert type="info" show-icon>
@@ -268,7 +284,7 @@ onMounted(() => {
       ref="modalsRef"
       :node-address="nodeAddress"
       :network="network"
-      :staking-amount="stakingAmount"
+      :staking-amount="activeStakingAmount"
       @success="handleSuccess"
     />
   </div>
