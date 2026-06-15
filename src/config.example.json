@@ -14,13 +14,13 @@
             },
             "blockExplorerUrls": [],
             "contracts": {
-                "credits": "0x71399bBc8604C4EB75260BEf01c2A8deD735C795",
-                "beneficialAddress": "0xFc80e019d00f0d06CbebdE648990A89c5a25B425",
-                "delegatedStaking": "0x8f31Ff3Ac3923442eAbA765e3422848d25FA2496",
-                "nodeStaking": "0xAE0DDF6cf595F1EACfA76e35D985357E69795712"
+                "credits": "0x2F44194dB165B773891556F8B27384fE87a9AeFd",
+                "beneficialAddress": "0x31609b6531399561c2B65b8673a17FE2575c1654",
+                "delegatedStaking": "0x91CaDAc285FaE7d652eEDC1863ed16D73288AB0D",
+                "nodeStaking": "0xF7b23E19bf1CD63fa640eD3c6bb51eedF07caadE"
             },
-            "withdrawal_fee": 1,
-            "withdrawal_min": 100,
+            "withdrawal_fee": 10,
+            "withdrawal_min": 1000,
             "deposit_min": 1000,
             "logo": "/base-square.png",
             "color": "geekblue"
@@ -40,19 +40,19 @@
             },
             "blockExplorerUrls": [],
             "contracts": {
-                "beneficialAddress": "0x0000000000000000000000000000000000000001",
-                "tokenAddress": "0x0000000000000000000000000000000000000002"
+                "beneficialAddress": "0x19d8A7584830fbbB163E25e5691dc84c58467C2f",
+                "tokenAddress": "0x0cba9e7585f91A758fa399B1A1dB148ADfE8cfd5"
             },
             "token_type": "erc20",
-            "withdrawal_fee": 1,
-            "withdrawal_min": 100,
+            "withdrawal_fee": 50,
+            "withdrawal_min": 5000,
             "deposit_min": 1000,
             "logo": "/base-square.png",
-            "color": "geekblue"
+            "color": "purple"
         }
     },
     "default_network": "crynux-on-base",
-    "deposit_address": "0x7bB0A0582893c09ED48397BFACDdbbd478eB4839",
+    "deposit_address": "0x95dAd4af9aCaDEaf1704d3C980e7f571A9c5C5a0",
     "social_links": {
         "twitter": "https://x.com/crynuxio",
         "discord": "https://discord.gg/Ug2AHUbrrm",
