@@ -1,9 +1,11 @@
 <script setup>
 import {computed, onMounted, reactive, ref} from 'vue'
-import {Grid} from 'ant-design-vue'
+import {Grid, message} from 'ant-design-vue'
 
+import cnxAPI from '@/api/cnx'
 import networkAPI from '@/api/v1/network'
 import v2NetworkAPI from '@/api/v2/network'
+import {formatBigInt18} from '@/services/token'
 
 import NetworkIncentivesLineChart from "./network-incentives-line-chart.vue";
 import TaskNumberLineChart from "./task-number-line-chart.vue";
@@ -189,10 +191,23 @@ const toEtherValue = (bigNum) => {
     return decimals + '.' + fractions
 }
 
-const circulation = 0
+const circulation = ref('0')
+
+const loadCirculation = async () => {
+    try {
+        const circulatingSupply = await cnxAPI.getCirculatingSupply()
+        circulation.value = formatBigInt18(circulatingSupply, 0)
+    } catch (error) {
+        console.error('Failed to load CNX circulating supply', error)
+        message.error('Failed to load CNX circulating supply')
+    }
+}
 
 onMounted(async () => {
-    await loadNetworkInfo()
+    await Promise.all([
+        loadNetworkInfo(),
+        loadCirculation()
+    ])
 })
 </script>
 
@@ -242,7 +257,7 @@ onMounted(async () => {
                     </a-statistic>
                 </a-card-grid>
                 <a-card-grid :hoverable="false" :style="gridItemStyle">
-                    <a-statistic :precision="0" :value="circulation" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
+                    <a-statistic :value="circulation" :value-style="kpiValueStyle" :style="{ 'white-space': 'nowrap' }">
                         <template #prefix>
                             <dollar-circle-outlined :style="kpiIconStyle" />
                         </template>

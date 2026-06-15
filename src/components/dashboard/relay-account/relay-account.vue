@@ -34,6 +34,8 @@ const erc20Abi = [
     'function transfer(address recipient, uint256 amount) returns (bool)'
 ]
 
+const getTokenAddress = (network) => network?.token_address || network?.contracts?.tokenAddress
+
 const networkName = computed(() => {
 	const key = wallet.selectedOnChainWalletNetworkKey
 	return formatConfiguredNetworkName(key)
@@ -142,9 +144,11 @@ const abi = beneficialAbi
 const benefitAddress = ref('')
 const withdrawBenefitAddress = ref('')
 const isFetchingBenefit = ref(false)
+const isFetchingOnChainBalances = ref(false)
+const isFetchingFundingBalances = ref(false)
 
 const isOnChainWalletLoading = computed(() => {
-    return isFetchingBenefit.value || !hasStakeInfoLoaded.value || !hasDelegatedStakeLoaded.value
+    return isFetchingOnChainBalances.value || isFetchingBenefit.value || !hasStakeInfoLoaded.value || !hasDelegatedStakeLoaded.value
 })
 const isModalOpen = ref(false)
 const inputBenefitAddress = ref('')
@@ -441,6 +445,38 @@ const truncateTxHash = (h) => {
 
 const formatNetworkName = (n) => formatConfiguredNetworkName(n)
 
+let dashboardRefreshId = 0
+let onChainBalanceRequestId = 0
+let fundingBalanceRequestId = 0
+
+const isSameAddress = (left, right) => String(left || '').toLowerCase() === String(right || '').toLowerCase()
+
+const isCurrentOnChainRequest = (address, networkKey) => {
+    return isSameAddress(wallet.address, address) && wallet.selectedOnChainWalletNetworkKey === networkKey
+}
+
+const isCurrentFundingRequest = (address, networkKey) => {
+    return isSameAddress(wallet.address, address) && wallet.selectedDepositWithdrawNetworkKey === networkKey
+}
+
+const resetOnChainWalletState = () => {
+    benefitAddress.value = ''
+    benefitBalanceWei.value = '0x0'
+    onChainNativeBalanceWei.value = '0x0'
+    onChainTokenBalanceWei.value = '0x0'
+    nodeStakedBalanceWei.value = '0x0'
+    nodeStakingStatus.value = 0
+    nodeUnstakeTimestamp.value = 0n
+    hasStakeInfoLoaded.value = false
+    delegatedStakedBalance.value = 0n
+    hasDelegatedStakeLoaded.value = false
+}
+
+const resetFundingBalances = () => {
+    fundingNativeBalanceWei.value = '0x0'
+    fundingTokenBalanceWei.value = '0x0'
+}
+
 const formatTimestamp = (t) => {
 	if (t === undefined || t === null || t === '') return ''
 	const n = Number(t)
@@ -458,20 +494,11 @@ const formatDate = (t) => {
 }
 
 async function refreshDashboard() {
+    const refreshId = ++dashboardRefreshId
 	if (!wallet.address) {
-		benefitAddress.value = ''
-        fundingNativeBalanceWei.value = '0x0'
-        fundingTokenBalanceWei.value = '0x0'
-        benefitBalanceWei.value = '0x0'
-        onChainNativeBalanceWei.value = '0x0'
-        onChainTokenBalanceWei.value = '0x0'
+        resetFundingBalances()
+        resetOnChainWalletState()
 		relayBalance.value = 0
-        nodeStakedBalanceWei.value = '0x0'
-        nodeStakingStatus.value = 0
-        nodeUnstakeTimestamp.value = 0n
-        hasStakeInfoLoaded.value = false
-        delegatedStakedBalance.value = 0n
-        hasDelegatedStakeLoaded.value = false
 		withdrawals.value = []
 		deposits.value = []
         lockedVestingWei.value = '0'
@@ -484,8 +511,9 @@ async function refreshDashboard() {
 	const sessionAddr = auth.sessionAddress || null
 	const hasMismatch = !!(sessionAddr && sessionAddr.toLowerCase() !== String(wallet.address).toLowerCase())
     await fetchFundingBalances()
-    await fetchOnChainNativeBalance()
-    await fetchOnChainTokenBalance()
+    if (refreshId !== dashboardRefreshId) return
+    await fetchOnChainBalances()
+    if (refreshId !== dashboardRefreshId) return
 	if (!auth.isAuthenticated || hasMismatch) {
 		benefitAddress.value = ''
         benefitBalanceWei.value = '0x0'
@@ -506,16 +534,23 @@ async function refreshDashboard() {
 		return
 	}
     await fetchBenefitAddress()
+    if (refreshId !== dashboardRefreshId) return
     if (benefitAddress.value && !isZeroAddress(benefitAddress.value)) {
         await fetchBenefitBalance()
+        if (refreshId !== dashboardRefreshId) return
     } else {
         benefitBalanceWei.value = '0x0'
     }
     await fetchNodeStakingInfo()
+    if (refreshId !== dashboardRefreshId) return
     await fetchDelegatedStakingInfo()
+    if (refreshId !== dashboardRefreshId) return
     await fetchLockedVesting()
+    if (refreshId !== dashboardRefreshId) return
 	await fetchRelayBalance()
+    if (refreshId !== dashboardRefreshId) return
 	await getWithdrawals(withdrawalsPagination.value.current, withdrawalsPagination.value.pageSize)
+    if (refreshId !== dashboardRefreshId) return
 	await getDeposits(depositsPagination.value.current, depositsPagination.value.pageSize)
 }
 
@@ -695,19 +730,28 @@ const fetchRelayBalance = async () => {
 const fetchBenefitAddress = async () => {
 	benefitError.value = ''
 	isFetchingBenefit.value = true
-	if (!wallet.address) {
+    const address = wallet.address
+    const networkKey = wallet.selectedOnChainWalletNetworkKey
+	if (!address) {
 		benefitAddress.value = ''
 		isFetchingBenefit.value = false
 		return
 	}
 	try {
-		benefitAddress.value = await getBeneficialAddress(wallet.selectedOnChainWalletNetworkKey, wallet.address)
+		const addr = await getBeneficialAddress(networkKey, address)
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            benefitAddress.value = addr
+        }
 	} catch (e) {
 		console.error(e)
-		benefitAddress.value = ''
-		benefitError.value = 'Failed to load. Please refresh the page.'
+        if (isCurrentOnChainRequest(address, networkKey)) {
+		    benefitAddress.value = ''
+		    benefitError.value = 'Failed to load. Please refresh the page.'
+        }
 	} finally {
-		isFetchingBenefit.value = false
+        if (isCurrentOnChainRequest(address, networkKey)) {
+		    isFetchingBenefit.value = false
+        }
 	}
 }
 
@@ -722,107 +766,173 @@ const fetchWithdrawBenefitAddress = async () => {
 const fetchBenefitBalance = async () => {
 	const addr = benefitAddress.value
 	if (!addr || isZeroAddress(addr)) return
+    const address = wallet.address
+    const networkKey = wallet.selectedOnChainWalletNetworkKey
+    const network = getNetworkConfig(networkKey)
+    const tokenAddress = getTokenAddress(network)
+    const tokenType = network?.token_type || 'native'
 	try {
-		const provider = createReadProvider(wallet.selectedOnChainWalletNetworkKey)
-        if (hasOnChainErc20Token.value) {
-            const tokenAddress = selectedOnChainWalletNetwork.value?.token_address || selectedOnChainWalletNetwork.value?.contracts?.tokenAddress
+		const provider = createReadProvider(networkKey)
+        if (tokenType === 'erc20') {
             if (!tokenAddress) {
-                benefitBalanceWei.value = '0x0'
+                if (isCurrentOnChainRequest(address, networkKey)) {
+                    benefitBalanceWei.value = '0x0'
+                }
                 return
             }
             const contract = new ethers.Contract(tokenAddress, erc20Abi, provider)
             const balance = await contract.balanceOf(addr)
-            benefitBalanceWei.value = '0x' + balance.toString(16)
+            if (isCurrentOnChainRequest(address, networkKey)) {
+                benefitBalanceWei.value = '0x' + balance.toString(16)
+            }
             return
         }
 		const balance = await provider.getBalance(addr)
-		benefitBalanceWei.value = '0x' + balance.toString(16)
+        if (isCurrentOnChainRequest(address, networkKey)) {
+		    benefitBalanceWei.value = '0x' + balance.toString(16)
+        }
 	} catch (e) {
 		console.error('Failed to fetch beneficial address CNX balance:', e)
-        benefitBalanceWei.value = '0x0'
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            benefitBalanceWei.value = '0x0'
+        }
 	}
 }
 
 const fetchOnChainNativeBalance = async () => {
-    if (!wallet.address) {
+    const address = wallet.address
+    const networkKey = wallet.selectedOnChainWalletNetworkKey
+    if (!address) {
         onChainNativeBalanceWei.value = '0x0'
         return
     }
     try {
-        const provider = createReadProvider(wallet.selectedOnChainWalletNetworkKey)
-        const balance = await provider.getBalance(wallet.address)
-        onChainNativeBalanceWei.value = '0x' + balance.toString(16)
+        const provider = createReadProvider(networkKey)
+        const balance = await provider.getBalance(address)
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            onChainNativeBalanceWei.value = '0x' + balance.toString(16)
+        }
     } catch (e) {
         console.error('Failed to fetch native balance:', e)
-        onChainNativeBalanceWei.value = '0x0'
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            onChainNativeBalanceWei.value = '0x0'
+        }
     }
 }
 
 const fetchOnChainTokenBalance = async () => {
-    if (!wallet.address || !hasOnChainErc20Token.value) {
+    const address = wallet.address
+    const networkKey = wallet.selectedOnChainWalletNetworkKey
+    const network = getNetworkConfig(networkKey)
+    const tokenType = network?.token_type || 'native'
+    if (!address || tokenType !== 'erc20') {
         onChainTokenBalanceWei.value = '0x0'
         return
     }
-    const tokenAddress = selectedOnChainWalletNetwork.value?.token_address || selectedOnChainWalletNetwork.value?.contracts?.tokenAddress
+    const tokenAddress = getTokenAddress(network)
     if (!tokenAddress) {
         onChainTokenBalanceWei.value = '0x0'
         return
     }
     try {
-        const provider = createReadProvider(wallet.selectedOnChainWalletNetworkKey)
+        const provider = createReadProvider(networkKey)
         const contract = new ethers.Contract(tokenAddress, erc20Abi, provider)
-        const balance = await contract.balanceOf(wallet.address)
-        onChainTokenBalanceWei.value = '0x' + balance.toString(16)
+        const balance = await contract.balanceOf(address)
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            onChainTokenBalanceWei.value = '0x' + balance.toString(16)
+        }
     } catch (e) {
         console.error('Failed to fetch token balance:', e)
-        onChainTokenBalanceWei.value = '0x0'
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            onChainTokenBalanceWei.value = '0x0'
+        }
     }
 }
 
 const fetchFundingNativeBalance = async () => {
-    if (!wallet.address) {
+    const address = wallet.address
+    const networkKey = wallet.selectedDepositWithdrawNetworkKey
+    if (!address) {
         fundingNativeBalanceWei.value = '0x0'
         return
     }
     try {
-        const provider = createReadProvider(wallet.selectedDepositWithdrawNetworkKey)
-        const balance = await provider.getBalance(wallet.address)
-        fundingNativeBalanceWei.value = '0x' + balance.toString(16)
+        const provider = createReadProvider(networkKey)
+        const balance = await provider.getBalance(address)
+        if (isCurrentFundingRequest(address, networkKey)) {
+            fundingNativeBalanceWei.value = '0x' + balance.toString(16)
+        }
     } catch (e) {
         console.error('Failed to fetch funding native balance:', e)
-        fundingNativeBalanceWei.value = '0x0'
+        if (isCurrentFundingRequest(address, networkKey)) {
+            fundingNativeBalanceWei.value = '0x0'
+        }
     }
 }
 
 const fetchFundingTokenBalance = async () => {
-    if (!wallet.address || !hasFundingErc20Token.value) {
+    const address = wallet.address
+    const networkKey = wallet.selectedDepositWithdrawNetworkKey
+    const network = getFundingNetworkConfig(networkKey)
+    const tokenType = network?.token_type || 'native'
+    if (!address || tokenType !== 'erc20') {
         fundingTokenBalanceWei.value = '0x0'
         return
     }
-    const tokenAddress = selectedFundingNetwork.value?.token_address || selectedFundingNetwork.value?.contracts?.tokenAddress
+    const tokenAddress = getTokenAddress(network)
     if (!tokenAddress) {
         fundingTokenBalanceWei.value = '0x0'
         return
     }
     try {
-        const provider = createReadProvider(wallet.selectedDepositWithdrawNetworkKey)
+        const provider = createReadProvider(networkKey)
         const contract = new ethers.Contract(tokenAddress, erc20Abi, provider)
-        const balance = await contract.balanceOf(wallet.address)
-        fundingTokenBalanceWei.value = '0x' + balance.toString(16)
+        const balance = await contract.balanceOf(address)
+        if (isCurrentFundingRequest(address, networkKey)) {
+            fundingTokenBalanceWei.value = '0x' + balance.toString(16)
+        }
     } catch (e) {
         console.error('Failed to fetch funding token balance:', e)
-        fundingTokenBalanceWei.value = '0x0'
+        if (isCurrentFundingRequest(address, networkKey)) {
+            fundingTokenBalanceWei.value = '0x0'
+        }
     }
 }
 
 const fetchFundingBalances = async () => {
-    await fetchFundingNativeBalance()
-    await fetchFundingTokenBalance()
+    const requestId = ++fundingBalanceRequestId
+    isFetchingFundingBalances.value = true
+    try {
+        await fetchFundingNativeBalance()
+        if (requestId !== fundingBalanceRequestId) return
+        await fetchFundingTokenBalance()
+    } finally {
+        if (requestId === fundingBalanceRequestId) {
+            isFetchingFundingBalances.value = false
+        }
+    }
+}
+
+const fetchOnChainBalances = async () => {
+    const requestId = ++onChainBalanceRequestId
+    isFetchingOnChainBalances.value = true
+    try {
+        await fetchOnChainNativeBalance()
+        if (requestId !== onChainBalanceRequestId) return
+        await fetchOnChainTokenBalance()
+    } finally {
+        if (requestId === onChainBalanceRequestId) {
+            isFetchingOnChainBalances.value = false
+        }
+    }
 }
 
 const fetchNodeStakingInfo = async () => {
     hasStakeInfoLoaded.value = false
-    if (!wallet.address) {
+    const address = wallet.address
+    const networkKey = wallet.selectedOnChainWalletNetworkKey
+    const isSystem = isSystemNetwork(networkKey)
+    if (!address) {
         nodeStakedBalanceWei.value = '0x0'
         nodeStakingStatus.value = 0
         nodeUnstakeTimestamp.value = 0n
@@ -830,13 +940,16 @@ const fetchNodeStakingInfo = async () => {
     }
     isFetchingStake.value = true
     try {
-        if (!selectedOnChainIsSystemNetwork.value) {
+        if (!isSystem) {
             nodeStakedBalanceWei.value = '0x0'
             nodeStakingStatus.value = 0
             nodeUnstakeTimestamp.value = 0n
             return
         }
-        const info = await getNodeStakingInfo(wallet.selectedOnChainWalletNetworkKey, wallet.address)
+        const info = await getNodeStakingInfo(networkKey, address)
+        if (!isCurrentOnChainRequest(address, networkKey)) {
+            return
+        }
         let balanceHex = '0x0'
         try {
             balanceHex = '0x' + info.stakedBalance.toString(16)
@@ -848,35 +961,48 @@ const fetchNodeStakingInfo = async () => {
         nodeUnstakeTimestamp.value = info.unstakeTimestamp
     } catch (e) {
         console.error('Failed to fetch node staking info:', e)
-        nodeStakedBalanceWei.value = '0x0'
-        nodeStakingStatus.value = 0
-        nodeUnstakeTimestamp.value = 0n
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            nodeStakedBalanceWei.value = '0x0'
+            nodeStakingStatus.value = 0
+            nodeUnstakeTimestamp.value = 0n
+        }
     } finally {
-        isFetchingStake.value = false
-        hasStakeInfoLoaded.value = true
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            isFetchingStake.value = false
+            hasStakeInfoLoaded.value = true
+        }
     }
 }
 
 const fetchDelegatedStakingInfo = async () => {
     hasDelegatedStakeLoaded.value = false
-    if (!wallet.address) {
+    const address = wallet.address
+    const networkKey = wallet.selectedOnChainWalletNetworkKey
+    const isSystem = isSystemNetwork(networkKey)
+    if (!address) {
         delegatedStakedBalance.value = 0n
         return
     }
     isFetchingDelegatedStake.value = true
     try {
-        if (!selectedOnChainIsSystemNetwork.value) {
+        if (!isSystem) {
             delegatedStakedBalance.value = 0n
             return
         }
-        const res = await getDelegatorTotalStakeAmount(wallet.selectedOnChainWalletNetworkKey, wallet.address)
-        delegatedStakedBalance.value = res
+        const res = await getDelegatorTotalStakeAmount(networkKey, address)
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            delegatedStakedBalance.value = res
+        }
     } catch (e) {
         console.error(e)
-        delegatedStakedBalance.value = 0n
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            delegatedStakedBalance.value = 0n
+        }
     } finally {
-        isFetchingDelegatedStake.value = false
-        hasDelegatedStakeLoaded.value = true
+        if (isCurrentOnChainRequest(address, networkKey)) {
+            isFetchingDelegatedStake.value = false
+            hasDelegatedStakeLoaded.value = true
+        }
     }
 }
 
@@ -918,12 +1044,14 @@ const submitSetBenefit = async () => {
 }
 
 const changeOnChainWalletNetwork = async () => {
+    resetOnChainWalletState()
     await wallet.ensureNetworkOnWallet(wallet.selectedOnChainWalletNetworkKey)
     await wallet.fetchBalance()
     await refreshDashboard()
 }
 
 const changeFundingNetwork = async () => {
+    resetFundingBalances()
     await wallet.ensureNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
     await wallet.fetchBalance()
     await fetchFundingBalances()
@@ -1010,7 +1138,7 @@ const submitDeposit = async () => {
         const signer = await provider.getSigner()
         let tx
         if (selectedFundingTokenType.value === 'erc20') {
-            const tokenAddress = selectedFundingNetwork.value?.token_address
+            const tokenAddress = getTokenAddress(selectedFundingNetwork.value)
             const contract = new ethers.Contract(tokenAddress, erc20Abi, signer)
             tx = await contract.transfer(depositAddress.value, valueWei)
         } else {
@@ -1086,7 +1214,15 @@ onMounted(async () => {
 	await refreshDashboard()
 })
 
-watch(() => [wallet.address, wallet.selectedNetworkKey, wallet.selectedOnChainWalletNetworkKey, wallet.selectedDepositWithdrawNetworkKey, beneficialAddressContractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
+watch(() => wallet.selectedOnChainWalletNetworkKey, () => {
+    resetOnChainWalletState()
+})
+
+watch(() => wallet.selectedDepositWithdrawNetworkKey, () => {
+    resetFundingBalances()
+})
+
+watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialAddressContractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
 	await refreshDashboard()
 })
 </script>
