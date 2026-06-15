@@ -1222,7 +1222,7 @@ watch(() => wallet.selectedDepositWithdrawNetworkKey, () => {
     resetFundingBalances()
 })
 
-watch(() => [wallet.address, wallet.selectedNetworkKey, wallet.selectedOnChainWalletNetworkKey, wallet.selectedDepositWithdrawNetworkKey, beneficialAddressContractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
+watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialAddressContractAddress.value, auth.sessionToken, auth.sessionAddress], async () => {
 	await refreshDashboard()
 })
 </script>
