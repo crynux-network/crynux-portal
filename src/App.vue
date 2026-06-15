@@ -79,6 +79,7 @@ function reauthWithFocusAndDelay() {
 }
 
 const isDashboard = computed(() => router.currentRoute.value?.path?.startsWith('/dashboard'))
+const isStakingNavActive = computed(() => router.currentRoute.value?.path?.startsWith('/staking'))
 
 async function refreshAccountAndBalance() {
   const result = await wallet.refreshAccountAndBalance()
@@ -197,7 +198,7 @@ onMounted(async () => {
                     <a-space size="large" align="center">
                       <template v-if="!isDashboard">
                         <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'netstats' }" @click="router.push({ name: 'netstats' })">Netstats</a-button>
-                        <a-button type="link" class="nav-button" :class="{ active: router.currentRoute.value.name === 'staking' }" @click="router.push({ name: 'staking' })">Staking</a-button>
+                        <a-button type="link" class="nav-button" :class="{ active: isStakingNavActive }" @click="router.push({ name: 'staking' })">Staking</a-button>
                       </template>
                       <template v-if="auth.isAuthenticated">
                         <a-dropdown :trigger="['hover']">
@@ -272,7 +273,7 @@ onMounted(async () => {
               @click="router.push({ name: 'netstats' }); mobileMenuOpen = false"
             >Netstats</a-button>
             <a-button type="text" block class="drawer-nav-btn"
-              :class="{ active: router.currentRoute.value.name === 'staking' }"
+              :class="{ active: isStakingNavActive }"
               @click="router.push({ name: 'staking' }); mobileMenuOpen = false"
             >Staking</a-button>
             <template v-if="auth.isAuthenticated">

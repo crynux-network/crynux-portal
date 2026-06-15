@@ -724,11 +724,22 @@ const fetchBenefitBalance = async () => {
 	if (!addr || isZeroAddress(addr)) return
 	try {
 		const provider = createReadProvider(wallet.selectedOnChainWalletNetworkKey)
-		const bn = await provider.getBalance(addr)
-		const hex = '0x' + bn.toString(16)
-		benefitBalanceWei.value = hex
+        if (hasOnChainErc20Token.value) {
+            const tokenAddress = selectedOnChainWalletNetwork.value?.token_address || selectedOnChainWalletNetwork.value?.contracts?.tokenAddress
+            if (!tokenAddress) {
+                benefitBalanceWei.value = '0x0'
+                return
+            }
+            const contract = new ethers.Contract(tokenAddress, erc20Abi, provider)
+            const balance = await contract.balanceOf(addr)
+            benefitBalanceWei.value = '0x' + balance.toString(16)
+            return
+        }
+		const balance = await provider.getBalance(addr)
+		benefitBalanceWei.value = '0x' + balance.toString(16)
 	} catch (e) {
-		console.error(e)
+		console.error('Failed to fetch beneficial address CNX balance:', e)
+        benefitBalanceWei.value = '0x0'
 	}
 }
 

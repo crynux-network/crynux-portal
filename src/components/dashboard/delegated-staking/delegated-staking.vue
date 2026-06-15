@@ -22,6 +22,7 @@ import {
   MinusOutlined,
   MoreOutlined,
   DollarCircleOutlined,
+  CloseCircleOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
   MinusCircleOutlined as StoppedCircleOutlined,
@@ -116,6 +117,20 @@ function getStatusText(status) {
   return 'Node is running'
 }
 
+function normalizeDelegationStatus(status, isActive) {
+  const value = String(status || '').toLowerCase()
+  if (['active', 'inactive', 'slashed'].includes(value)) {
+    return value
+  }
+  return isActive ? 'active' : 'inactive'
+}
+
+function getDelegationStatusTooltip(status) {
+  if (status === 'slashed') return 'Slashed: Stake was confiscated and cannot be unstaked'
+  if (status === 'inactive') return 'Inactive: Stake network differs from node current network'
+  return 'Active: Stake network matches node current network'
+}
+
 function formatStakedAt(timestamp) {
   if (!timestamp) return '-'
   const date = new Date(timestamp * 1000)
@@ -180,9 +195,11 @@ async function fetchData(page = 1) {
 
     delegations.value = delegationsList.map((item, index) => {
       const nodeDetails = nodeDetailsMap[item.node_address]
-      const nodeNetwork = nodeDetails?.network || null
+      const nodeNetwork = item.node_current_blockchain_network || nodeDetails?.network || null
       const nodeStatus = nodeDetails?.status ?? null
-      const isActive = nodeNetwork === item.network
+      const status = normalizeDelegationStatus(item.status, nodeNetwork === item.network)
+      const isActive = status === 'active'
+      const isSlashed = status === 'slashed'
 
       return {
         key: `${item.node_address}-${item.network}-${index}`,
@@ -190,7 +207,9 @@ async function fetchData(page = 1) {
         network: item.network,
         nodeNetwork: nodeNetwork,
         nodeStatus: nodeStatus,
+        status: status,
         isActive: isActive,
+        isSlashed: isSlashed,
         stakingAmount: toBigInt(item.staking_amount || 0),
         stakedAt: item.staked_at,
         totalEarnings: toBigInt(item.total_earnings || 0),
@@ -288,80 +307,80 @@ onMounted(() => {
 
     <!-- Connected state -->
     <template v-else>
-      <a-spin :spinning="loading">
-        <!-- Statistics Cards -->
-        <a-row :gutter="[16, 16]">
-          <a-col :xs="24" :md="8">
-            <a-card :bordered="false" class="stat-card">
-              <a-statistic
-                title="Total Stakes"
-                :value="delegationNum"
-                :value-style="statisticValueStyle"
-              />
-            </a-card>
-          </a-col>
-          <a-col :xs="24" :md="8">
-            <a-card :bordered="false" class="stat-card">
-              <a-statistic
-                title="Total Stake (CNX)"
-                :value="formattedTotalStaking"
-                :value-style="statisticValueStyle"
-              />
-            </a-card>
-          </a-col>
-          <a-col :xs="24" :md="8">
-            <a-card :bordered="false" class="stat-card">
-              <a-statistic
-                :value="formattedTotalEarnings"
-                :value-style="statisticValueStyle"
-              >
-                <template #title>
-                  <span class="stat-title-with-tooltip">
-                    Total Task Fee (CNX)
-                    <a-tooltip title="Task Fee is not the full reward amount. It is used to calculate Emission rewards, which are released weekly through Vesting and can be viewed in the Vesting list of the Relay Account.">
-                      <question-circle-outlined class="reward-info-icon" />
-                    </a-tooltip>
-                  </span>
-                </template>
-              </a-statistic>
-            </a-card>
-          </a-col>
-        </a-row>
-
-        <!-- Earnings Chart -->
-        <a-row :gutter="[16, 16]" style="margin-top: 16px">
-          <a-col :span="24">
-            <a-card :bordered="false" class="chart-card">
+      <!-- Statistics Cards -->
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="24" :md="8">
+          <a-card :bordered="false" class="stat-card">
+            <a-statistic
+              title="Total Stakes"
+              :value="delegationNum"
+              :value-style="statisticValueStyle"
+            />
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :md="8">
+          <a-card :bordered="false" class="stat-card">
+            <a-statistic
+              title="Total Stake (CNX)"
+              :value="formattedTotalStaking"
+              :value-style="statisticValueStyle"
+            />
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :md="8">
+          <a-card :bordered="false" class="stat-card">
+            <a-statistic
+              :value="formattedTotalEarnings"
+              :value-style="statisticValueStyle"
+            >
               <template #title>
-                <span class="card-title-with-tooltip">
-                  Staking Task Fee Income
+                <span class="stat-title-with-tooltip">
+                  Total Task Fee (CNX)
                   <a-tooltip title="Task Fee is not the full reward amount. It is used to calculate Emission rewards, which are released weekly through Vesting and can be viewed in the Vesting list of the Relay Account.">
                     <question-circle-outlined class="reward-info-icon" />
                   </a-tooltip>
                 </span>
               </template>
-              <DelegatorIncomeChart :address="wallet.address" :height="280" />
-            </a-card>
-          </a-col>
-        </a-row>
+            </a-statistic>
+          </a-card>
+        </a-col>
+      </a-row>
 
-        <a-row :gutter="[16, 16]" style="margin-top: 16px">
-          <a-col :span="24">
-            <a-card :bordered="false" class="chart-card">
-              <template #title>
-                <span class="card-title-with-tooltip">
-                  Staking Emission Income
-                </span>
-              </template>
-              <DelegatorEmissionChart :address="wallet.address" :height="280" />
-            </a-card>
-          </a-col>
-        </a-row>
+      <!-- Earnings Chart -->
+      <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="24">
+          <a-card :bordered="false" class="chart-card">
+            <template #title>
+              <span class="card-title-with-tooltip">
+                Staking Task Fee Income
+                <a-tooltip title="Task Fee is not the full reward amount. It is used to calculate Emission rewards, which are released weekly through Vesting and can be viewed in the Vesting list of the Relay Account.">
+                  <question-circle-outlined class="reward-info-icon" />
+                </a-tooltip>
+              </span>
+            </template>
+            <DelegatorIncomeChart :address="wallet.address" :height="280" />
+          </a-card>
+        </a-col>
+      </a-row>
 
-        <!-- Delegations List -->
-        <a-row :gutter="[16, 16]" style="margin-top: 16px">
-          <a-col :span="24">
-            <a-card title="My Stakes" :bordered="false" class="list-card">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="24">
+          <a-card :bordered="false" class="chart-card">
+            <template #title>
+              <span class="card-title-with-tooltip">
+                Staking Emission Income
+              </span>
+            </template>
+            <DelegatorEmissionChart :address="wallet.address" :height="280" />
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <!-- Delegations List -->
+      <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="24">
+          <a-card title="My Stakes" :bordered="false" class="list-card">
+            <a-spin :spinning="loading">
               <a-empty v-if="!hasData && totalDelegations === 0" description="No stakes yet" />
               <div v-else class="delegations-list">
                 <div
@@ -377,7 +396,7 @@ onMounted(() => {
                         {{ delegation.nodeAddress }}
                       </span>
                     </div>
-                    <div class="header-actions">
+                    <div v-if="!delegation.isSlashed" class="header-actions">
                       <a-dropdown trigger="click">
                         <a-button type="text" class="more-btn">
                           <template #icon><more-outlined /></template>
@@ -399,7 +418,7 @@ onMounted(() => {
                   </div>
 
                   <!-- Network & Status Row -->
-                  <div :class="['network-status-row', { 'network-mismatch': !delegation.isActive }]">
+                  <div :class="['network-status-row', { 'network-mismatch': delegation.status === 'inactive', 'delegation-slashed': delegation.isSlashed }]">
                     <div class="status-icons">
                       <a-tooltip :title="getStatusText(delegation.nodeStatus)">
                         <span :class="['node-status-icon', normalizeStatus(delegation.nodeStatus)]">
@@ -408,15 +427,20 @@ onMounted(() => {
                           <stopped-circle-outlined v-else />
                         </span>
                       </a-tooltip>
-                      <a-tooltip :title="delegation.isActive ? 'Active: Stake network matches node current network' : 'Inactive: Stake network differs from node current network'">
-                        <span :class="['status-indicator', delegation.isActive ? 'active' : 'inactive']">
+                      <a-tooltip v-if="delegation.isSlashed" :title="getDelegationStatusTooltip(delegation.status)">
+                        <span class="slashed-status-icon">
+                          <close-circle-outlined />
+                        </span>
+                      </a-tooltip>
+                      <a-tooltip v-else :title="getDelegationStatusTooltip(delegation.status)">
+                        <span :class="['status-indicator', delegation.status]">
                           <dollar-circle-outlined />
                         </span>
                       </a-tooltip>
                     </div>
 
                     <!-- Same network: show single tag -->
-                    <div v-if="delegation.isActive" class="network-display">
+                    <div v-if="delegation.isActive || delegation.isSlashed" class="network-display">
                       <NetworkTag :text="getNetworkName(delegation.network)" />
                     </div>
 
@@ -502,10 +526,10 @@ onMounted(() => {
                   @change="onPageChange"
                 />
               </div>
-            </a-card>
-          </a-col>
-        </a-row>
-      </a-spin>
+            </a-spin>
+          </a-card>
+        </a-col>
+      </a-row>
     </template>
 
     <!-- Staking Modals (shared) -->
@@ -702,6 +726,10 @@ onMounted(() => {
   background rgba(255, 77, 79, 0.04)
   border-bottom-color rgba(255, 77, 79, 0.1)
 
+.network-status-row.delegation-slashed
+  background rgba(0, 0, 0, 0.04)
+  border-bottom-color rgba(0, 0, 0, 0.1)
+
 .status-icons
   display flex
   align-items center
@@ -717,6 +745,12 @@ onMounted(() => {
   color #52c41a
 
 .status-indicator.inactive
+  color #ff4d4f
+
+.slashed-status-icon
+  display flex
+  align-items center
+  font-size 16px
   color #ff4d4f
 
 .network-display

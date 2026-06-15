@@ -223,8 +223,8 @@ onMounted(async () => {
 
 <template>
   <div class="node-details-container">
-    <a-spin :spinning="loading" tip="Loading...">
-      <a-row :gutter="[16, 16]" v-if="node">
+    <template v-if="node">
+      <a-row :gutter="[16, 16]">
         <!-- Left Card: Node Basic Info -->
         <a-col :xs="24" :lg="8">
           <a-card class="info-card" :bordered="false" style="opacity: 0.9">
@@ -399,7 +399,7 @@ onMounted(async () => {
       </a-row>
 
       <!-- Node Task Fee Chart -->
-      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="24">
           <a-card class="chart-card" :bordered="false" style="opacity: 0.9">
             <template #title>
@@ -415,7 +415,7 @@ onMounted(async () => {
         </a-col>
       </a-row>
 
-      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :span="24">
           <a-card class="chart-card" :bordered="false" style="opacity: 0.9">
             <template #title>
@@ -427,7 +427,7 @@ onMounted(async () => {
       </a-row>
 
       <!-- Node Charts Row 1 -->
-      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :xs="24" :lg="12">
           <a-card class="chart-card" title="Node Scores" :bordered="false" style="opacity: 0.9">
             <NodeScoresChart :address="nodeAddress" />
@@ -441,7 +441,7 @@ onMounted(async () => {
       </a-row>
 
       <!-- Node Charts Row 2 -->
-      <a-row :gutter="[16, 16]" style="margin-top: 16px" v-if="node">
+      <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :xs="24" :lg="8">
           <a-card class="chart-card" title="Delegators" :bordered="false" style="opacity: 0.9">
             <NodeDelegatorsChart :address="nodeAddress" />
@@ -493,10 +493,15 @@ onMounted(async () => {
         </a-col>
       </a-row>
 
-      <div v-else-if="!loading" class="no-data">
-        <p>Node not found or failed to load</p>
-      </div>
-    </a-spin>
+    </template>
+
+    <a-card v-else-if="loading" class="node-loading-card" :bordered="false" style="opacity: 0.9">
+      <a-spin :spinning="loading" tip="Loading..." />
+    </a-card>
+
+    <div v-else class="no-data">
+      <p>Node not found or failed to load</p>
+    </div>
   </div>
 </template>
 
@@ -506,6 +511,13 @@ onMounted(async () => {
   max-width: 1600px;
   margin: 0 auto;
   margin-top: 20px;
+}
+
+.node-loading-card :deep(.ant-card-body) {
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Info Card Styles */
