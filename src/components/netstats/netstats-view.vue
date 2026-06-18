@@ -149,7 +149,7 @@ const loadNetworkInfo = async () => {
 };
 
 const loadNodeList = async (page, pageSize) => {
-    const nodesData = await v2NetworkAPI.getAllNodesData((page - 1) * pageSize, pageSize);
+    const nodesData = await v2NetworkAPI.getAllNodesData(page, pageSize);
     if (Array.isArray(nodesData)) {
         nodeList.value = nodesData;
     } else {
