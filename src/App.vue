@@ -103,6 +103,7 @@ function promptReauth() {
 }
 
 async function connect() {
+  const shouldOpenRelayAccount = router.currentRoute.value.name === 'netstats'
   const result = await auth.authenticate()
   if (!result.success) {
     if (result.reason === 'no_provider') {
@@ -110,6 +111,8 @@ async function connect() {
     } else if (result.reason === 'auth_failed') {
       messageApi.error('Authentication failed or was rejected')
     }
+  } else if (shouldOpenRelayAccount) {
+    router.push({ name: 'relay-account' })
   }
   reauthModalVisible = false
   return result
