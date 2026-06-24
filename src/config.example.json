@@ -14,10 +14,10 @@
             },
             "blockExplorerUrls": [],
             "contracts": {
-                "credits": "0x2F44194dB165B773891556F8B27384fE87a9AeFd",
-                "beneficialAddress": "0x31609b6531399561c2B65b8673a17FE2575c1654",
-                "delegatedStaking": "0x91CaDAc285FaE7d652eEDC1863ed16D73288AB0D",
-                "nodeStaking": "0xF7b23E19bf1CD63fa640eD3c6bb51eedF07caadE"
+                "credits": "0xE474ecE312b79fDF833C76C0d8255fA688068e4a",
+                "beneficialAddress": "0x7c8861a639B712D486eFB2C944419F7531700db0",
+                "delegatedStaking": "0xAbCa3C0a800569c05e87E500306dFf9b8Ba21821",
+                "nodeStaking": "0x31609b6531399561c2B65b8673a17FE2575c1654"
             },
             "withdrawal_fee": 10,
             "withdrawal_min": 1000,
@@ -40,8 +40,8 @@
             },
             "blockExplorerUrls": [],
             "contracts": {
-                "beneficialAddress": "0x19d8A7584830fbbB163E25e5691dc84c58467C2f",
-                "tokenAddress": "0x0cba9e7585f91A758fa399B1A1dB148ADfE8cfd5"
+                "beneficialAddress": "0x74Df778FF9705502a94ddd5aCE64a66689953e0C",
+                "tokenAddress": "0x9557DD9E241bc9636732623B672B4090AF519396"
             },
             "token_type": "erc20",
             "withdrawal_fee": 50,
