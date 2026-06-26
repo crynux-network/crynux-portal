@@ -146,7 +146,7 @@ onUnmounted(() => {
                 <div class="info-title">
                   <a-tooltip placement="left">
                     <template #title>{{ statusText(item.status) }}</template>
-                    <div class="status-icon">
+                    <div class="status-icon" :class="normalizeStatus(item.status)">
                       <play-circle-outlined v-if="normalizeStatus(item.status) === 'running'" />
                       <pause-circle-outlined v-else-if="normalizeStatus(item.status) === 'paused'" />
                       <minus-circle-outlined v-else />
@@ -338,6 +338,9 @@ onUnmounted(() => {
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 8px;
   background: #fafafa;
+}
+.status-icon.running {
+  color: #1890ff;
 }
 .name-row {
   display: flex;

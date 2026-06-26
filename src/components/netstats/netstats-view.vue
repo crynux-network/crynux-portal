@@ -174,7 +174,7 @@ const nodeListColumns = [
         key: 'v_ram',
     },
     {
-        title: 'Stake',
+        title: 'Operator Stake',
         key: 'staking'
     }
 ];

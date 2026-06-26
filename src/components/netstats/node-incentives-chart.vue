@@ -1,6 +1,8 @@
 <script setup>
 import v2IncentivesAPI from "@/api/v2/incentives";
 import {onMounted, reactive, ref, watch} from "vue";
+import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import { formatBigInt18Compact } from '@/services/token'
 
 
 
@@ -10,7 +12,7 @@ const periodSelected = ref(periodOptions[0]);
 
 const nodeList = ref([]);
 
-const formatCnxValue = (value) => Number(value).toFixed(2);
+const formatCnxValue = (value) => Number(value).toFixed(4);
 
 const columns = [
     {
@@ -54,18 +56,6 @@ const columns = [
         key: 'incentive'
     }
 ];
-
-const toEtherValue = (bigNum) => {
-    if (!bigNum || bigNum === "0") return 0
-
-    const bn = BigInt(bigNum)
-
-    const decimals = (bn / BigInt(1e18)).toString()
-    let fractions = ((bn / BigInt(1e16)) % 100n).toString()
-    if (fractions.length === 1) fractions += '0'
-
-    return decimals + '.' + fractions
-}
 
 watch([periodSelected], async () => {
     await fetchData()
@@ -113,6 +103,19 @@ const fetchData = async () => {
         :scroll="{ x: 800 }"
         size="small"
     >
+        <template #headerCell="{ column }">
+            <template v-if="column.key === 'staking'">
+                <span class="stake-title">
+                    Stake
+                    <a-tooltip title="Stake is the sum of Delegated Stake, Operator Stake, and Locked Emission.">
+                        <question-circle-outlined class="stake-title-icon" />
+                    </a-tooltip>
+                </span>
+            </template>
+            <template v-else>
+                {{ column.title }}
+            </template>
+        </template>
         <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'node_address'">
                     {{ record.node_address.substring(0, 5) }}...{{ record.node_address.substring(record.node_address.length - 5, record.node_address.length) }}
@@ -131,7 +134,7 @@ const fetchData = async () => {
                 </div>
             </template>
             <template v-else-if="column.key === 'staking'">
-                CNX {{ toEtherValue(record.staking) }}
+                CNX {{ formatBigInt18Compact(record.staking) }}
             </template>
             <template v-else-if="column.key === 'staking_score'">
                 {{ (record.staking_score * 100).toFixed(2) }}%
@@ -147,4 +150,14 @@ const fetchData = async () => {
 </template>
 
 <style scoped>
+.stake-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stake-title-icon {
+    color: rgba(0, 0, 0, 0.45);
+    cursor: help;
+}
 </style>
