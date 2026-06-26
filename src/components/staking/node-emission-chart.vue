@@ -117,7 +117,7 @@ const fetchData = async () => {
       labels: timestamps.map(ts => moment.unix(ts).format('MMM DD')),
       datasets: [
         {
-          label: 'Node emission',
+          label: 'Operator emission',
           backgroundColor: 'rgba(250, 140, 22, 0.25)',
           borderColor: 'rgba(250, 140, 22, 1)',
           data: emissions.map(formatBigIntValue),

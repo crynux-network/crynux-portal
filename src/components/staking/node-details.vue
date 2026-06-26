@@ -231,7 +231,7 @@ onMounted(async () => {
             <div class="node-header">
               <div class="status-badge">
                 <a-tooltip :title="statusText(node.status)">
-                  <div class="status-icon">
+                  <div class="status-icon" :class="normalizeStatus(node.status)">
                     <play-circle-outlined v-if="normalizeStatus(node.status) === 'running'" />
                     <pause-circle-outlined v-else-if="normalizeStatus(node.status) === 'paused'" />
                     <minus-circle-outlined v-else />
@@ -336,22 +336,28 @@ onMounted(async () => {
                 <!-- Staking Stats -->
                 <div class="metrics-section">
                   <a-row :gutter="[16, 16]">
-                    <a-col :xs="8">
+                    <a-col :xs="6">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(totalStaking) }}</div>
                         <div class="metric-label">Total Stake</div>
                       </div>
                     </a-col>
-                    <a-col :xs="8">
+                    <a-col :xs="6">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(node.operator_staking) }}</div>
                         <div class="metric-label">Operator Stake</div>
                       </div>
                     </a-col>
-                    <a-col :xs="8">
+                    <a-col :xs="6">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(node.delegator_staking) }}</div>
                         <div class="metric-label">Delegator Stake</div>
+                      </div>
+                    </a-col>
+                    <a-col :xs="6">
+                      <div class="metric-box">
+                        <div class="metric-value">{{ formatBigInt18Compact(node.locked_emission) }}</div>
+                        <div class="metric-label">Locked Emission</div>
                       </div>
                     </a-col>
                   </a-row>
@@ -419,7 +425,12 @@ onMounted(async () => {
         <a-col :span="24">
           <a-card class="chart-card" :bordered="false" style="opacity: 0.9">
             <template #title>
-              Node Emission
+              <span class="card-title-with-tooltip">
+                Node Emission
+                <a-tooltip title="This chart only includes emission rewards earned by the node operator. Delegator emission rewards are not included.">
+                  <question-circle-outlined class="reward-info-icon" />
+                </a-tooltip>
+              </span>
             </template>
             <NodeEmissionChart :address="nodeAddress" />
           </a-card>
@@ -555,6 +566,10 @@ onMounted(async () => {
   color: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(0, 0, 0, 0.06);
   background: #fafafa;
+}
+
+.status-icon.running {
+  color: #1890ff;
 }
 
 .node-title-section {
