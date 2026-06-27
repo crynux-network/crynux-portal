@@ -1,21 +1,109 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { List as AList, Row as ARow, Col as ACol, Tag as ATag, Card as ACard, Tooltip as ATooltip, message } from 'ant-design-vue'
-import { PlayCircleOutlined, PauseCircleOutlined, MinusCircleOutlined, FunnelPlotOutlined, ThunderboltOutlined, DollarOutlined } from '@ant-design/icons-vue'
+import { PlayCircleOutlined, PauseCircleOutlined, MinusCircleOutlined, FunnelPlotOutlined, ThunderboltOutlined, DollarOutlined, CheckCircleOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
 import { formatBigInt18, formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 
+const router = useRouter()
 const nodes = ref([])
 const loading = ref(false)
+const filterOptionsLoading = ref(false)
 const nodesTotal = ref(0)
 const nodesPage = ref(1)
 const nodesPageSize = 30
+const filterOptions = ref({
+  statuses: [],
+  gpu_vrams: [],
+  gpu_names: [],
+  versions: []
+})
+const selectedStatuses = ref([])
+const selectedGPUVrams = ref([])
+const selectedGPUNames = ref([])
+const selectedVersions = ref([])
+const gpuVramSearchText = ref('')
+const gpuVramDropdownOpen = ref(false)
+const gpuNameSearchText = ref('')
+const gpuNameDropdownOpen = ref(false)
+const sortBy = ref('operator_emission_4w')
+
+const sortOptions = [
+  { value: 'operator_emission_4w', label: 'Operator Emission' },
+  { value: 'operator_staking', label: 'Operator Staking' },
+  { value: 'delegator_staking', label: 'Delegator Staking' },
+  { value: 'total_staking', label: 'Total Staking' },
+  { value: 'delegators_num', label: 'Delegators' },
+  { value: 'prob_weight', label: 'Prob Weight' },
+  { value: 'qos', label: 'QoS Score' },
+  { value: 'gpu_vram', label: 'GPU VRAM' }
+]
+
+const filterSections = computed(() => [
+  {
+    key: 'status',
+    title: 'Status',
+    icon: PlayCircleOutlined,
+    selected: selectedStatuses,
+    options: filterOptions.value.statuses.map((status) => ({
+      value: status,
+      label: statusFilterText(status)
+    }))
+  },
+  {
+    key: 'version',
+    title: 'Version',
+    icon: CheckCircleOutlined,
+    selected: selectedVersions,
+    options: filterOptions.value.versions.map((version) => ({
+      value: version,
+      label: version
+    }))
+  }
+])
+
+const gpuVramSearchResults = computed(() => {
+  const keyword = gpuVramSearchText.value.trim().toLowerCase()
+  return filterOptions.value.gpu_vrams
+    .filter((vram) => {
+      if (selectedGPUVrams.value.includes(vram)) return false
+      if (!keyword) return true
+      const rawVram = String(vram || '').toLowerCase()
+      const displayVram = formatVram(vram).toLowerCase()
+      return rawVram.includes(keyword) || displayVram.includes(keyword)
+    })
+    .slice(0, 10)
+})
+
+const gpuNameSearchResults = computed(() => {
+  const keyword = gpuNameSearchText.value.trim().toLowerCase()
+  return filterOptions.value.gpu_names
+    .filter((name) => {
+      if (selectedGPUNames.value.includes(name)) return false
+      if (!keyword) return true
+      const rawName = String(name || '').toLowerCase()
+      const displayName = formatGpuName(name).toLowerCase()
+      return rawName.includes(keyword) || displayName.includes(keyword)
+    })
+    .slice(0, 10)
+})
 
 const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1920)
+const isFiltersStacked = computed(() => windowWidth.value < 992)
+const filtersCollapsed = ref(isFiltersStacked.value)
 const handleResize = () => {
-  windowWidth.value = window.innerWidth
+  const wasStacked = isFiltersStacked.value
+  const nextWidth = window.innerWidth
+  windowWidth.value = nextWidth
+
+  if (nextWidth >= 992) {
+    filtersCollapsed.value = false
+  } else if (!wasStacked) {
+    filtersCollapsed.value = true
+  }
 }
 const scoreSize = computed(() => {
   const w = windowWidth.value
@@ -50,6 +138,15 @@ const statusText = (status) => {
   if (s === 'paused') return 'Paused'
   if (s === 'stopped') return 'Stopped'
   return 'Running'
+}
+
+const statusFilterText = (status) => {
+  if (status === 'stopped') return 'Stopped'
+  return 'Running'
+}
+
+const formatGpuName = (name) => {
+  return String(name || '').split('+')[0]
 }
 
 
@@ -87,7 +184,15 @@ const percentFromRatio = (ratio) => {
 const fetchData = async (page = 1) => {
   loading.value = true
   try {
-    const delegated = await v2DelegatedStakingAPI.getDelegatedNodes(page, nodesPageSize)
+    const delegated = await v2DelegatedStakingAPI.getDelegatedNodes({
+      page,
+      pageSize: nodesPageSize,
+      status: selectedStatuses.value,
+      gpuVram: selectedGPUVrams.value,
+      gpuName: selectedGPUNames.value,
+      version: selectedVersions.value,
+      sortBy: sortBy.value
+    })
     nodes.value = (delegated && delegated.nodes) ? delegated.nodes : []
     nodesTotal.value = delegated?.total || 0
     nodesPage.value = page
@@ -99,11 +204,145 @@ const fetchData = async (page = 1) => {
   }
 }
 
+const fetchFilterOptions = async () => {
+  filterOptionsLoading.value = true
+  try {
+    const options = await v2DelegatedStakingAPI.getDelegatedNodeFilterOptions()
+    filterOptions.value = {
+      statuses: options?.statuses || [],
+      gpu_vrams: options?.gpu_vrams || [],
+      gpu_names: options?.gpu_names || [],
+      versions: options?.versions || []
+    }
+  } catch (e) {
+    message.error('Failed to load filter options: ' + e.message)
+    console.error(e)
+  } finally {
+    filterOptionsLoading.value = false
+  }
+}
+
 const onNodesPageChange = (page) => {
   fetchData(page)
 }
 
+const onFilterChange = () => {
+  fetchData(1)
+}
+
+const isAllFilterSelected = (selectedValues) => selectedValues.length === 0
+
+const isFilterOptionSelected = (selectedValues, value) => selectedValues.includes(value)
+
+const clearFilterSelection = (selected) => {
+  if (selected.value.length === 0) return
+  selected.value = []
+  onFilterChange()
+}
+
+const toggleFilterOption = (selected, value, checked) => {
+  if (checked) {
+    if (!selected.value.includes(value)) {
+      selected.value = [...selected.value, value]
+      onFilterChange()
+    }
+    return
+  }
+
+  selected.value = selected.value.filter((item) => item !== value)
+  onFilterChange()
+}
+
+const clearGpuVramFilter = () => {
+  if (selectedGPUVrams.value.length === 0 && gpuVramSearchText.value === '') return
+  selectedGPUVrams.value = []
+  gpuVramSearchText.value = ''
+  gpuVramDropdownOpen.value = false
+  onFilterChange()
+}
+
+const openGpuVramDropdown = () => {
+  gpuVramDropdownOpen.value = true
+}
+
+const onGpuVramInputChange = (event) => {
+  gpuVramSearchText.value = event?.target?.value || ''
+  gpuVramDropdownOpen.value = true
+}
+
+const closeGpuVramDropdown = () => {
+  window.setTimeout(() => {
+    gpuVramDropdownOpen.value = false
+  }, 120)
+}
+
+const selectGpuVram = (vram) => {
+  if (!selectedGPUVrams.value.includes(vram)) {
+    selectedGPUVrams.value = [...selectedGPUVrams.value, vram]
+    onFilterChange()
+  }
+  gpuVramSearchText.value = ''
+  gpuVramDropdownOpen.value = false
+}
+
+const removeGpuVram = (vram) => {
+  selectedGPUVrams.value = selectedGPUVrams.value.filter((item) => item !== vram)
+  onFilterChange()
+}
+
+const clearGpuNameFilter = () => {
+  if (selectedGPUNames.value.length === 0 && gpuNameSearchText.value === '') return
+  selectedGPUNames.value = []
+  gpuNameSearchText.value = ''
+  gpuNameDropdownOpen.value = false
+  onFilterChange()
+}
+
+const openGpuNameDropdown = () => {
+  gpuNameDropdownOpen.value = true
+}
+
+const onGpuNameInputChange = (event) => {
+  gpuNameSearchText.value = event?.target?.value || ''
+  gpuNameDropdownOpen.value = true
+}
+
+const closeGpuNameDropdown = () => {
+  window.setTimeout(() => {
+    gpuNameDropdownOpen.value = false
+  }, 120)
+}
+
+const selectGpuName = (name) => {
+  if (!selectedGPUNames.value.includes(name)) {
+    selectedGPUNames.value = [...selectedGPUNames.value, name]
+    onFilterChange()
+  }
+  gpuNameSearchText.value = ''
+  gpuNameDropdownOpen.value = false
+}
+
+const removeGpuName = (name) => {
+  selectedGPUNames.value = selectedGPUNames.value.filter((item) => item !== name)
+  onFilterChange()
+}
+
+const onSortChange = () => {
+  fetchData(1)
+}
+
+const toggleFiltersCollapsed = () => {
+  if (!isFiltersStacked.value) return
+  filtersCollapsed.value = !filtersCollapsed.value
+}
+
+const openNodeDetails = (address) => {
+  const href = router.resolve({ name: 'node-details', params: { address } }).href
+  window.open(href, '_blank', 'noopener,noreferrer')
+}
+
 onMounted(() => {
+  fetchFilterOptions()
   fetchData()
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize)
@@ -118,29 +357,192 @@ onUnmounted(() => {
 
 <template>
   <div class="stakeable-nodes-container">
-    <a-card :title="'Stakeable Nodes'" :bordered="false" style="opacity: 0.9">
-      <a-list
-        :data-source="nodes"
-        :loading="loading"
-        :pagination="{
-          current: nodesPage,
-          pageSize: nodesPageSize,
-          total: nodesTotal,
-          onChange: onNodesPageChange
-        }"
-        row-key="address"
-        :split="false"
-        :grid="{ gutter: 8, xs: 1, sm: 1, md: 2, lg: 3, xl: 3, xxl: 3 }"
-        style="width: 100%;"
-      >
-        <template #renderItem="{ item }">
-          <a-list-item class="node-item">
+    <a-row :gutter="[16, 16]" align="top">
+      <a-col :xs="24" :lg="6" :xl="5">
+        <a-card
+          :class="['filters-card', { 'filters-card-collapsed': isFiltersStacked && filtersCollapsed }]"
+          :bordered="false"
+          style="opacity: 0.9"
+          :loading="filterOptionsLoading"
+        >
+          <template #title>
+            <button
+              type="button"
+              class="filters-card-title"
+              :disabled="!isFiltersStacked"
+              @click="toggleFiltersCollapsed"
+            >
+              <span>Filters</span>
+              <span
+                v-if="isFiltersStacked"
+                class="filters-collapse-icon"
+                :class="{ expanded: !filtersCollapsed }"
+              />
+            </button>
+          </template>
+          <div v-show="!isFiltersStacked || !filtersCollapsed">
+            <template v-for="section in filterSections" :key="section.key">
+              <div class="filter-section">
+                <div class="filter-section-title">
+                  <component :is="section.icon" />
+                  <span>{{ section.title }}</span>
+                </div>
+                <div class="filter-option-list">
+                  <a-checkbox
+                    class="filter-option"
+                    :checked="isAllFilterSelected(section.selected.value)"
+                    @change="() => clearFilterSelection(section.selected)"
+                  >
+                    All
+                  </a-checkbox>
+                  <a-checkbox
+                    v-for="option in section.options"
+                    :key="option.value"
+                    class="filter-option"
+                    :checked="isFilterOptionSelected(section.selected.value, option.value)"
+                    @change="event => toggleFilterOption(section.selected, option.value, event.target.checked)"
+                  >
+                    {{ option.label }}
+                  </a-checkbox>
+                </div>
+              </div>
+              <div v-if="section.key === 'status'" class="filter-section">
+                <div class="filter-section-title">
+                  <thunderbolt-outlined />
+                  <span>GPU VRAM</span>
+                </div>
+                <div class="searchable-filter">
+                  <a-checkbox
+                    class="filter-option"
+                    :checked="isAllFilterSelected(selectedGPUVrams)"
+                    @change="clearGpuVramFilter"
+                  >
+                    All
+                  </a-checkbox>
+                  <div v-if="selectedGPUVrams.length > 0" class="selected-filter-card-list">
+                    <a-checkbox
+                      v-for="vram in selectedGPUVrams"
+                      :key="vram"
+                      class="filter-value-card selected"
+                      :checked="true"
+                      @change="() => removeGpuVram(vram)"
+                    >
+                      {{ formatVram(vram) }}
+                    </a-checkbox>
+                  </div>
+                  <div class="filter-search-box">
+                    <a-input
+                      v-model:value="gpuVramSearchText"
+                      allow-clear
+                      placeholder="Search GPU VRAM"
+                      @focus="openGpuVramDropdown"
+                      @change="onGpuVramInputChange"
+                      @blur="closeGpuVramDropdown"
+                    />
+                    <div v-if="gpuVramDropdownOpen" class="filter-dropdown">
+                      <button
+                        v-for="vram in gpuVramSearchResults"
+                        :key="vram"
+                        type="button"
+                        class="filter-value-card filter-result-card"
+                        @mousedown.prevent="selectGpuVram(vram)"
+                      >
+                        {{ formatVram(vram) }}
+                      </button>
+                      <div v-if="gpuVramSearchResults.length === 0" class="filter-empty">
+                        No GPU VRAM found
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="section.key === 'status'" class="filter-section">
+                <div class="filter-section-title">
+                  <search-outlined />
+                  <span>GPU Name</span>
+                </div>
+                <div class="searchable-filter">
+                  <a-checkbox
+                    class="filter-option"
+                    :checked="isAllFilterSelected(selectedGPUNames)"
+                    @change="clearGpuNameFilter"
+                  >
+                    All
+                  </a-checkbox>
+                  <div v-if="selectedGPUNames.length > 0" class="selected-filter-card-list">
+                    <a-checkbox
+                      v-for="name in selectedGPUNames"
+                      :key="name"
+                      class="filter-value-card selected"
+                      :checked="true"
+                      @change="() => removeGpuName(name)"
+                    >
+                      {{ formatGpuName(name) }}
+                    </a-checkbox>
+                  </div>
+                  <div class="filter-search-box">
+                    <a-input
+                      v-model:value="gpuNameSearchText"
+                      allow-clear
+                      placeholder="Search GPU name"
+                      @focus="openGpuNameDropdown"
+                      @change="onGpuNameInputChange"
+                      @blur="closeGpuNameDropdown"
+                    />
+                    <div v-if="gpuNameDropdownOpen" class="filter-dropdown">
+                      <button
+                        v-for="name in gpuNameSearchResults"
+                        :key="name"
+                        type="button"
+                        class="filter-value-card filter-result-card"
+                        @mousedown.prevent="selectGpuName(name)"
+                      >
+                        {{ formatGpuName(name) }}
+                      </button>
+                      <div v-if="gpuNameSearchResults.length === 0" class="filter-empty">
+                        No GPU names found
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :lg="18" :xl="19">
+        <a-card :title="'Stakeable Nodes'" :bordered="false" style="opacity: 0.9">
+          <div class="list-toolbar">
+            <span class="sort-label">Sort by</span>
+            <a-select v-model:value="sortBy" style="width: 240px" @change="onSortChange">
+              <a-select-option v-for="option in sortOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </a-select-option>
+            </a-select>
+          </div>
+          <a-divider />
+          <a-list
+            :data-source="nodes"
+            :loading="loading"
+            :pagination="{
+              current: nodesPage,
+              pageSize: nodesPageSize,
+              total: nodesTotal,
+              onChange: onNodesPageChange
+            }"
+            row-key="address"
+            :split="false"
+            :grid="{ gutter: 8, xs: 1, sm: 1, md: 2, lg: 3, xl: 3, xxl: 3 }"
+            style="width: 100%;"
+          >
+            <template #renderItem="{ item }">
+              <a-list-item class="node-item">
             <div
               class="node-item-box"
               role="button"
               tabindex="0"
-              @click="$router.push({ name: 'node-details', params: { address: item.address } })"
-              @keydown.enter="$router.push({ name: 'node-details', params: { address: item.address } })"
+              @click="openNodeDetails(item.address)"
+              @keydown.enter="openNodeDetails(item.address)"
             >
               <div class="basic-info">
                 <div class="info-title">
@@ -266,10 +668,12 @@ onUnmounted(() => {
                 </a-col>
               </a-row>
             </div>
-          </a-list-item>
-        </template>
-      </a-list>
-    </a-card>
+              </a-list-item>
+            </template>
+          </a-list>
+        </a-card>
+      </a-col>
+    </a-row>
   </div>
   </template>
 
@@ -277,6 +681,146 @@ onUnmounted(() => {
 .stakeable-nodes-container {
   padding: 0;
   margin-top: 20px;
+}
+.filters-card :deep(.ant-card-body) {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.filters-card-collapsed :deep(.ant-card-head) {
+  border-bottom: 0;
+}
+.filters-card-collapsed :deep(.ant-card-body) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.filters-card-title {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+.filters-card-title:disabled {
+  cursor: default;
+}
+.filters-collapse-icon {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid rgba(0, 0, 0, 0.65);
+  transition: transform 0.2s ease;
+}
+.filters-collapse-icon.expanded {
+  transform: rotate(180deg);
+}
+.filter-section {
+  margin-bottom: 18px;
+}
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+.filter-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 600;
+}
+.filter-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 16px;
+}
+.filter-option {
+  max-width: 100%;
+  margin-inline-start: 0 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filter-option :deep(.ant-checkbox + span) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.searchable-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 16px;
+}
+.selected-filter-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.filter-search-box {
+  position: relative;
+}
+.filter-dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+.filter-value-card {
+  width: 100%;
+  min-height: 36px;
+  margin-inline-start: 0 !important;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  background: #ffffff;
+  color: rgba(0, 0, 0, 0.85);
+  text-align: left;
+}
+.filter-value-card.selected {
+  background: rgba(24, 144, 255, 0.06);
+  border-color: rgba(24, 144, 255, 0.35);
+}
+.filter-result-card {
+  display: block;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.filter-result-card:last-child {
+  margin-bottom: 0;
+}
+.filter-result-card:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+.filter-empty {
+  padding: 8px 10px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.sort-label {
+  color: rgba(0, 0, 0, 0.65);
 }
 /* Ensure list grid spacing is truly reduced and left edge aligns with card title */
 .stakeable-nodes-container :deep(.ant-list .ant-row) {
