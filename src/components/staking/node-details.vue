@@ -25,7 +25,7 @@ import {
   QuestionCircleOutlined
 } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
-import { formatBigInt18, formatBigInt18Compact } from '@/services/token'
+import { formatBigInt18, formatBigInt18Compact, toBigInt } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
@@ -115,9 +115,11 @@ const osTag = computed(() => {
 
 const totalStaking = computed(() => {
   if (!node.value) return 0n
-  const op = typeof node.value.operator_staking === 'bigint' ? node.value.operator_staking : BigInt(node.value.operator_staking || 0)
-  const del = typeof node.value.delegator_staking === 'bigint' ? node.value.delegator_staking : BigInt(node.value.delegator_staking || 0)
-  return op + del
+  return (
+    toBigInt(node.value.operator_staking) +
+    toBigInt(node.value.delegator_staking) +
+    toBigInt(node.value.locked_emission)
+  )
 })
 
 const fetchData = async () => {
@@ -196,7 +198,7 @@ const formatStakingAmount = (value) => {
 }
 
 const formatTaskFeeAmount = (value) => {
-  return formatBigInt18(value, 2)
+  return formatBigInt18(value, 4)
 }
 
 const formatDate = (timestamp) => {

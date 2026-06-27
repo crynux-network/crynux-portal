@@ -85,7 +85,7 @@ const options = {
             stacked: true,
             beginAtZero: true,
             ticks: {
-                callback: (value) => formatCompact(value)
+                callback: (value) => Number(value || 0).toFixed(4)
             },
             title: {
                 display: true,

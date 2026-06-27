@@ -90,22 +90,19 @@ const fetchData = async () => {
                     label: 'Prob Weight',
                     backgroundColor: 'rgba(24, 144, 255, 0.5)',
                     borderColor: 'rgba(24, 144, 255, 1)',
-                    data: resp.prob_weights.map(v => v * 2 * 100),
-                    tension: 0.1
+                    data: resp.prob_weights.map(v => v * 2 * 100)
                 },
                 {
                     label: 'QoS Score',
                     backgroundColor: 'rgba(82, 196, 26, 0.5)',
                     borderColor: 'rgba(82, 196, 26, 1)',
-                    data: resp.qos_scores.map(v => v * 100),
-                    tension: 0.1
+                    data: resp.qos_scores.map(v => v * 100)
                 },
                 {
                     label: 'Staking Score',
                     backgroundColor: 'rgba(250, 173, 20, 0.5)',
                     borderColor: 'rgba(250, 173, 20, 1)',
-                    data: resp.staking_scores.map(v => v * 100),
-                    tension: 0.1
+                    data: resp.staking_scores.map(v => v * 100)
                 }
             ]
         };

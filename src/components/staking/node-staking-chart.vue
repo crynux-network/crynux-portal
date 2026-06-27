@@ -84,6 +84,9 @@ const options = {
         y: {
             stacked: true,
             beginAtZero: true,
+            ticks: {
+                callback: (value) => formatCompact(value)
+            },
             title: {
                 display: true,
                 text: 'Stake (CNX)'
