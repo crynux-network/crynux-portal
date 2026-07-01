@@ -49,18 +49,8 @@ const data = ref({
     datasets: []
 });
 
-const formatCompact = (value) => {
-    const num = Math.abs(value);
-    const toOneDecimal = (val, unit) => {
-        const scaled = Math.floor(val * 10 / unit);
-        const whole = Math.floor(scaled / 10);
-        const frac = scaled % 10;
-        return frac === 0 ? `${whole}` : `${whole}.${frac}`;
-    };
-    if (num >= 1e9) return toOneDecimal(num, 1e9) + 'B';
-    if (num >= 1e6) return toOneDecimal(num, 1e6) + 'M';
-    if (num >= 1e3) return toOneDecimal(num, 1e3) + 'K';
-    return Math.floor(num).toString();
+const formatCnxValue = (value) => {
+    return Number(value || 0).toFixed(4);
 };
 
 const formatBigIntValue = (value) => {
@@ -73,7 +63,7 @@ const formatBigIntValue = (value) => {
     const base = 10n ** 18n;
     const integer = bn / base;
     const remainder = bn % base;
-    const fracStr = remainder.toString().padStart(18, '0').slice(0, 2);
+    const fracStr = remainder.toString().padStart(18, '0').slice(0, 4);
     return parseFloat(integer.toString() + '.' + fracStr);
 };
 
@@ -90,14 +80,14 @@ const options = {
             itemSort: (a, b) => b.datasetIndex - a.datasetIndex,
             callbacks: {
                 label: (context) => {
-                    return context.dataset.label + ': CNX ' + formatCompact(context.parsed.y);
+                    return context.dataset.label + ': CNX ' + formatCnxValue(context.parsed.y);
                 },
                 footer: (tooltipItems) => {
                     let sum = 0;
                     tooltipItems.forEach(item => {
                         sum += item.parsed.y;
                     });
-                    return 'Total: CNX ' + formatCompact(sum);
+                    return 'Total: CNX ' + formatCnxValue(sum);
                 }
             }
         }
