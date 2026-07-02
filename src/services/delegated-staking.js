@@ -10,6 +10,13 @@ import { toBigInt } from './token'
 import { useWalletStore } from '@/stores/wallet'
 import delegatedStakingAbi from '@/abi/delegated-staking.json'
 
+export class InvalidDelegatedStakingContractError extends Error {
+  constructor(networkKey, contractAddress, reason) {
+    super(`Invalid delegated staking contract for ${networkKey}: ${contractAddress}. ${reason}`)
+    this.name = 'InvalidDelegatedStakingContractError'
+  }
+}
+
 /**
  * Get the delegated staking contract instance for reading
  * @param {string} networkKey - The network key
@@ -21,6 +28,30 @@ function getReadContract(networkKey) {
   return new ethers.Contract(address, delegatedStakingAbi, provider)
 }
 
+async function validateDelegatedStakingContract(networkKey, provider) {
+  const address = getContractAddress(networkKey, 'delegatedStaking')
+  if (!address || !ethers.isAddress(address)) {
+    throw new InvalidDelegatedStakingContractError(networkKey, address || '<empty>', 'The configured address is not a valid address.')
+  }
+
+  const code = await provider.getCode(address)
+  if (code === '0x') {
+    throw new InvalidDelegatedStakingContractError(networkKey, address, 'No contract is deployed at this address.')
+  }
+
+  const contract = new ethers.Contract(address, delegatedStakingAbi, provider)
+  try {
+    await Promise.all([
+      contract.getMinStakeAmount.staticCall(),
+      contract.getDelegatorTotalStakeAmount.staticCall(ethers.ZeroAddress)
+    ])
+  } catch (e) {
+    throw new InvalidDelegatedStakingContractError(networkKey, address, 'The contract does not expose the expected delegated staking methods.')
+  }
+
+  return address
+}
+
 /**
  * Get the delegated staking contract instance for writing (with signer)
  * Ensures MetaMask is on the correct network before creating signer
@@ -30,7 +61,8 @@ function getReadContract(networkKey) {
 async function getWriteContract(networkKey) {
   const wallet = useWalletStore()
   await wallet.ensureNetworkOnWallet(networkKey)
-  const address = getContractAddress(networkKey, 'delegatedStaking')
+  const provider = createReadProvider(networkKey)
+  const address = await validateDelegatedStakingContract(networkKey, provider)
   const signer = await createBrowserSigner()
   return new ethers.Contract(address, delegatedStakingAbi, signer)
 }

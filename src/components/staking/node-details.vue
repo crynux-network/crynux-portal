@@ -201,6 +201,21 @@ const formatTaskFeeAmount = (value) => {
   return formatBigInt18(value, 4)
 }
 
+const formatWholeCnxAmount = (value) => {
+  const n = Number.isFinite(Number(value)) ? Number(value) : 0
+  const amount = Math.floor(Math.max(0, n))
+  const toOneDecimal = (val, unit) => {
+    const scaled = Math.floor((val * 10) / unit)
+    const whole = Math.floor(scaled / 10)
+    const frac = scaled % 10
+    return frac === 0 ? `${whole}` : `${whole}.${frac}`
+  }
+  if (amount >= 1_000_000_000) return `${toOneDecimal(amount, 1_000_000_000)}B`
+  if (amount >= 1_000_000) return `${toOneDecimal(amount, 1_000_000)}M`
+  if (amount >= 1_000) return `${toOneDecimal(amount, 1_000)}K`
+  return formatIntegerWithThousands(amount)
+}
+
 const formatDate = (timestamp) => {
   if (!timestamp) return '-'
   const date = new Date(timestamp * 1000)
@@ -365,18 +380,37 @@ onMounted(async () => {
                   </a-row>
                 </div>
 
-                <!-- Operator Task Fee (subtle display) -->
-                <div class="operator-rewards-section">
-                  <div class="operator-rewards-title">Operator Task Fee</div>
-                  <div class="operator-rewards-row">
-                    <div class="operator-reward-item">
-                      <span class="operator-reward-value">{{ formatTaskFeeAmount(node.today_operator_earnings) }}</span>
-                      <span class="operator-reward-label">Today</span>
+                <div class="rewards-summary-row">
+                  <div class="operator-rewards-section">
+                    <div class="operator-rewards-title">Delegator Task Fee</div>
+                    <div class="operator-rewards-row">
+                      <div class="operator-reward-item">
+                        <span class="operator-reward-value">
+                          {{ formatTaskFeeAmount(node.today_delegator_earnings) }}
+                        </span>
+                        <span class="operator-reward-label">Today</span>
+                      </div>
+                      <div class="operator-reward-divider"></div>
+                      <div class="operator-reward-item">
+                        <span class="operator-reward-value">
+                          {{ formatTaskFeeAmount(node.total_delegator_earnings) }}
+                        </span>
+                        <span class="operator-reward-label">Total</span>
+                      </div>
                     </div>
-                    <div class="operator-reward-divider"></div>
-                    <div class="operator-reward-item">
-                      <span class="operator-reward-value">{{ formatTaskFeeAmount(node.total_operator_earnings) }}</span>
-                      <span class="operator-reward-label">Total</span>
+                  </div>
+                  <div class="operator-rewards-section">
+                    <div class="operator-rewards-title">Operator Task Fee</div>
+                    <div class="operator-rewards-row">
+                      <div class="operator-reward-item">
+                        <span class="operator-reward-value">{{ formatTaskFeeAmount(node.today_operator_earnings) }}</span>
+                        <span class="operator-reward-label">Today</span>
+                      </div>
+                      <div class="operator-reward-divider"></div>
+                      <div class="operator-reward-item">
+                        <span class="operator-reward-value">{{ formatTaskFeeAmount(node.total_operator_earnings) }}</span>
+                        <span class="operator-reward-label">Total</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -391,13 +425,17 @@ onMounted(async () => {
                   </div>
 
                   <div class="reward-highlight-box">
-                    <div class="reward-highlight-value">{{ formatBigInt18Compact(node.today_delegator_earnings) }}</div>
-                    <div class="reward-highlight-label">Delegator Task Fee Today</div>
+                    <div class="reward-highlight-value">
+                      {{ formatWholeCnxAmount(node.estimated_upcoming_delegator_emission) }}
+                    </div>
+                    <div class="reward-highlight-label">Est. Next Delegators Emission</div>
                   </div>
 
                   <div class="reward-highlight-box total">
-                    <div class="reward-highlight-value">{{ formatBigInt18Compact(node.total_delegator_earnings) }}</div>
-                    <div class="reward-highlight-label">Delegator Task Fee Total</div>
+                    <div class="reward-highlight-value">
+                      {{ formatWholeCnxAmount(node.estimated_upcoming_operator_emission) }}
+                    </div>
+                    <div class="reward-highlight-label">Est. Next Operator Emission</div>
                   </div>
                 </div>
               </a-col>
@@ -803,10 +841,17 @@ onMounted(async () => {
 }
 
 /* Operator Rewards Section (subtle) */
+.rewards-summary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .operator-rewards-section {
   padding: 10px 14px;
   background: rgba(0, 0, 0, 0.02);
   border-radius: 8px;
+  min-width: 0;
 }
 
 .operator-rewards-title {
@@ -816,21 +861,26 @@ onMounted(async () => {
 }
 
 .operator-rewards-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
+  column-gap: 8px;
 }
 
 .operator-reward-item {
   display: flex;
+  justify-content: center;
   align-items: baseline;
   gap: 6px;
+  min-width: 0;
 }
 
 .operator-reward-value {
   font-size: 16px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .operator-reward-label {
@@ -1066,6 +1116,13 @@ onMounted(async () => {
   .delegator-num-box,
   .reward-highlight-box {
     padding: 16px 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .rewards-summary-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 

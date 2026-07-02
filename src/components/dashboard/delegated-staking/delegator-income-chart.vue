@@ -40,10 +40,10 @@ const formatCnxValue = (value) => {
   const num = Number(value || 0)
   const abs = Math.abs(num)
   const sign = num < 0 ? '-' : ''
-  if (abs >= 1e9) return sign + (abs / 1e9).toFixed(2) + 'B'
-  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2) + 'M'
-  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(2) + 'K'
-  return num.toFixed(2)
+  if (abs >= 1e9) return sign + (abs / 1e9).toFixed(4) + 'B'
+  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(4) + 'M'
+  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(4) + 'K'
+  return num.toFixed(4)
 }
 
 const formatBigIntValue = (value) => {
@@ -51,7 +51,7 @@ const formatBigIntValue = (value) => {
   const base = 10n ** 18n
   const integer = bn / base
   const remainder = bn % base
-  const fracStr = remainder.toString().padStart(18, '0').slice(0, 2)
+  const fracStr = remainder.toString().padStart(18, '0').slice(0, 4)
   return parseFloat(integer.toString() + '.' + fracStr)
 }
 
@@ -65,7 +65,7 @@ const options = {
     tooltip: {
       callbacks: {
         label: (context) => {
-          return 'Rewards: CNX ' + formatCnxValue(context.parsed.y)
+          return 'Task Fee: CNX ' + formatCnxValue(context.parsed.y)
         }
       }
     }
@@ -78,7 +78,7 @@ const options = {
       },
       title: {
         display: true,
-        text: 'Rewards (CNX)'
+        text: 'Task Fee (CNX)'
       }
     }
   }
@@ -96,7 +96,7 @@ const buildEmptyDatasets = () => {
     labels,
     datasets: [
       {
-        label: 'Rewards',
+        label: 'Task Fee',
         backgroundColor: 'rgba(24, 144, 255, 0.4)',
         borderColor: 'rgba(24, 144, 255, 1)',
         data: [...emptyValues],
@@ -127,7 +127,7 @@ const fetchData = async () => {
       labels,
       datasets: [
         {
-          label: 'Rewards',
+          label: 'Task Fee',
           backgroundColor: 'rgba(24, 144, 255, 0.4)',
           borderColor: 'rgba(24, 144, 255, 1)',
           data: values,

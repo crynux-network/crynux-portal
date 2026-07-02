@@ -30,7 +30,7 @@ const gpuVramDropdownOpen = ref(false)
 const gpuNameSearchText = ref('')
 const gpuNameDropdownOpen = ref(false)
 const expandedFilterKey = ref('status')
-const sortBy = ref('operator_emission_4w')
+const sortBy = ref('estimated_upcoming_delegator_emission')
 
 const sortOptions = [
   { value: 'operator_emission_4w', label: 'Operator Emission (4W)' },
@@ -145,12 +145,12 @@ const handleResize = () => {
 }
 const scoreSize = computed(() => {
   const w = windowWidth.value
-  if (w >= 1600) return 88
-  if (w >= 1200) return 80
-  if (w >= 992) return 72
-  if (w >= 768) return 64
-  if (w >= 576) return 56
-  return 48
+  if (w >= 1600) return 60
+  if (w >= 1200) return 56
+  if (w >= 992) return 52
+  if (w >= 768) return 48
+  if (w >= 576) return 44
+  return 40
 })
 
 function getNetworkName(networkKey) {
@@ -859,8 +859,8 @@ onUnmounted(() => {
   margin-bottom: 10px;
   border: 0;
   border-radius: 10px;
-  background: rgba(24, 144, 255, 0.08);
-  color: #1677ff;
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.85);
   font: inherit;
   font-weight: 600;
   text-align: left;
@@ -873,7 +873,7 @@ onUnmounted(() => {
   gap: 8px;
 }
 .filter-section-title :deep(.anticon) {
-  color: #1677ff;
+  color: rgba(0, 0, 0, 0.65);
   font-size: 18px;
   flex: 0 0 auto;
 }
@@ -882,7 +882,7 @@ onUnmounted(() => {
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 5px solid #1677ff;
+  border-top: 5px solid rgba(0, 0, 0, 0.65);
   transition: transform 0.2s ease;
   flex: 0 0 auto;
 }
@@ -946,8 +946,8 @@ onUnmounted(() => {
   text-align: left;
 }
 .filter-value-card.selected {
-  background: rgba(24, 144, 255, 0.06);
-  border-color: rgba(24, 144, 255, 0.35);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.18);
 }
 .filter-result-card {
   display: block;
@@ -958,8 +958,8 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 .filter-result-card:hover {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: rgba(0, 0, 0, 0.35);
+  color: rgba(0, 0, 0, 0.85);
 }
 .filter-empty {
   padding: 8px 10px;
