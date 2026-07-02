@@ -44,6 +44,7 @@ const stakingAmount = ref(0n)
 const stakedAt = ref(null)
 const todayEarnings = ref(0n)
 const totalEarnings = ref(0n)
+const estimatedUpcomingEmission = ref(0n)
 const modalsRef = ref(null)
 const otherNetworkStakes = ref([])
 const delegationStatus = ref('')
@@ -60,6 +61,22 @@ const formattedStakedAt = computed(() => {
 })
 
 const formattedStakingAmount = computed(() => formatBigInt18Compact(stakingAmount.value))
+const formattedEstimatedUpcomingEmission = computed(() => formatWholeCnxAmount(estimatedUpcomingEmission.value))
+
+const formatWholeCnxAmount = (value) => {
+  const n = Number.isFinite(Number(value)) ? Number(value) : 0
+  const amount = Math.floor(Math.max(0, n))
+  const toOneDecimal = (val, unit) => {
+    const scaled = Math.floor((val * 10) / unit)
+    const whole = Math.floor(scaled / 10)
+    const frac = scaled % 10
+    return frac === 0 ? `${whole}` : `${whole}.${frac}`
+  }
+  if (amount >= 1_000_000_000) return `${toOneDecimal(amount, 1_000_000_000)}B`
+  if (amount >= 1_000_000) return `${toOneDecimal(amount, 1_000_000)}M`
+  if (amount >= 1_000) return `${toOneDecimal(amount, 1_000)}K`
+  return amount.toLocaleString('en-US')
+}
 
 const formatTaskFeeAmount = (value) => {
   return formatBigInt18(value, 2)
@@ -85,6 +102,7 @@ async function fetchDelegation() {
     stakedAt.value = null
     todayEarnings.value = 0n
     totalEarnings.value = 0n
+    estimatedUpcomingEmission.value = 0n
     delegationStatus.value = ''
     return
   }
@@ -95,6 +113,7 @@ async function fetchDelegation() {
     stakedAt.value = resp.staked_at || null
     todayEarnings.value = toBigInt(resp.today_earnings || 0)
     totalEarnings.value = toBigInt(resp.total_earnings || 0)
+    estimatedUpcomingEmission.value = toBigInt(resp.estimated_upcoming_emission || 0)
     delegationStatus.value = String(resp.status || '').toLowerCase()
   } catch (e) {
     if (!(e instanceof ApiError && e.type === ApiError.Type.NotFound)) {
@@ -104,6 +123,7 @@ async function fetchDelegation() {
     stakedAt.value = null
     todayEarnings.value = 0n
     totalEarnings.value = 0n
+    estimatedUpcomingEmission.value = 0n
     delegationStatus.value = ''
   } finally {
     loading.value = false
@@ -169,6 +189,7 @@ watch(
     } else {
       stakingAmount.value = 0n
       otherNetworkStakes.value = []
+      estimatedUpcomingEmission.value = 0n
       delegationStatus.value = ''
     }
   }
@@ -256,6 +277,10 @@ onMounted(() => {
             <div class="staking-amount-label">My Stake (CNX)</div>
           </div>
           <div class="staking-right">
+            <div class="staking-right-row emission-row">
+              <span class="right-label">Est. Next Emission</span>
+              <span class="right-value emission-value">{{ formattedEstimatedUpcomingEmission }}</span>
+            </div>
             <div class="staking-right-row">
               <span class="right-label">Staked At</span>
               <span class="right-value">{{ formattedStakedAt }}</span>
@@ -364,6 +389,16 @@ onMounted(() => {
 .staking-right-row .right-sub {
   color: rgba(0, 0, 0, 0.35);
   font-weight: 400;
+}
+
+.staking-right-row.emission-row {
+  margin-bottom: 2px;
+}
+
+.staking-right-row .emission-value {
+  color: #1677ff;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .staking-actions {

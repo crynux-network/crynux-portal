@@ -1313,8 +1313,8 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
                                     style="display: inline-block; margin-top: 8px; font-size: 12px; cursor: pointer;"
                                     @click="openVestingModal"
                                 >
-                                    <span v-if="isLockedVestingLoading">Locked Amount: Loading...</span>
-                                    <span v-else>Locked Amount: {{ formattedLockedVesting }} CNX</span>
+                                    <span v-if="isLockedVestingLoading">Locked Emission: Loading...</span>
+                                    <span v-else>Locked Emission: {{ formattedLockedVesting }} CNX</span>
                                 </a-typography-text>
                             </div>
 						</div>
@@ -1564,13 +1564,13 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 
     <a-modal
         v-model:open="isVestingOpen"
-        :title="'Vesting'"
+        :title="'Emissions'"
         :footer="null"
         :width="920"
         :mask-closable="true"
     >
         <a-typography-text type="secondary" style="display: block; margin-bottom: 16px;">
-            Locked Amount: {{ formattedLockedVesting }} CNX
+            Locked Emission: {{ formattedLockedVesting }} CNX
         </a-typography-text>
         <a-table
             :columns="vestingColumns"

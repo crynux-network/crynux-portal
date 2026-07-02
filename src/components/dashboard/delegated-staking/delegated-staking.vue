@@ -53,6 +53,7 @@ const loading = ref(false)
 const delegationNum = ref(0)
 const totalStakingAmount = ref(0n)
 const totalDelegationEarnings = ref(0n)
+const estimatedUpcomingDelegationEmission = ref(0)
 const delegations = ref([])
 const expandedKey = ref(null)
 
@@ -91,6 +92,7 @@ const statisticValueStyle = computed(() => {
 
 const formattedTotalStaking = computed(() => formatBigInt18Precise(totalStakingAmount.value))
 const formattedTotalEarnings = computed(() => formatBigInt18Precise(totalDelegationEarnings.value))
+const formattedEstimatedUpcomingDelegationEmission = computed(() => formatWholeCnxAmount(estimatedUpcomingDelegationEmission.value))
 
 function getNetworkName(networkKey) {
   return formatConfiguredNetworkName(networkKey)
@@ -137,6 +139,21 @@ function formatStakedAt(timestamp) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function formatWholeCnxAmount(value) {
+  const n = Number.isFinite(Number(value)) ? Number(value) : 0
+  const amount = Math.floor(Math.max(0, n))
+  const toOneDecimal = (val, unit) => {
+    const scaled = Math.floor((val * 10) / unit)
+    const whole = Math.floor(scaled / 10)
+    const frac = scaled % 10
+    return frac === 0 ? `${whole}` : `${whole}.${frac}`
+  }
+  if (amount >= 1_000_000_000) return `${toOneDecimal(amount, 1_000_000_000)}B`
+  if (amount >= 1_000_000) return `${toOneDecimal(amount, 1_000_000)}M`
+  if (amount >= 1_000) return `${toOneDecimal(amount, 1_000)}K`
+  return amount.toLocaleString('en-US')
+}
+
 async function connect() {
   const result = await auth.authenticate()
   if (!result.success) {
@@ -156,6 +173,7 @@ async function fetchData(page = 1) {
     delegationNum.value = 0
     totalStakingAmount.value = 0n
     totalDelegationEarnings.value = 0n
+    estimatedUpcomingDelegationEmission.value = 0
     delegations.value = []
     totalDelegations.value = 0
     return
@@ -171,6 +189,7 @@ async function fetchData(page = 1) {
     delegationNum.value = statsResp.delegation_num || 0
     totalStakingAmount.value = toBigInt(statsResp.total_staking_amount || 0)
     totalDelegationEarnings.value = toBigInt(statsResp.total_delegation_earnings || 0)
+    estimatedUpcomingDelegationEmission.value = statsResp.estimated_upcoming_delegation_emission || 0
     totalDelegations.value = listResp?.total || 0
     currentPage.value = page
 
@@ -213,7 +232,8 @@ async function fetchData(page = 1) {
         stakingAmount: toBigInt(item.staking_amount || 0),
         stakedAt: item.staked_at,
         totalEarnings: toBigInt(item.total_earnings || 0),
-        todayEarnings: toBigInt(item.today_earnings || 0)
+        todayEarnings: toBigInt(item.today_earnings || 0),
+        estimatedUpcomingEmission: item.estimated_upcoming_emission || 0
       }
     })
   } catch (e) {
@@ -223,6 +243,7 @@ async function fetchData(page = 1) {
     delegationNum.value = 0
     totalStakingAmount.value = 0n
     totalDelegationEarnings.value = 0n
+    estimatedUpcomingDelegationEmission.value = 0
     delegations.value = []
     totalDelegations.value = 0
   } finally {
@@ -277,6 +298,7 @@ watch(
       delegationNum.value = 0
       totalStakingAmount.value = 0n
       totalDelegationEarnings.value = 0n
+      estimatedUpcomingDelegationEmission.value = 0
       delegations.value = []
     }
   }
@@ -309,7 +331,7 @@ onMounted(() => {
     <template v-else>
       <!-- Statistics Cards -->
       <a-row :gutter="[16, 16]">
-        <a-col :xs="24" :md="8">
+        <a-col :xs="24" :sm="12" :lg="6">
           <a-card :bordered="false" class="stat-card">
             <a-statistic
               title="Total Stakes"
@@ -318,7 +340,7 @@ onMounted(() => {
             />
           </a-card>
         </a-col>
-        <a-col :xs="24" :md="8">
+        <a-col :xs="24" :sm="12" :lg="6">
           <a-card :bordered="false" class="stat-card">
             <a-statistic
               title="Total Stake (CNX)"
@@ -327,7 +349,7 @@ onMounted(() => {
             />
           </a-card>
         </a-col>
-        <a-col :xs="24" :md="8">
+        <a-col :xs="24" :sm="12" :lg="6">
           <a-card :bordered="false" class="stat-card">
             <a-statistic
               :value="formattedTotalEarnings"
@@ -342,6 +364,15 @@ onMounted(() => {
                 </span>
               </template>
             </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :sm="12" :lg="6">
+          <a-card :bordered="false" class="stat-card">
+            <a-statistic
+              title="Est. Next Emission (CNX)"
+              :value="formattedEstimatedUpcomingDelegationEmission"
+              :value-style="statisticValueStyle"
+            />
           </a-card>
         </a-col>
       </a-row>
@@ -456,6 +487,11 @@ onMounted(() => {
                         <NetworkTag v-if="delegation.nodeNetwork" :text="getNetworkName(delegation.nodeNetwork)" />
                         <span v-else class="network-unknown">Unknown</span>
                       </div>
+                    </div>
+
+                    <div class="estimated-emission-display">
+                      <span class="estimated-emission-label">Est. Next Emission</span>
+                      <span class="estimated-emission-value">{{ formatWholeCnxAmount(delegation.estimatedUpcomingEmission) }}</span>
                     </div>
                   </div>
 
@@ -785,6 +821,26 @@ onMounted(() => {
   font-size 12px
   color rgba(0, 0, 0, 0.25)
   font-style italic
+
+.estimated-emission-display
+  margin-left auto
+  display flex
+  align-items baseline
+  gap 6px
+  padding 3px 10px
+  border-radius 999px
+  background rgba(22, 119, 255, 0.08)
+
+.estimated-emission-label
+  font-size 11px
+  color rgba(0, 0, 0, 0.45)
+  font-weight 500
+
+.estimated-emission-value
+  color #1677ff
+  font-size 14px
+  font-weight 700
+  line-height 1
 
 // Card Body
 .card-body

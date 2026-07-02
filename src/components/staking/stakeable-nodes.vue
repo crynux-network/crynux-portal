@@ -1,10 +1,10 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { List as AList, Row as ARow, Col as ACol, Tag as ATag, Card as ACard, Tooltip as ATooltip, message } from 'ant-design-vue'
-import { PlayCircleOutlined, PauseCircleOutlined, MinusCircleOutlined, FunnelPlotOutlined, ThunderboltOutlined, DollarOutlined, CheckCircleOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { PlayCircleOutlined, PlayCircleFilled, PauseCircleOutlined, MinusCircleOutlined, FunnelPlotOutlined, ThunderboltOutlined, DollarOutlined, InfoCircleFilled } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
-import { formatBigInt18, formatBigInt18Compact } from '@/services/token'
+import { formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
 
@@ -29,10 +29,13 @@ const gpuVramSearchText = ref('')
 const gpuVramDropdownOpen = ref(false)
 const gpuNameSearchText = ref('')
 const gpuNameDropdownOpen = ref(false)
-const sortBy = ref('operator_emission_4w')
+const expandedFilterKey = ref('status')
+const sortBy = ref('estimated_upcoming_delegator_emission')
 
 const sortOptions = [
-  { value: 'operator_emission_4w', label: 'Operator Emission' },
+  { value: 'operator_emission_4w', label: 'Operator Emission (4W)' },
+  { value: 'estimated_upcoming_operator_emission', label: 'Est. Next Operator Emission' },
+  { value: 'estimated_upcoming_delegator_emission', label: 'Est. Next Delegators Emission' },
   { value: 'operator_staking', label: 'Operator Staking' },
   { value: 'delegator_staking', label: 'Delegator Staking' },
   { value: 'total_staking', label: 'Total Staking' },
@@ -42,11 +45,46 @@ const sortOptions = [
   { value: 'gpu_vram', label: 'GPU VRAM' }
 ]
 
+const circleIconProps = {
+  viewBox: '0 0 1024 1024',
+  width: '1em',
+  height: '1em',
+  fill: 'currentColor',
+  focusable: 'false',
+  'aria-hidden': 'true'
+}
+
+const circleIconStyle = {
+  display: 'inline-block',
+  fontSize: '20px',
+  flex: '0 0 auto'
+}
+
+const GpuVramCircleFilled = () => h(
+  'svg',
+  { ...circleIconProps, style: circleIconStyle },
+  [
+    h('path', { d: 'M512 64a448 448 0 1 0 0 896 448 448 0 0 0 0-896z' }),
+    h('path', { d: 'M336 328h352c44.2 0 80 35.8 80 80v208c0 44.2-35.8 80-80 80H336c-44.2 0-80-35.8-80-80V408c0-44.2 35.8-80 80-80z', fill: '#fff' }),
+    h('path', { d: 'M360 424h304v176H360V424zm48 48v40h208v-40H408zm0 80v40h136v-40H408z', fill: 'currentColor' })
+  ]
+)
+
+const GpuNameCircleFilled = () => h(
+  'svg',
+  { ...circleIconProps, style: circleIconStyle },
+  [
+    h('path', { d: 'M512 64a448 448 0 1 0 0 896 448 448 0 0 0 0-896z' }),
+    h('path', { d: 'M344 344h238c17 0 33.3 6.7 45.3 18.7l109 109c25 25 25 65.5 0 90.5L562.2 736.3c-25 25-65.5 25-90.5 0l-109-109A64 64 0 0 1 344 582V344z', fill: '#fff' }),
+    h('path', { d: 'M448 448a48 48 0 1 0 0 96 48 48 0 0 0 0-96z', fill: 'currentColor' })
+  ]
+)
+
 const filterSections = computed(() => [
   {
     key: 'status',
     title: 'Status',
-    icon: PlayCircleOutlined,
+    icon: PlayCircleFilled,
     selected: selectedStatuses,
     options: filterOptions.value.statuses.map((status) => ({
       value: status,
@@ -56,7 +94,7 @@ const filterSections = computed(() => [
   {
     key: 'version',
     title: 'Version',
-    icon: CheckCircleOutlined,
+    icon: InfoCircleFilled,
     selected: selectedVersions,
     options: filterOptions.value.versions.map((version) => ({
       value: version,
@@ -107,12 +145,12 @@ const handleResize = () => {
 }
 const scoreSize = computed(() => {
   const w = windowWidth.value
-  if (w >= 1600) return 88
-  if (w >= 1200) return 80
-  if (w >= 992) return 72
-  if (w >= 768) return 64
-  if (w >= 576) return 56
-  return 48
+  if (w >= 1600) return 60
+  if (w >= 1200) return 56
+  if (w >= 992) return 52
+  if (w >= 768) return 48
+  if (w >= 576) return 44
+  return 40
 })
 
 function getNetworkName(networkKey) {
@@ -163,8 +201,19 @@ const formatIntegerWithThousands = (value) => {
   return intVal.toLocaleString('en-US')
 }
 
-const formatTaskFeeAmount = (value) => {
-  return formatBigInt18(value, 2)
+const formatWholeCnxAmount = (value) => {
+  const n = Number.isFinite(Number(value)) ? Number(value) : 0
+  const amount = Math.floor(Math.max(0, n))
+  const toOneDecimal = (val, unit) => {
+    const scaled = Math.floor((val * 10) / unit)
+    const whole = Math.floor(scaled / 10)
+    const frac = scaled % 10
+    return frac === 0 ? `${whole}` : `${whole}.${frac}`
+  }
+  if (amount >= 1_000_000_000) return `${toOneDecimal(amount, 1_000_000_000)}B`
+  if (amount >= 1_000_000) return `${toOneDecimal(amount, 1_000_000)}M`
+  if (amount >= 1_000) return `${toOneDecimal(amount, 1_000)}K`
+  return formatIntegerWithThousands(amount)
 }
 
 const clampPercent = (value) => {
@@ -234,13 +283,31 @@ const isAllFilterSelected = (selectedValues) => selectedValues.length === 0
 
 const isFilterOptionSelected = (selectedValues, value) => selectedValues.includes(value)
 
-const clearFilterSelection = (selected) => {
+const selectedFilterValues = (key) => {
+  if (key === 'status') return selectedStatuses.value
+  if (key === 'gpu_vram') return selectedGPUVrams.value
+  if (key === 'gpu_name') return selectedGPUNames.value
+  if (key === 'version') return selectedVersions.value
+  return []
+}
+
+const hasActiveFilterSelection = (key) => selectedFilterValues(key).length > 0
+
+const isFilterSectionExpanded = (key) => hasActiveFilterSelection(key) || expandedFilterKey.value === key
+
+const toggleFilterSection = (key) => {
+  if (hasActiveFilterSelection(key)) return
+  expandedFilterKey.value = expandedFilterKey.value === key ? '' : key
+}
+
+const clearFilterSelection = (selected, key) => {
   if (selected.value.length === 0) return
   selected.value = []
+  expandedFilterKey.value = key
   onFilterChange()
 }
 
-const toggleFilterOption = (selected, value, checked) => {
+const toggleFilterOption = (selected, key, value, checked) => {
   if (checked) {
     if (!selected.value.includes(value)) {
       selected.value = [...selected.value, value]
@@ -250,6 +317,9 @@ const toggleFilterOption = (selected, value, checked) => {
   }
 
   selected.value = selected.value.filter((item) => item !== value)
+  if (selected.value.length === 0) {
+    expandedFilterKey.value = key
+  }
   onFilterChange()
 }
 
@@ -258,6 +328,7 @@ const clearGpuVramFilter = () => {
   selectedGPUVrams.value = []
   gpuVramSearchText.value = ''
   gpuVramDropdownOpen.value = false
+  expandedFilterKey.value = 'gpu_vram'
   onFilterChange()
 }
 
@@ -287,6 +358,9 @@ const selectGpuVram = (vram) => {
 
 const removeGpuVram = (vram) => {
   selectedGPUVrams.value = selectedGPUVrams.value.filter((item) => item !== vram)
+  if (selectedGPUVrams.value.length === 0) {
+    expandedFilterKey.value = 'gpu_vram'
+  }
   onFilterChange()
 }
 
@@ -295,6 +369,7 @@ const clearGpuNameFilter = () => {
   selectedGPUNames.value = []
   gpuNameSearchText.value = ''
   gpuNameDropdownOpen.value = false
+  expandedFilterKey.value = 'gpu_name'
   onFilterChange()
 }
 
@@ -324,6 +399,9 @@ const selectGpuName = (name) => {
 
 const removeGpuName = (name) => {
   selectedGPUNames.value = selectedGPUNames.value.filter((item) => item !== name)
+  if (selectedGPUNames.value.length === 0) {
+    expandedFilterKey.value = 'gpu_name'
+  }
   onFilterChange()
 }
 
@@ -358,7 +436,7 @@ onUnmounted(() => {
 <template>
   <div class="stakeable-nodes-container">
     <a-row :gutter="[16, 16]" align="top">
-      <a-col :xs="24" :lg="6" :xl="5">
+      <a-col class="filters-column" :xs="24" :lg="6" :xl="5">
         <a-card
           :class="['filters-card', { 'filters-card-collapsed': isFiltersStacked && filtersCollapsed }]"
           :bordered="false"
@@ -383,15 +461,26 @@ onUnmounted(() => {
           <div v-show="!isFiltersStacked || !filtersCollapsed">
             <template v-for="section in filterSections" :key="section.key">
               <div class="filter-section">
-                <div class="filter-section-title">
-                  <component :is="section.icon" />
-                  <span>{{ section.title }}</span>
-                </div>
-                <div class="filter-option-list">
+                <button
+                  type="button"
+                  class="filter-section-title"
+                  :aria-expanded="isFilterSectionExpanded(section.key)"
+                  @click="toggleFilterSection(section.key)"
+                >
+                  <span class="filter-section-title-content">
+                    <component :is="section.icon" />
+                    <span>{{ section.title }}</span>
+                  </span>
+                  <span
+                    class="filter-section-caret"
+                    :class="{ expanded: isFilterSectionExpanded(section.key) }"
+                  />
+                </button>
+                <div v-show="isFilterSectionExpanded(section.key)" class="filter-option-list">
                   <a-checkbox
                     class="filter-option"
                     :checked="isAllFilterSelected(section.selected.value)"
-                    @change="() => clearFilterSelection(section.selected)"
+                    @change="() => clearFilterSelection(section.selected, section.key)"
                   >
                     All
                   </a-checkbox>
@@ -400,18 +489,29 @@ onUnmounted(() => {
                     :key="option.value"
                     class="filter-option"
                     :checked="isFilterOptionSelected(section.selected.value, option.value)"
-                    @change="event => toggleFilterOption(section.selected, option.value, event.target.checked)"
+                    @change="event => toggleFilterOption(section.selected, section.key, option.value, event.target.checked)"
                   >
                     {{ option.label }}
                   </a-checkbox>
                 </div>
               </div>
               <div v-if="section.key === 'status'" class="filter-section">
-                <div class="filter-section-title">
-                  <thunderbolt-outlined />
-                  <span>GPU VRAM</span>
-                </div>
-                <div class="searchable-filter">
+                <button
+                  type="button"
+                  class="filter-section-title"
+                  :aria-expanded="isFilterSectionExpanded('gpu_vram')"
+                  @click="toggleFilterSection('gpu_vram')"
+                >
+                  <span class="filter-section-title-content">
+                    <gpu-vram-circle-filled />
+                    <span>GPU VRAM</span>
+                  </span>
+                  <span
+                    class="filter-section-caret"
+                    :class="{ expanded: isFilterSectionExpanded('gpu_vram') }"
+                  />
+                </button>
+                <div v-show="isFilterSectionExpanded('gpu_vram')" class="searchable-filter">
                   <a-checkbox
                     class="filter-option"
                     :checked="isAllFilterSelected(selectedGPUVrams)"
@@ -457,11 +557,22 @@ onUnmounted(() => {
                 </div>
               </div>
               <div v-if="section.key === 'status'" class="filter-section">
-                <div class="filter-section-title">
-                  <search-outlined />
-                  <span>GPU Name</span>
-                </div>
-                <div class="searchable-filter">
+                <button
+                  type="button"
+                  class="filter-section-title"
+                  :aria-expanded="isFilterSectionExpanded('gpu_name')"
+                  @click="toggleFilterSection('gpu_name')"
+                >
+                  <span class="filter-section-title-content">
+                    <gpu-name-circle-filled />
+                    <span>GPU Name</span>
+                  </span>
+                  <span
+                    class="filter-section-caret"
+                    :class="{ expanded: isFilterSectionExpanded('gpu_name') }"
+                  />
+                </button>
+                <div v-show="isFilterSectionExpanded('gpu_name')" class="searchable-filter">
                   <a-checkbox
                     class="filter-option"
                     :checked="isAllFilterSelected(selectedGPUNames)"
@@ -573,8 +684,8 @@ onUnmounted(() => {
               <a-row :gutter="[16, 16]" align="stretch" class="node-main">
                 <a-col :xs="24" :md="24" class="earnings-row">
                   <div class="earnings-inline-compact">
-                    <div class="earnings-inline-label">Delegator Task Fee Today</div>
-                    <div class="earnings-inline-value">{{ formatTaskFeeAmount(item.today_delegator_earnings) }}</div>
+                    <div class="earnings-inline-label">Est. Next Delegators Emission</div>
+                    <div class="earnings-inline-value">{{ formatWholeCnxAmount(item.estimated_upcoming_delegator_emission) }}</div>
                   </div>
                 </a-col>
                 <a-col :xs="24" :md="24" class="left-pane">
@@ -682,6 +793,18 @@ onUnmounted(() => {
   padding: 0;
   margin-top: 20px;
 }
+@media (min-width: 992px) {
+  .filters-column {
+    align-self: stretch;
+  }
+  .filters-card {
+    position: sticky;
+    top: 24px;
+    z-index: 2;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+}
 .filters-card :deep(.ant-card-body) {
   padding-left: 12px;
   padding-right: 12px;
@@ -727,14 +850,44 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 .filter-section-title {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(0, 0, 0, 0.85);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.filter-section-title-content {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 8px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.filter-section-title :deep(.anticon) {
   color: rgba(0, 0, 0, 0.65);
-  font-weight: 600;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+.filter-section-caret {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid rgba(0, 0, 0, 0.65);
+  transition: transform 0.2s ease;
+  flex: 0 0 auto;
+}
+.filter-section-caret.expanded {
+  transform: rotate(180deg);
 }
 .filter-option-list {
   display: flex;
@@ -793,8 +946,8 @@ onUnmounted(() => {
   text-align: left;
 }
 .filter-value-card.selected {
-  background: rgba(24, 144, 255, 0.06);
-  border-color: rgba(24, 144, 255, 0.35);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.18);
 }
 .filter-result-card {
   display: block;
@@ -805,8 +958,8 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 .filter-result-card:hover {
-  border-color: #1890ff;
-  color: #1890ff;
+  border-color: rgba(0, 0, 0, 0.35);
+  color: rgba(0, 0, 0, 0.85);
 }
 .filter-empty {
   padding: 8px 10px;
