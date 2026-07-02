@@ -65,14 +65,14 @@ const options = {
             itemSort: (a, b) => b.datasetIndex - a.datasetIndex,
             callbacks: {
                 label: (context) => {
-                    return context.dataset.label + ': CNX ' + formatCompact(context.parsed.y);
+                    return context.dataset.label + ': CNX ' + formatCnxValue(context.parsed.y);
                 },
                 footer: (tooltipItems) => {
                     let sum = 0;
                     tooltipItems.forEach(item => {
                         sum += item.parsed.y;
                     });
-                    return 'Total: CNX ' + formatCompact(sum);
+                    return 'Total: CNX ' + formatCnxValue(sum);
                 }
             }
         }
@@ -95,6 +95,10 @@ const options = {
     }
 };
 
+const formatCnxValue = (value) => {
+    return Number(value || 0).toFixed(4);
+};
+
 const formatBigIntValue = (value) => {
     let bn = 0n;
     try {
@@ -105,7 +109,7 @@ const formatBigIntValue = (value) => {
     const base = 10n ** 18n;
     const integer = bn / base;
     const remainder = bn % base;
-    const fracStr = remainder.toString().padStart(18, '0').slice(0, 2);
+    const fracStr = remainder.toString().padStart(18, '0').slice(0, 4);
     return parseFloat(integer.toString() + '.' + fracStr);
 };
 
