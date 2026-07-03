@@ -127,6 +127,9 @@ const options = {
         y: {
             stacked: true,
             beginAtZero: true,
+            ticks: {
+                callback: (value) => formatCnxValue(value)
+            },
             title: {
                 display: true,
                 text: 'Task Fee'
