@@ -67,6 +67,34 @@ const formatBigIntValue = (value) => {
     return parseFloat(integer.toString() + '.' + fracStr);
 };
 
+const createCompletedFill = (context, color) => {
+    const { chart, dataset } = context;
+    const { chartArea, ctx, scales } = chart;
+    const values = Array.isArray(dataset.data) ? dataset.data : [];
+    if (!chartArea || !scales?.x || values.length < 2 || dataset.incompleteStartIndex === undefined) return color;
+
+    const cutoffPixel = scales.x.getPixelForValue(dataset.incompleteStartIndex - 1);
+    const chartWidth = chartArea.right - chartArea.left;
+    if (!Number.isFinite(cutoffPixel) || !Number.isFinite(chartWidth) || chartWidth <= 0) return color;
+
+    const cutoff = (cutoffPixel - chartArea.left) / chartWidth;
+    const stop = Math.min(1, Math.max(0, cutoff));
+    if (!Number.isFinite(stop)) return color;
+
+    const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(stop, color);
+    gradient.addColorStop(stop, 'rgba(0, 0, 0, 0)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    return gradient;
+};
+
+const incompleteBorderDash = (context) => {
+    const dataset = context.chart.data.datasets[context.datasetIndex];
+    const incompleteStartIndex = dataset?.incompleteStartIndex;
+    return incompleteStartIndex !== undefined && context.p1DataIndex >= incompleteStartIndex ? [6, 6] : undefined;
+};
+
 const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -161,19 +189,27 @@ const fetchData = async () => {
             datasets: [
                 {
                     label: 'Node',
-                    backgroundColor: 'rgba(82, 196, 26, 0.6)',
+                    backgroundColor: (context) => createCompletedFill(context, 'rgba(82, 196, 26, 0.6)'),
                     borderColor: 'rgba(82, 196, 26, 1)',
                     data: nodeValues,
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    incompleteStartIndex: nodeValues.length - 1,
+                    segment: {
+                        borderDash: incompleteBorderDash
+                    }
                 },
                 {
                     label: 'Delegated Staking',
-                    backgroundColor: 'rgba(24, 144, 255, 0.6)',
+                    backgroundColor: (context) => createCompletedFill(context, 'rgba(24, 144, 255, 0.6)'),
                     borderColor: 'rgba(24, 144, 255, 1)',
                     data: stakingValues,
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    incompleteStartIndex: stakingValues.length - 1,
+                    segment: {
+                        borderDash: incompleteBorderDash
+                    }
                 }
             ]
         }

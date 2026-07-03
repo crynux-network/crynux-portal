@@ -14,9 +14,13 @@ import { onMounted, ref, watch } from 'vue'
 import moment from 'moment'
 import { Chart as ChartJS, registerables } from 'chart.js'
 import v2RelayAccountAPI from '@/api/v2/relay-account'
+import v2NodeAPI from '@/api/v2/node'
+import { walletAPI } from '@/api/v1/wallet'
 import { toBigInt } from '@/services/token'
 
 ChartJS.register(...registerables)
+
+const WEEK_SECONDS = 7 * 24 * 60 * 60
 
 const props = defineProps({
   address: {
@@ -49,6 +53,82 @@ const formatBigIntValue = (value) => {
   return parseFloat(integer.toString() + '.' + fracStr)
 }
 
+const formatEstimatedEmissionValue = (value) => {
+  const num = Number(value || 0)
+  return Number.isFinite(num) ? num : 0
+}
+
+const createCompletedFill = (context, color) => {
+  const { chart, dataset } = context
+  const { chartArea, ctx, scales } = chart
+  const values = Array.isArray(dataset.data) ? dataset.data : []
+  if (!chartArea || !scales?.x || values.length < 2 || dataset.estimatedStartIndex === undefined) return color
+
+  const cutoffPixel = scales.x.getPixelForValue(dataset.estimatedStartIndex - 1)
+  const chartWidth = chartArea.right - chartArea.left
+  if (!Number.isFinite(cutoffPixel) || !Number.isFinite(chartWidth) || chartWidth <= 0) return color
+
+  const cutoff = (cutoffPixel - chartArea.left) / chartWidth
+  const stop = Math.min(1, Math.max(0, cutoff))
+  if (!Number.isFinite(stop)) return color
+
+  const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
+  gradient.addColorStop(0, color)
+  gradient.addColorStop(stop, color)
+  gradient.addColorStop(stop, 'rgba(0, 0, 0, 0)')
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  return gradient
+}
+
+const estimatedBorderDash = (context) => {
+  const dataset = context.chart.data.datasets[context.datasetIndex]
+  const estimatedStartIndex = dataset?.estimatedStartIndex
+  return estimatedStartIndex !== undefined && context.p1DataIndex >= estimatedStartIndex ? [6, 6] : undefined
+}
+
+const getTooltipLabel = (context) => {
+  const estimatedStartIndex = context.dataset.estimatedStartIndex
+  const label = estimatedStartIndex !== undefined && context.dataIndex >= estimatedStartIndex
+    ? context.dataset.estimatedLabel
+    : context.dataset.label
+  return `${label}: CNX ${formatCompact(context.parsed.y)}`
+}
+
+const fetchNodeEmissionEstimate = async (address) => {
+  try {
+    const node = await v2NodeAPI.getNodeDetails(address)
+    if (!node?.emission_week_end) return null
+    return {
+      timestamp: node.emission_week_end,
+      value: node.estimated_upcoming_operator_emission
+    }
+  } catch (error) {
+    console.error('Failed to fetch relay account node emission estimate:', error)
+    return null
+  }
+}
+
+const fetchDelegationEmissionEstimate = async (address) => {
+  try {
+    const stats = await walletAPI.getDelegatorStats(address)
+    if (!stats?.emission_week_end) return null
+    return {
+      timestamp: stats.emission_week_end,
+      value: stats.estimated_upcoming_delegation_emission
+    }
+  } catch (error) {
+    console.error('Failed to fetch relay account delegation emission estimate:', error)
+    return null
+  }
+}
+
+const getEstimatedTimestamp = (timestamps, ...estimates) => {
+  const estimateWithTimestamp = estimates.find(estimate => estimate?.timestamp)
+  if (estimateWithTimestamp) return estimateWithTimestamp.timestamp
+  if (timestamps.length > 0) return timestamps[timestamps.length - 1] + WEEK_SECONDS
+  return moment().startOf('week').add(1, 'week').unix()
+}
+
 const options = {
   responsive: true,
   maintainAspectRatio: false,
@@ -59,7 +139,7 @@ const options = {
     },
     tooltip: {
       callbacks: {
-        label: (context) => `${context.dataset.label}: CNX ${formatCompact(context.parsed.y)}`
+        label: getTooltipLabel
       }
     }
   },
@@ -127,31 +207,53 @@ const fetchData = async () => {
       return
     }
 
-    const resp = await v2RelayAccountAPI.getEmissionChart(props.address, 24)
+    const [resp, nodeEmissionEstimate, delegationEmissionEstimate] = await Promise.all([
+      v2RelayAccountAPI.getEmissionChart(props.address, 24),
+      fetchNodeEmissionEstimate(props.address),
+      fetchDelegationEmissionEstimate(props.address)
+    ])
     const timestamps = Array.isArray(resp?.timestamps) ? resp.timestamps : []
     const nodeEmissions = Array.isArray(resp?.node_emission_income) ? resp.node_emission_income : []
     const delegationEmissions = Array.isArray(resp?.delegation_emission_income) ? resp.delegation_emission_income : []
+    const labels = timestamps.map(ts => moment.unix(ts).format('MMM DD'))
+    const nodeValues = nodeEmissions.map(formatBigIntValue)
+    const delegationValues = delegationEmissions.map(formatBigIntValue)
+    const estimatedTimestamp = getEstimatedTimestamp(timestamps, nodeEmissionEstimate, delegationEmissionEstimate)
+    labels.push(moment.unix(estimatedTimestamp).format('MMM DD'))
+    nodeValues.push(formatEstimatedEmissionValue(nodeEmissionEstimate?.value))
+    delegationValues.push(formatEstimatedEmissionValue(delegationEmissionEstimate?.value))
+    const estimatedStartIndex = labels.length - 1
 
     data.value = {
-      labels: timestamps.map(ts => moment.unix(ts).format('MMM DD')),
+      labels,
       datasets: [
         {
           label: 'Node emission',
-          backgroundColor: 'rgba(250, 140, 22, 0.25)',
+          backgroundColor: (context) => createCompletedFill(context, 'rgba(250, 140, 22, 0.25)'),
           borderColor: 'rgba(250, 140, 22, 1)',
-          data: nodeEmissions.map(formatBigIntValue),
+          data: nodeValues,
           tension: 0.25,
           fill: true,
-          stack: 'emission'
+          stack: 'emission',
+          estimatedStartIndex,
+          estimatedLabel: 'Estimated node emission',
+          segment: {
+            borderDash: estimatedBorderDash
+          }
         },
         {
           label: 'Delegation emission',
-          backgroundColor: 'rgba(24, 144, 255, 0.25)',
+          backgroundColor: (context) => createCompletedFill(context, 'rgba(24, 144, 255, 0.25)'),
           borderColor: 'rgba(24, 144, 255, 1)',
-          data: delegationEmissions.map(formatBigIntValue),
+          data: delegationValues,
           tension: 0.25,
           fill: true,
-          stack: 'emission'
+          stack: 'emission',
+          estimatedStartIndex,
+          estimatedLabel: 'Estimated delegation emission',
+          segment: {
+            borderDash: estimatedBorderDash
+          }
         }
       ]
     }
