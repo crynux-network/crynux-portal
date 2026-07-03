@@ -97,10 +97,9 @@ const getTooltipLabel = (context) => {
 const fetchNodeEmissionEstimate = async (address) => {
   try {
     const node = await v2NodeAPI.getNodeDetails(address)
-    if (!node?.emission_week_end) return null
     return {
-      timestamp: node.emission_week_end,
-      value: node.estimated_upcoming_operator_emission
+      timestamp: node?.emission_week_end,
+      value: node?.estimated_upcoming_operator_emission
     }
   } catch (error) {
     console.error('Failed to fetch relay account node emission estimate:', error)
@@ -111,10 +110,9 @@ const fetchNodeEmissionEstimate = async (address) => {
 const fetchDelegationEmissionEstimate = async (address) => {
   try {
     const stats = await walletAPI.getDelegatorStats(address)
-    if (!stats?.emission_week_end) return null
     return {
-      timestamp: stats.emission_week_end,
-      value: stats.estimated_upcoming_delegation_emission
+      timestamp: stats?.emission_week_end,
+      value: stats?.estimated_upcoming_delegation_emission
     }
   } catch (error) {
     console.error('Failed to fetch relay account delegation emission estimate:', error)
