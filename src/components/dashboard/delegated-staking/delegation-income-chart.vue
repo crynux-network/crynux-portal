@@ -18,6 +18,8 @@ import { toBigInt } from '@/services/token'
 
 ChartJS.register(...registerables)
 
+const DAY_SECONDS = 24 * 60 * 60
+
 const props = defineProps({
   delegatorAddress: {
     type: String,
@@ -48,10 +50,10 @@ const formatCnxValue = (value) => {
   const num = Number(value || 0)
   const abs = Math.abs(num)
   const sign = num < 0 ? '-' : ''
-  if (abs >= 1e9) return sign + (abs / 1e9).toFixed(2) + 'B'
-  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2) + 'M'
-  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(2) + 'K'
-  return num.toFixed(2)
+  if (abs >= 1e9) return sign + (abs / 1e9).toFixed(4) + 'B'
+  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(4) + 'M'
+  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(4) + 'K'
+  return num.toFixed(4)
 }
 
 const formatBigIntValue = (value) => {
@@ -59,8 +61,45 @@ const formatBigIntValue = (value) => {
   const base = 10n ** 18n
   const integer = bn / base
   const remainder = bn % base
-  const fracStr = remainder.toString().padStart(18, '0').slice(0, 2)
+  const fracStr = remainder.toString().padStart(18, '0').slice(0, 4)
   return parseFloat(integer.toString() + '.' + fracStr)
+}
+
+const createCompletedFill = (context, color) => {
+  const { chart, dataset } = context
+  const { chartArea, ctx, scales } = chart
+  const values = Array.isArray(dataset.data) ? dataset.data : []
+  if (!chartArea || !scales?.x || values.length < 2 || dataset.currentStartIndex === undefined) return color
+
+  const cutoffPixel = scales.x.getPixelForValue(dataset.currentStartIndex - 1)
+  const chartWidth = chartArea.right - chartArea.left
+  if (!Number.isFinite(cutoffPixel) || !Number.isFinite(chartWidth) || chartWidth <= 0) return color
+
+  const cutoff = (cutoffPixel - chartArea.left) / chartWidth
+  const stop = Math.min(1, Math.max(0, cutoff))
+  if (!Number.isFinite(stop)) return color
+
+  const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
+  gradient.addColorStop(0, color)
+  gradient.addColorStop(stop, color)
+  gradient.addColorStop(stop, 'rgba(0, 0, 0, 0)')
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  return gradient
+}
+
+const currentBorderDash = (context) => {
+  const dataset = context.chart.data.datasets[context.datasetIndex]
+  const currentStartIndex = dataset?.currentStartIndex
+  return currentStartIndex !== undefined && context.p1DataIndex >= currentStartIndex ? [6, 6] : undefined
+}
+
+const getCurrentTaskFeePoint = (timestamps, earningsArr) => {
+  const currentDayStart = moment.utc().startOf('day').unix()
+  const index = timestamps.findIndex(ts => ts >= currentDayStart && ts < currentDayStart + DAY_SECONDS)
+  return {
+    timestamp: currentDayStart,
+    value: index >= 0 ? earningsArr[index] : 0
+  }
 }
 
 const options = {
@@ -73,7 +112,11 @@ const options = {
     tooltip: {
       callbacks: {
         label: (context) => {
-          return 'Task Fee: CNX ' + formatCnxValue(context.parsed.y)
+          const currentStartIndex = context.dataset.currentStartIndex
+          const label = currentStartIndex !== undefined && context.dataIndex >= currentStartIndex
+            ? 'Current task fee'
+            : 'Task Fee'
+          return label + ': CNX ' + formatCnxValue(context.parsed.y)
         }
       }
     }
@@ -128,19 +171,35 @@ const fetchData = async () => {
     const timestamps = Array.isArray(resp?.timestamps) ? resp.timestamps : []
     const earningsArr = Array.isArray(resp?.earnings) ? resp.earnings : []
 
-    const labels = timestamps.map(ts => moment.unix(ts).format('DD MMM'))
-    const values = earningsArr.map(formatBigIntValue)
+    const currentTaskFeePoint = getCurrentTaskFeePoint(timestamps, earningsArr)
+    const historicalTimestamps = []
+    const historicalValues = []
+    timestamps.forEach((ts, index) => {
+      if (ts < currentTaskFeePoint.timestamp) {
+        historicalTimestamps.push(ts)
+        historicalValues.push(earningsArr[index])
+      }
+    })
+    const labels = historicalTimestamps.map(ts => moment.unix(ts).format('DD MMM'))
+    const values = historicalValues.map(formatBigIntValue)
+    labels.push(moment.unix(currentTaskFeePoint.timestamp).format('DD MMM'))
+    values.push(formatBigIntValue(currentTaskFeePoint.value))
+    const currentStartIndex = values.length - 1
 
     data.value = {
       labels,
       datasets: [
         {
           label: 'Task Fee',
-          backgroundColor: 'rgba(82, 196, 26, 0.4)',
+          backgroundColor: (context) => createCompletedFill(context, 'rgba(82, 196, 26, 0.4)'),
           borderColor: 'rgba(82, 196, 26, 1)',
           data: values,
           tension: 0.3,
-          fill: true
+          fill: true,
+          currentStartIndex,
+          segment: {
+            borderDash: currentBorderDash
+          }
         }
       ]
     }

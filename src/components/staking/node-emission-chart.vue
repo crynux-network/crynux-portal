@@ -18,6 +18,8 @@ import { toBigInt } from '@/services/token'
 
 ChartJS.register(...registerables)
 
+const WEEK_SECONDS = 7 * 24 * 60 * 60
+
 const props = defineProps({
   address: {
     type: String,
@@ -62,8 +64,6 @@ const formatEstimatedEmissionValue = (value) => {
   return Number.isFinite(num) ? num : 0
 }
 
-const hasEstimatedEmission = () => props.estimatedOperatorEmission !== null && props.estimatedOperatorEmission !== undefined
-
 const createCompletedFill = (context, color) => {
   const { chart, dataset } = context
   const { chartArea, ctx, scales } = chart
@@ -90,6 +90,12 @@ const estimatedBorderDash = (context) => {
   const dataset = context.chart.data.datasets[context.datasetIndex]
   const estimatedStartIndex = dataset.estimatedStartIndex
   return estimatedStartIndex !== undefined && context.p1DataIndex >= estimatedStartIndex ? [6, 6] : undefined
+}
+
+const getEstimatedTimestamp = (timestamps) => {
+  if (props.estimatedEmissionTimestamp) return props.estimatedEmissionTimestamp
+  if (timestamps.length > 0) return timestamps[timestamps.length - 1] + WEEK_SECONDS
+  return moment().startOf('week').add(1, 'week').unix()
 }
 
 const options = {
@@ -163,12 +169,10 @@ const fetchData = async () => {
     const emissions = Array.isArray(resp?.node_emission_income) ? resp.node_emission_income : []
     const labels = timestamps.map(ts => moment.unix(ts).format('MMM DD'))
     const values = emissions.map(formatBigIntValue)
-    let estimatedStartIndex
-    if (hasEstimatedEmission() && props.estimatedEmissionTimestamp) {
-      labels.push(moment.unix(props.estimatedEmissionTimestamp).format('MMM DD'))
-      values.push(formatEstimatedEmissionValue(props.estimatedOperatorEmission))
-      estimatedStartIndex = values.length - 1
-    }
+    const estimatedTimestamp = getEstimatedTimestamp(timestamps)
+    labels.push(moment.unix(estimatedTimestamp).format('MMM DD'))
+    values.push(formatEstimatedEmissionValue(props.estimatedOperatorEmission))
+    const estimatedStartIndex = values.length - 1
 
     data.value = {
       labels,
