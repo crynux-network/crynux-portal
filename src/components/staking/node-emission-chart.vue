@@ -22,6 +22,14 @@ const props = defineProps({
   address: {
     type: String,
     required: true
+  },
+  estimatedOperatorEmission: {
+    type: [String, Number, BigInt],
+    default: null
+  },
+  estimatedEmissionTimestamp: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -49,6 +57,41 @@ const formatBigIntValue = (value) => {
   return parseFloat(integer.toString() + '.' + fracStr)
 }
 
+const formatEstimatedEmissionValue = (value) => {
+  const num = Number(value || 0)
+  return Number.isFinite(num) ? num : 0
+}
+
+const hasEstimatedEmission = () => props.estimatedOperatorEmission !== null && props.estimatedOperatorEmission !== undefined
+
+const createCompletedFill = (context, color) => {
+  const { chart, dataset } = context
+  const { chartArea, ctx, scales } = chart
+  const values = Array.isArray(dataset.data) ? dataset.data : []
+  if (!chartArea || !scales?.x || values.length < 2 || dataset.estimatedStartIndex === undefined) return color
+
+  const cutoffPixel = scales.x.getPixelForValue(dataset.estimatedStartIndex - 1)
+  const chartWidth = chartArea.right - chartArea.left
+  if (!Number.isFinite(cutoffPixel) || !Number.isFinite(chartWidth) || chartWidth <= 0) return color
+
+  const cutoff = chartWidth > 0 ? (cutoffPixel - chartArea.left) / chartWidth : 1
+  const stop = Math.min(1, Math.max(0, cutoff))
+  if (!Number.isFinite(stop)) return color
+
+  const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
+  gradient.addColorStop(0, color)
+  gradient.addColorStop(stop, color)
+  gradient.addColorStop(stop, 'rgba(0, 0, 0, 0)')
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  return gradient
+}
+
+const estimatedBorderDash = (context) => {
+  const dataset = context.chart.data.datasets[context.datasetIndex]
+  const estimatedStartIndex = dataset.estimatedStartIndex
+  return estimatedStartIndex !== undefined && context.p1DataIndex >= estimatedStartIndex ? [6, 6] : undefined
+}
+
 const options = {
   responsive: true,
   maintainAspectRatio: false,
@@ -59,7 +102,13 @@ const options = {
     },
     tooltip: {
       callbacks: {
-        label: (context) => 'Emission: CNX ' + formatCompact(context.parsed.y)
+        label: (context) => {
+          const estimatedStartIndex = context.dataset.estimatedStartIndex
+          const label = estimatedStartIndex !== undefined && context.dataIndex >= estimatedStartIndex
+            ? 'Estimated operator emission'
+            : 'Operator emission'
+          return label + ': CNX ' + formatCompact(context.parsed.y)
+        }
       }
     }
   },
@@ -112,17 +161,29 @@ const fetchData = async () => {
     const resp = await v2DelegatedStakingAPI.getNodeEmissionChart(props.address, 24)
     const timestamps = Array.isArray(resp?.timestamps) ? resp.timestamps : []
     const emissions = Array.isArray(resp?.node_emission_income) ? resp.node_emission_income : []
+    const labels = timestamps.map(ts => moment.unix(ts).format('MMM DD'))
+    const values = emissions.map(formatBigIntValue)
+    let estimatedStartIndex
+    if (hasEstimatedEmission() && props.estimatedEmissionTimestamp) {
+      labels.push(moment.unix(props.estimatedEmissionTimestamp).format('MMM DD'))
+      values.push(formatEstimatedEmissionValue(props.estimatedOperatorEmission))
+      estimatedStartIndex = values.length - 1
+    }
 
     data.value = {
-      labels: timestamps.map(ts => moment.unix(ts).format('MMM DD')),
+      labels,
       datasets: [
         {
           label: 'Operator emission',
-          backgroundColor: 'rgba(250, 140, 22, 0.25)',
+          backgroundColor: (context) => createCompletedFill(context, 'rgba(250, 140, 22, 0.25)'),
           borderColor: 'rgba(250, 140, 22, 1)',
-          data: emissions.map(formatBigIntValue),
+          data: values,
           tension: 0.25,
-          fill: true
+          fill: true,
+          estimatedStartIndex,
+          segment: {
+            borderDash: estimatedBorderDash
+          }
         }
       ]
     }
@@ -134,9 +195,12 @@ const fetchData = async () => {
   }
 }
 
-watch(() => props.address, async () => {
-  await fetchData()
-})
+watch(
+  () => [props.address, props.estimatedOperatorEmission, props.estimatedEmissionTimestamp],
+  async () => {
+    await fetchData()
+  }
+)
 
 onMounted(async () => {
   await fetchData()

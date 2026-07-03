@@ -472,7 +472,11 @@ onMounted(async () => {
                 </a-tooltip>
               </span>
             </template>
-            <NodeEmissionChart :address="nodeAddress" />
+            <NodeEmissionChart
+              :address="nodeAddress"
+              :estimated-operator-emission="node.estimated_upcoming_operator_emission"
+              :estimated-emission-timestamp="node.emission_week_end"
+            />
           </a-card>
         </a-col>
       </a-row>
