@@ -99,6 +99,33 @@ const formatCnxValue = (value) => {
     return Number(value || 0).toFixed(4);
 };
 
+const createCompletedFill = (context, color) => {
+    const { chart, dataset } = context;
+    const { chartArea, ctx, scales } = chart;
+    const values = Array.isArray(dataset.data) ? dataset.data : [];
+    if (!chartArea || !scales?.x || values.length < 2) return color;
+
+    const cutoffPixel = scales.x.getPixelForValue(values.length - 2);
+    const chartWidth = chartArea.right - chartArea.left;
+    if (!Number.isFinite(cutoffPixel) || !Number.isFinite(chartWidth) || chartWidth <= 0) return color;
+
+    const cutoff = chartWidth > 0 ? (cutoffPixel - chartArea.left) / chartWidth : 1;
+    const stop = Math.min(1, Math.max(0, cutoff));
+    if (!Number.isFinite(stop)) return color;
+
+    const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(stop, color);
+    gradient.addColorStop(stop, 'rgba(0, 0, 0, 0)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    return gradient;
+};
+
+const incompleteDayBorderDash = (context) => {
+    const lastIndex = context.chart.data.labels.length - 1;
+    return context.p1DataIndex === lastIndex ? [6, 6] : undefined;
+};
+
 const formatBigIntValue = (value) => {
     let bn = 0n;
     try {
@@ -138,19 +165,25 @@ const fetchData = async () => {
             datasets: [
                 {
                     label: 'Operator Task Fee',
-                    backgroundColor: 'rgba(82, 196, 26, 0.6)',
+                    backgroundColor: (context) => createCompletedFill(context, 'rgba(82, 196, 26, 0.6)'),
                     borderColor: 'rgba(82, 196, 26, 1)',
                     data: resp.operator_earnings.map(formatBigIntValue),
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    segment: {
+                        borderDash: incompleteDayBorderDash
+                    }
                 },
                 {
                     label: 'Delegator Task Fee',
-                    backgroundColor: 'rgba(24, 144, 255, 0.6)',
+                    backgroundColor: (context) => createCompletedFill(context, 'rgba(24, 144, 255, 0.6)'),
                     borderColor: 'rgba(24, 144, 255, 1)',
                     data: resp.delegator_earnings.map(formatBigIntValue),
                     tension: 0.1,
-                    fill: true
+                    fill: true,
+                    segment: {
+                        borderDash: incompleteDayBorderDash
+                    }
                 }
             ]
         };
