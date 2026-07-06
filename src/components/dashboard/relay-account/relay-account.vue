@@ -20,9 +20,11 @@ import { getStakingInfo as getNodeStakingInfo, tryUnstake, forceUnstake, Staking
 import {
     formatNetworkName as formatConfiguredNetworkName,
     getAllWalletNetworks,
+    getAddressExplorerUrl,
     getFundingNetworkConfig,
     getFundingNetworks,
     getNetworkConfig,
+    getTransactionExplorerUrl,
     isSystemNetwork
 } from '@/services/network-config'
 
@@ -39,6 +41,10 @@ const getTokenAddress = (network) => network?.token_address || network?.contract
 const networkName = computed(() => {
 	const key = wallet.selectedOnChainWalletNetworkKey
 	return formatConfiguredNetworkName(key)
+})
+
+const onChainWalletAddressUrl = computed(() => {
+    return getAddressExplorerUrl(wallet.selectedOnChainWalletNetworkKey, wallet.address)
 })
 
 const beneficialAddressContractAddress = computed(() => {
@@ -444,6 +450,7 @@ const truncateTxHash = (h) => {
 }
 
 const formatNetworkName = (n) => formatConfiguredNetworkName(n)
+const getTxUrl = (network, txHash) => getTransactionExplorerUrl(network, txHash)
 
 let dashboardRefreshId = 0
 let onChainBalanceRequestId = 0
@@ -588,16 +595,20 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 			const isBeneficial = benefitAddrStr !== '' && benefitAddrStr.toLowerCase() !== opAddrStr.toLowerCase()
 			const toType = isBeneficial ? 'Beneficial' : 'Operational'
 			const toTypeColor = isBeneficial ? 'green' : 'red'
+			const networkKey = (record && record.network) || ''
+			const txHash = (record && record.tx_hash) || ''
 			return {
 				...record,
 				time: formatTimestamp(record && (record.created_at)),
 				amount: hasAmount ? ("CNX " + formattedAmount) : '',
 				withdrawal_fee: hasFee ? ("CNX " + formattedFee) : '',
-				network: formatNetworkName((record && record.network) || ''),
+				network: formatNetworkName(networkKey),
+				network_key: networkKey,
 				status: (record && (record.status ?? '')),
 				to_type: toType,
 				to_type_color: toTypeColor,
-				tx_hash: (record && (record.tx_hash)) || '',
+				tx_hash: txHash,
+				tx_url: getTxUrl(networkKey, txHash),
 			}
 		});
 		withdrawalsPagination.value.total = res.total;
@@ -631,12 +642,16 @@ const getDeposits = async (page = 1, pageSize = 10) => {
 					formattedAmount = ''
 				}
 			}
+			const networkKey = (record && record.network) || ''
+			const txHash = (record && record.tx_hash) || ''
 			return {
 				...record,
 				time: formatTimestamp(record && (record.created_at)),
 				amount: hasAmount ? ("CNX " + formattedAmount) : '',
-				network: formatNetworkName((record && record.network) || ''),
-				tx_hash: (record && (record.tx_hash)) || '',
+				network: formatNetworkName(networkKey),
+				network_key: networkKey,
+				tx_hash: txHash,
+				tx_url: getTxUrl(networkKey, txHash),
 			}
 		});
 		depositsPagination.value.total = res.total;
@@ -1239,7 +1254,12 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 										<a-select-option v-for="n in onChainWalletNetworkOptions" :key="n.key" :value="n.key">{{ n.name }}</a-select-option>
 									</a-select>
 								</a-descriptions-item>
-								<a-descriptions-item :span="2" label="Address">{{ wallet.address }}</a-descriptions-item>
+								<a-descriptions-item :span="2" label="Address">
+									<a-typography-text copyable :content="wallet.address">
+										<a v-if="onChainWalletAddressUrl" class="explorer-link" :href="onChainWalletAddressUrl" target="_blank" rel="noopener noreferrer">{{ wallet.address }}</a>
+										<span v-else>{{ wallet.address }}</span>
+									</a-typography-text>
+								</a-descriptions-item>
 								<a-descriptions-item :span="2" label="CNX Balance"><span>{{ formattedOnChainCnxBalance }}</span></a-descriptions-item>
 								<a-descriptions-item v-if="hasOnChainErc20Token" :span="2" :label="nativeBalanceLabel"><span>{{ formattedBalance }}</span></a-descriptions-item>
 								<a-descriptions-item v-if="selectedOnChainIsSystemNetwork" label="Node Stake">
@@ -1384,7 +1404,8 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 											<a-tag :color="record.to_type_color">{{ record.to_type }}</a-tag>
 										</template>
 										<template v-else-if="column.dataIndex === 'tx_hash'">
-											<span>{{ truncateTxHash(record.tx_hash) }}</span>
+											<a v-if="record.tx_url" class="explorer-link" :href="record.tx_url" target="_blank" rel="noopener noreferrer">{{ truncateTxHash(record.tx_hash) }}</a>
+											<span v-else>{{ truncateTxHash(record.tx_hash) }}</span>
 										</template>
 									</template>
 								</a-table>
@@ -1403,7 +1424,8 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 											<NetworkTag :text="record.network" />
 										</template>
 										<template v-else-if="column.dataIndex === 'tx_hash'">
-											<span>{{ truncateTxHash(record.tx_hash) }}</span>
+											<a v-if="record.tx_url" class="explorer-link" :href="record.tx_url" target="_blank" rel="noopener noreferrer">{{ truncateTxHash(record.tx_hash) }}</a>
+											<span v-else>{{ truncateTxHash(record.tx_hash) }}</span>
 										</template>
 									</template>
 								</a-table>
@@ -1599,4 +1621,33 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 .card-title-with-tooltip
 	display inline-flex
 	align-items center
+
+.explorer-link
+	color inherit
+	text-decoration none
+
+.explorer-link:hover
+	color inherit
+	text-decoration underline
+
+:deep(.ant-typography-copy)
+	color inherit
+
+:deep(.ant-typography-copy:hover)
+	color inherit
+
+:deep(.ant-typography-copy:focus)
+	color inherit
+
+:deep(.ant-typography-copy-success)
+	color inherit
+
+:deep(.ant-typography-copy-success:hover)
+	color inherit
+
+:deep(.ant-typography-copy .anticon)
+	color inherit
+
+:deep(.ant-typography-copy-success .anticon)
+	color inherit
 </style>

@@ -27,7 +27,7 @@ import {
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
 import { formatBigInt18, formatBigInt18Compact, toBigInt } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
-import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
+import { formatNetworkName as formatConfiguredNetworkName, getAddressExplorerUrl } from '@/services/network-config'
 import NodeRewardsChart from '@/components/staking/node-rewards-chart.vue'
 import NodeEmissionChart from '@/components/staking/node-emission-chart.vue'
 import NodeStakingChart from '@/components/staking/node-staking-chart.vue'
@@ -51,6 +51,8 @@ const networkName = computed(() => {
   if (!key) return ''
   return formatConfiguredNetworkName(key)
 })
+
+const nodeAddressExplorerUrl = computed(() => getAddressExplorerUrl(node.value?.network, node.value?.address))
 
 
 const normalizeStatus = (status) => {
@@ -227,6 +229,8 @@ const shortenAddress = (address) => {
   return address.slice(0, 8) + '...' + address.slice(-6)
 }
 
+const getDelegatorAddressUrl = (address) => getAddressExplorerUrl(node.value?.network, address)
+
 const handleStakingChanged = () => {
   fetchData()
   fetchDelegations()
@@ -258,12 +262,14 @@ onMounted(async () => {
               <div class="node-title-section">
                 <div class="gpu-name">{{ gpuDisplayName }}</div>
                 <a-typography-text class="node-address node-address-inline" copyable :content="node.address">
-                  {{ node.address }}
+                  <a v-if="nodeAddressExplorerUrl" class="explorer-link" :href="nodeAddressExplorerUrl" target="_blank" rel="noopener noreferrer">{{ node.address }}</a>
+                  <span v-else>{{ node.address }}</span>
                 </a-typography-text>
               </div>
               <div class="node-address-row">
                 <a-typography-text class="node-address" copyable :content="node.address">
-                  {{ node.address }}
+                  <a v-if="nodeAddressExplorerUrl" class="explorer-link" :href="nodeAddressExplorerUrl" target="_blank" rel="noopener noreferrer">{{ node.address }}</a>
+                  <span v-else>{{ node.address }}</span>
                 </a-typography-text>
               </div>
             </div>
@@ -523,7 +529,8 @@ onMounted(async () => {
                 <template #bodyCell="{ column, record }">
                   <template v-if="column.key === 'user_address'">
                     <a-tooltip :title="record.user_address">
-                      <span class="delegator-address">{{ shortenAddress(record.user_address) }}</span>
+                      <a v-if="getDelegatorAddressUrl(record.user_address)" class="delegator-address explorer-link" :href="getDelegatorAddressUrl(record.user_address)" target="_blank" rel="noopener noreferrer">{{ shortenAddress(record.user_address) }}</a>
+                      <span v-else class="delegator-address">{{ shortenAddress(record.user_address) }}</span>
                     </a-tooltip>
                   </template>
                   <template v-else-if="column.key === 'staking_amount'">
@@ -639,6 +646,16 @@ onMounted(async () => {
 
 .node-address :deep(.ant-typography-copy) {
   color: rgba(0, 0, 0, 0.45);
+}
+
+.explorer-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.explorer-link:hover {
+  color: inherit;
+  text-decoration: underline;
 }
 
 .node-address-row {
