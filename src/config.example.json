@@ -12,7 +12,9 @@
                 "symbol": "CNX",
                 "decimals": 18
             },
-            "blockExplorerUrls": [],
+            "blockExplorerUrls": [
+                "https://cnxscan.base.crynux.io"
+            ],
             "contracts": {
                 "credits": "0xE474ecE312b79fDF833C76C0d8255fA688068e4a",
                 "beneficialAddress": "0x7c8861a639B712D486eFB2C944419F7531700db0",
@@ -38,7 +40,9 @@
                 "symbol": "ETH",
                 "decimals": 18
             },
-            "blockExplorerUrls": [],
+            "blockExplorerUrls": [
+                "https://basescan.org"
+            ],
             "contracts": {
                 "beneficialAddress": "0x74Df778FF9705502a94ddd5aCE64a66689953e0C",
                 "tokenAddress": "0x9557DD9E241bc9636732623B672B4090AF519396"

@@ -50,7 +50,24 @@ export const getDefaultFundingNetworkKey = () => {
   return Object.keys(getFundingNetworks())[0] || ''
 }
 
-export const getNetworkConfig = (networkKey) => getAllWalletNetworks()[networkKey]
+const findNetworkEntry = (networkKeyOrName) => {
+  if (!networkKeyOrName) return undefined
+  const raw = String(networkKeyOrName).trim()
+  const normalized = raw.toLowerCase()
+  const networks = getAllWalletNetworks()
+  const direct = networks[raw]
+  if (direct) return [raw, direct]
+  return Object.entries(networks).find(([key, item]) => (
+    key.toLowerCase() === normalized || String(item.chainName || '').toLowerCase() === normalized
+  ))
+}
+
+const getExplorerBaseUrl = (networkKeyOrName) => {
+  const network = findNetworkEntry(networkKeyOrName)?.[1]
+  return String(network?.blockExplorerUrls?.[0] || '').trim().replace(/\/+$/, '')
+}
+
+export const getNetworkConfig = (networkKey) => findNetworkEntry(networkKey)?.[1]
 
 export const getSystemNetworkConfig = (networkKey) => getSystemNetworks()[networkKey]
 
@@ -59,20 +76,30 @@ export const getFundingNetworkConfig = (networkKey) => getFundingNetworks()[netw
 export const isSystemNetwork = (networkKey) => Boolean(getSystemNetworks()[networkKey])
 
 export const getNetworkColor = (networkKeyOrName) => {
-  if (!networkKeyOrName) return undefined
-  const raw = String(networkKeyOrName).trim()
-  const normalized = raw.toLowerCase()
-  const networks = getAllWalletNetworks()
-  const network = networks[raw] || Object.entries(networks).find(([key, item]) => (
-    key.toLowerCase() === normalized || String(item.chainName || '').toLowerCase() === normalized
-  ))?.[1]
+  const network = findNetworkEntry(networkKeyOrName)?.[1]
   return network?.color
+}
+
+export const getTransactionExplorerUrl = (networkKeyOrName, txHash) => {
+  const hash = String(txHash || '').trim()
+  if (!hash) return ''
+  const baseUrl = getExplorerBaseUrl(networkKeyOrName)
+  if (!baseUrl) return ''
+  return `${baseUrl}/tx/${hash}`
+}
+
+export const getAddressExplorerUrl = (networkKeyOrName, address) => {
+  const value = String(address || '').trim()
+  if (!value) return ''
+  const baseUrl = getExplorerBaseUrl(networkKeyOrName)
+  if (!baseUrl) return ''
+  return `${baseUrl}/address/${value}`
 }
 
 export const formatNetworkName = (networkKey) => {
   if (!networkKey) return ''
   const raw = String(networkKey).trim()
-  const network = getAllWalletNetworks()[raw] || Object.entries(getAllWalletNetworks()).find(([key]) => key.toLowerCase() === raw.toLowerCase())?.[1]
+  const network = findNetworkEntry(raw)?.[1]
   if (network?.chainName) return network.chainName
   if (raw.toLowerCase().startsWith('crynux on ')) return raw
   return `Crynux on ${raw.split('-').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')}`

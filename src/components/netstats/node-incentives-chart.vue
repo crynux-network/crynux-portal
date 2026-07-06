@@ -3,6 +3,7 @@ import v2IncentivesAPI from "@/api/v2/incentives";
 import {onMounted, reactive, ref, watch} from "vue";
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { formatBigInt18Compact } from '@/services/token'
+import { getAddressExplorerUrl, getDefaultSystemNetworkKey } from '@/services/network-config'
 
 
 
@@ -13,6 +14,7 @@ const periodSelected = ref(periodOptions[0]);
 const nodeList = ref([]);
 
 const formatCnxValue = (value) => Number(value).toFixed(4);
+const getNodeAddressUrl = (address) => getAddressExplorerUrl(getDefaultSystemNetworkKey(), address)
 
 const columns = [
     {
@@ -118,7 +120,8 @@ const fetchData = async () => {
         </template>
         <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'node_address'">
-                    {{ record.node_address.substring(0, 5) }}...{{ record.node_address.substring(record.node_address.length - 5, record.node_address.length) }}
+                    <a v-if="getNodeAddressUrl(record.node_address)" class="explorer-link" :href="getNodeAddressUrl(record.node_address)" target="_blank" rel="noopener noreferrer">{{ record.node_address.substring(0, 5) }}...{{ record.node_address.substring(record.node_address.length - 5, record.node_address.length) }}</a>
+                    <span v-else>{{ record.node_address.substring(0, 5) }}...{{ record.node_address.substring(record.node_address.length - 5, record.node_address.length) }}</span>
             </template>
             <template v-else-if="column.key === 'incentive'">
                     CNX {{ formatCnxValue(record.incentive) }}
@@ -159,5 +162,15 @@ const fetchData = async () => {
 .stake-title-icon {
     color: rgba(0, 0, 0, 0.45);
     cursor: help;
+}
+
+.explorer-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.explorer-link:hover {
+    color: inherit;
+    text-decoration: underline;
 }
 </style>
