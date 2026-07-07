@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import NetstatsView from '@/components/netstats/netstats-view.vue'
 import StakeableNodes from '@/components/staking/stakeable-nodes.vue'
 import Dashboard from '@/components/dashboard/the-dashboard.vue'
@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useWalletStore } from '@/stores/wallet'
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
