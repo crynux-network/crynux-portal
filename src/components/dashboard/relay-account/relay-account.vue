@@ -1356,7 +1356,7 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 				<template #title>
 					<span class="card-title-with-tooltip">
 						Task Fee Income
-						<a-tooltip title="This income only includes Node Task Fee and Delegator Task Fee. Emission rewards and Vesting unlocks are not included.">
+						<a-tooltip title="This income only includes Node Task Fee and Delegators Task Fee. Emission rewards and Vesting unlocks are not included.">
 							<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer;" />
 						</a-tooltip>
 					</span>

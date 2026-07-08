@@ -29,6 +29,10 @@ const props = defineProps({
     type: [String, Number, BigInt],
     default: null
   },
+  estimatedDelegatorEmission: {
+    type: [String, Number, BigInt],
+    default: null
+  },
   estimatedEmissionTimestamp: {
     type: Number,
     default: 0
@@ -92,6 +96,14 @@ const estimatedBorderDash = (context) => {
   return estimatedStartIndex !== undefined && context.p1DataIndex >= estimatedStartIndex ? [6, 6] : undefined
 }
 
+const getTooltipLabel = (context) => {
+  const estimatedStartIndex = context.dataset.estimatedStartIndex
+  const label = estimatedStartIndex !== undefined && context.dataIndex >= estimatedStartIndex
+    ? context.dataset.estimatedLabel
+    : context.dataset.label
+  return `${label}: CNX ${formatCompact(context.parsed.y)}`
+}
+
 const getEstimatedTimestamp = (timestamps) => {
   if (props.estimatedEmissionTimestamp) return props.estimatedEmissionTimestamp
   if (timestamps.length > 0) return timestamps[timestamps.length - 1] + WEEK_SECONDS
@@ -108,19 +120,14 @@ const options = {
     },
     tooltip: {
       callbacks: {
-        label: (context) => {
-          const estimatedStartIndex = context.dataset.estimatedStartIndex
-          const label = estimatedStartIndex !== undefined && context.dataIndex >= estimatedStartIndex
-            ? 'Estimated operator emission'
-            : 'Operator emission'
-          return label + ': CNX ' + formatCompact(context.parsed.y)
-        }
+        label: getTooltipLabel
       }
     }
   },
   scales: {
     y: {
       beginAtZero: true,
+      stacked: true,
       ticks: {
         callback: (value) => formatCompact(value)
       },
@@ -128,7 +135,14 @@ const options = {
         display: true,
         text: 'Emission (CNX)'
       }
+    },
+    x: {
+      stacked: true
     }
+  },
+  interaction: {
+    mode: 'index',
+    intersect: false
   }
 }
 
@@ -145,12 +159,22 @@ const buildEmptyDatasets = () => {
     labels,
     datasets: [
       {
-        label: 'Emission',
+        label: 'Operator emission',
         backgroundColor: 'rgba(250, 140, 22, 0.25)',
         borderColor: 'rgba(250, 140, 22, 1)',
         data: emptyValues,
         tension: 0.25,
-        fill: true
+        fill: true,
+        stack: 'emission'
+      },
+      {
+        label: 'Delegators emission',
+        backgroundColor: 'rgba(24, 144, 255, 0.25)',
+        borderColor: 'rgba(24, 144, 255, 1)',
+        data: emptyValues,
+        tension: 0.25,
+        fill: true,
+        stack: 'emission'
       }
     ]
   }
@@ -166,13 +190,16 @@ const fetchData = async () => {
 
     const resp = await v2DelegatedStakingAPI.getNodeEmissionChart(props.address, 24)
     const timestamps = Array.isArray(resp?.timestamps) ? resp.timestamps : []
-    const emissions = Array.isArray(resp?.node_emission_income) ? resp.node_emission_income : []
+    const operatorEmissions = Array.isArray(resp?.node_emission_income) ? resp.node_emission_income : []
+    const delegationEmissions = Array.isArray(resp?.delegation_emission_income) ? resp.delegation_emission_income : []
     const labels = timestamps.map(ts => moment.unix(ts).format('MMM DD'))
-    const values = emissions.map(formatBigIntValue)
+    const operatorValues = operatorEmissions.map(formatBigIntValue)
+    const delegationValues = delegationEmissions.map(formatBigIntValue)
     const estimatedTimestamp = getEstimatedTimestamp(timestamps)
     labels.push(moment.unix(estimatedTimestamp).format('MMM DD'))
-    values.push(formatEstimatedEmissionValue(props.estimatedOperatorEmission))
-    const estimatedStartIndex = values.length - 1
+    operatorValues.push(formatEstimatedEmissionValue(props.estimatedOperatorEmission))
+    delegationValues.push(formatEstimatedEmissionValue(props.estimatedDelegatorEmission))
+    const estimatedStartIndex = labels.length - 1
 
     data.value = {
       labels,
@@ -181,10 +208,26 @@ const fetchData = async () => {
           label: 'Operator emission',
           backgroundColor: (context) => createCompletedFill(context, 'rgba(250, 140, 22, 0.25)'),
           borderColor: 'rgba(250, 140, 22, 1)',
-          data: values,
+          data: operatorValues,
           tension: 0.25,
           fill: true,
+          stack: 'emission',
           estimatedStartIndex,
+          estimatedLabel: 'Estimated operator emission',
+          segment: {
+            borderDash: estimatedBorderDash
+          }
+        },
+        {
+          label: 'Delegators emission',
+          backgroundColor: (context) => createCompletedFill(context, 'rgba(24, 144, 255, 0.25)'),
+          borderColor: 'rgba(24, 144, 255, 1)',
+          data: delegationValues,
+          tension: 0.25,
+          fill: true,
+          stack: 'emission',
+          estimatedStartIndex,
+          estimatedLabel: 'Estimated delegators emission',
           segment: {
             borderDash: estimatedBorderDash
           }
@@ -200,7 +243,7 @@ const fetchData = async () => {
 }
 
 watch(
-  () => [props.address, props.estimatedOperatorEmission, props.estimatedEmissionTimestamp],
+  () => [props.address, props.estimatedOperatorEmission, props.estimatedDelegatorEmission, props.estimatedEmissionTimestamp],
   async () => {
     await fetchData()
   }

@@ -175,7 +175,7 @@ const fetchData = async () => {
                     }
                 },
                 {
-                    label: 'Delegator Task Fee',
+                    label: 'Delegators Task Fee',
                     backgroundColor: (context) => createCompletedFill(context, 'rgba(24, 144, 255, 0.6)'),
                     borderColor: 'rgba(24, 144, 255, 1)',
                     data: resp.delegator_earnings.map(formatBigIntValue),

@@ -374,7 +374,7 @@ onMounted(async () => {
                     <a-col :xs="6">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(node.delegator_staking) }}</div>
-                        <div class="metric-label">Delegator Stake</div>
+                        <div class="metric-label">Delegators Stake</div>
                       </div>
                     </a-col>
                     <a-col :xs="6">
@@ -388,7 +388,7 @@ onMounted(async () => {
 
                 <div class="rewards-summary-row">
                   <div class="operator-rewards-section">
-                    <div class="operator-rewards-title">Delegator Task Fee</div>
+                    <div class="operator-rewards-title">Delegators Task Fee</div>
                     <div class="operator-rewards-row">
                       <div class="operator-reward-item">
                         <span class="operator-reward-value">
@@ -473,7 +473,7 @@ onMounted(async () => {
             <template #title>
               <span class="card-title-with-tooltip">
                 Node Emission
-                <a-tooltip title="This chart only includes emission rewards earned by the node operator. Delegator emission rewards are not included.">
+                <a-tooltip title="This chart includes emission rewards earned by the node operator and the node's delegators.">
                   <question-circle-outlined class="reward-info-icon" />
                 </a-tooltip>
               </span>
@@ -481,6 +481,7 @@ onMounted(async () => {
             <NodeEmissionChart
               :address="nodeAddress"
               :estimated-operator-emission="node.estimated_upcoming_operator_emission"
+              :estimated-delegator-emission="node.estimated_upcoming_delegator_emission"
               :estimated-emission-timestamp="node.emission_week_end"
             />
           </a-card>

@@ -145,7 +145,7 @@ const fetchData = async () => {
                     fill: true
                 },
                 {
-                    label: 'Delegator Stake',
+                    label: 'Delegators Stake',
                     backgroundColor: 'rgba(24, 144, 255, 0.6)',
                     borderColor: 'rgba(24, 144, 255, 1)',
                     data: resp.delegator_stakings.map(formatBigIntValue),
