@@ -218,6 +218,12 @@ const formatWholeCnxAmount = (value) => {
   return formatIntegerWithThousands(amount)
 }
 
+const formatAprPercent = (value) => {
+  const n = Number.isFinite(Number(value)) ? Number(value) : 0
+  const percent = Math.floor(Math.max(0, n) * 100)
+  return `${percent.toLocaleString('en-US')}%`
+}
+
 const formatDate = (timestamp) => {
   if (!timestamp) return '-'
   const date = new Date(timestamp * 1000)
@@ -374,7 +380,7 @@ onMounted(async () => {
                     <a-col :xs="6">
                       <div class="metric-box">
                         <div class="metric-value">{{ formatBigInt18Compact(node.delegator_staking) }}</div>
-                        <div class="metric-label">Delegator Stake</div>
+                        <div class="metric-label">Delegators Stake</div>
                       </div>
                     </a-col>
                     <a-col :xs="6">
@@ -388,7 +394,7 @@ onMounted(async () => {
 
                 <div class="rewards-summary-row">
                   <div class="operator-rewards-section">
-                    <div class="operator-rewards-title">Delegator Task Fee</div>
+                    <div class="operator-rewards-title">Delegators Task Fee</div>
                     <div class="operator-rewards-row">
                       <div class="operator-reward-item">
                         <span class="operator-reward-value">
@@ -443,6 +449,18 @@ onMounted(async () => {
                     </div>
                     <div class="reward-highlight-label">Est. Next Operator Emission</div>
                   </div>
+
+                  <div class="reward-highlight-box apr">
+                    <div class="reward-highlight-value">
+                      {{ formatAprPercent(node.delegation_apr_12m) }}
+                    </div>
+                    <div class="reward-highlight-label reward-highlight-label-with-tooltip">
+                      Historical APR
+                      <a-tooltip title="This APR is based on historical staking data and does not represent future earnings.">
+                        <question-circle-outlined class="reward-info-icon" />
+                      </a-tooltip>
+                    </div>
+                  </div>
                 </div>
               </a-col>
             </a-row>
@@ -473,7 +491,7 @@ onMounted(async () => {
             <template #title>
               <span class="card-title-with-tooltip">
                 Node Emission
-                <a-tooltip title="This chart only includes emission rewards earned by the node operator. Delegator emission rewards are not included.">
+                <a-tooltip title="This chart includes emission rewards earned by the node operator and the node's delegators.">
                   <question-circle-outlined class="reward-info-icon" />
                 </a-tooltip>
               </span>
@@ -481,6 +499,7 @@ onMounted(async () => {
             <NodeEmissionChart
               :address="nodeAddress"
               :estimated-operator-emission="node.estimated_upcoming_operator_emission"
+              :estimated-delegator-emission="node.estimated_upcoming_delegator_emission"
               :estimated-emission-timestamp="node.emission_week_end"
             />
           </a-card>
@@ -763,14 +782,14 @@ onMounted(async () => {
 /* Delegator Num Box */
 .delegator-num-box {
   text-align: center;
-  padding: 20px 12px;
+  padding: 12px 12px;
   background: rgba(0, 0, 0, 0.02);
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .delegator-num-value {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   color: rgba(0, 0, 0, 0.85);
   line-height: 1;
@@ -779,7 +798,7 @@ onMounted(async () => {
 .delegator-num-label {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 /* Metric Boxes */
@@ -925,7 +944,7 @@ onMounted(async () => {
 
 .reward-highlight-box {
   text-align: center;
-  padding: 20px 12px;
+  padding: 12px 12px;
   background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(24, 144, 255, 0.02) 100%);
   border-radius: 12px;
   border: 1px solid rgba(24, 144, 255, 0.1);
@@ -936,8 +955,13 @@ onMounted(async () => {
   border-color: rgba(82, 196, 26, 0.1);
 }
 
+.reward-highlight-box.apr {
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(24, 144, 255, 0.02) 100%);
+  border-color: rgba(24, 144, 255, 0.1);
+}
+
 .reward-highlight-value {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   color: #1890ff;
   line-height: 1;
@@ -950,7 +974,13 @@ onMounted(async () => {
 .reward-highlight-label {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
-  margin-top: 6px;
+  margin-top: 4px;
+}
+
+.reward-highlight-label-with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Chart Card Styles */
@@ -1102,15 +1132,15 @@ onMounted(async () => {
   .delegator-num-box,
   .reward-highlight-box {
     flex: 1;
-    padding: 16px 12px;
+    padding: 12px 10px;
   }
 
   .delegator-num-value {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .reward-highlight-value {
-    font-size: 24px;
+    font-size: 22px;
   }
 }
 
@@ -1136,7 +1166,7 @@ onMounted(async () => {
 
   .delegator-num-box,
   .reward-highlight-box {
-    padding: 16px 12px;
+    padding: 12px 10px;
   }
 }
 
@@ -1178,7 +1208,7 @@ onMounted(async () => {
   }
 
   .reward-highlight-value {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .delegator-count {
