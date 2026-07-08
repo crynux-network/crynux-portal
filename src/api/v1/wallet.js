@@ -73,6 +73,15 @@ class WalletAPI extends BaseAPI {
 			params: { network }
 		})
 	}
+
+	getDelegationEmissionChart(userAddress, nodeAddress, network, count = 24) {
+		return v1.get(`/stats/line_chart/delegation/${userAddress}/${nodeAddress}/emission`, {
+			params: {
+				network,
+				count
+			}
+		})
+	}
 }
 
 export const walletAPI = new WalletAPI();

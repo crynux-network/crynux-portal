@@ -38,6 +38,7 @@ import NetworkTag from '@/components/network-tag.vue'
 import DelegatorIncomeChart from './delegator-income-chart.vue'
 import DelegatorEmissionChart from './delegator-emission-chart.vue'
 import DelegationIncomeChart from './delegation-income-chart.vue'
+import DelegationEmissionChart from './delegation-emission-chart.vue'
 import DelegationModals from '@/components/delegation-modals.vue'
 import { useRouter } from 'vue-router'
 import { formatNetworkName as formatConfiguredNetworkName } from '@/services/network-config'
@@ -233,7 +234,8 @@ async function fetchData(page = 1) {
         stakedAt: item.staked_at,
         totalEarnings: toBigInt(item.total_earnings || 0),
         todayEarnings: toBigInt(item.today_earnings || 0),
-        estimatedUpcomingEmission: item.estimated_upcoming_emission || 0
+        estimatedUpcomingEmission: item.estimated_upcoming_emission || 0,
+        emissionWeekEnd: item.emission_week_end || 0
       }
     })
   } catch (e) {
@@ -533,19 +535,35 @@ onMounted(() => {
 
                   <!-- Expand Toggle -->
                   <div class="card-footer" @click="toggleExpand(delegation.key)">
-                    <span class="expand-text">{{ isExpanded(delegation.key) ? 'Hide Chart' : 'Show Task Fee Chart' }}</span>
+                    <span class="expand-text">{{ isExpanded(delegation.key) ? 'Hide Charts' : 'Show Charts' }}</span>
                     <up-outlined v-if="isExpanded(delegation.key)" class="expand-icon" />
                     <down-outlined v-else class="expand-icon" />
                   </div>
 
-                  <!-- Expanded Chart -->
+                  <!-- Expanded Charts -->
                   <div v-if="isExpanded(delegation.key)" class="card-chart">
-                    <DelegationIncomeChart
-                      :delegator-address="wallet.address"
-                      :node-address="delegation.nodeAddress"
-                      :network="delegation.network"
-                      :height="220"
-                    />
+                    <div class="delegation-chart-grid">
+                      <div class="delegation-chart-panel">
+                        <div class="delegation-chart-title">Task Fee Income</div>
+                        <DelegationIncomeChart
+                          :delegator-address="wallet.address"
+                          :node-address="delegation.nodeAddress"
+                          :network="delegation.network"
+                          :height="220"
+                        />
+                      </div>
+                      <div class="delegation-chart-panel">
+                        <div class="delegation-chart-title">Emission Income</div>
+                        <DelegationEmissionChart
+                          :delegator-address="wallet.address"
+                          :node-address="delegation.nodeAddress"
+                          :network="delegation.network"
+                          :estimated-emission="delegation.estimatedUpcomingEmission"
+                          :estimated-emission-timestamp="delegation.emissionWeekEnd"
+                          :height="220"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -937,6 +955,22 @@ onMounted(() => {
   border-top 1px solid rgba(0, 0, 0, 0.04)
   background rgba(0, 0, 0, 0.01)
 
+.delegation-chart-grid
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap 20px
+
+.delegation-chart-panel
+  min-width 0
+
+.delegation-chart-title
+  font-size 12px
+  font-weight 600
+  color rgba(0, 0, 0, 0.55)
+  margin-bottom 12px
+  text-transform uppercase
+  letter-spacing 0.5px
+
 // Responsive
 @media (max-width: 768px)
   .card-header
@@ -971,4 +1005,7 @@ onMounted(() => {
 
   .rewards-section
     border-top 1px solid rgba(82, 196, 26, 0.1)
+
+  .delegation-chart-grid
+    grid-template-columns 1fr
 </style>
