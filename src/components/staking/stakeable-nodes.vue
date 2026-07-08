@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { List as AList, Row as ARow, Col as ACol, Tag as ATag, Card as ACard, Tooltip as ATooltip, message } from 'ant-design-vue'
-import { PlayCircleOutlined, PlayCircleFilled, PauseCircleOutlined, MinusCircleOutlined, FunnelPlotOutlined, ThunderboltOutlined, DollarOutlined, InfoCircleFilled } from '@ant-design/icons-vue'
+import { PlayCircleOutlined, PlayCircleFilled, PauseCircleOutlined, MinusCircleOutlined, FunnelPlotOutlined, ThunderboltOutlined, DollarOutlined, InfoCircleFilled, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
 import { formatBigInt18Compact } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
@@ -36,6 +36,7 @@ const sortOptions = [
   { value: 'operator_emission_4w', label: 'Operator Emission (4W)' },
   { value: 'estimated_upcoming_operator_emission', label: 'Est. Next Operator Emission' },
   { value: 'estimated_upcoming_delegator_emission', label: 'Est. Next Delegators Emission' },
+  { value: 'delegation_apr_12m', label: 'Historical APR' },
   { value: 'operator_staking', label: 'Operator Staking' },
   { value: 'delegator_staking', label: 'Delegator Staking' },
   { value: 'total_staking', label: 'Total Staking' },
@@ -214,6 +215,12 @@ const formatWholeCnxAmount = (value) => {
   if (amount >= 1_000_000) return `${toOneDecimal(amount, 1_000_000)}M`
   if (amount >= 1_000) return `${toOneDecimal(amount, 1_000)}K`
   return formatIntegerWithThousands(amount)
+}
+
+const formatAprPercent = (value) => {
+  const n = Number.isFinite(Number(value)) ? Number(value) : 0
+  const percent = Math.floor(Math.max(0, n) * 100)
+  return `${percent.toLocaleString('en-US')}%`
 }
 
 const clampPercent = (value) => {
@@ -688,6 +695,17 @@ onUnmounted(() => {
                     <div class="earnings-inline-value">{{ formatWholeCnxAmount(item.estimated_upcoming_delegator_emission) }}</div>
                   </div>
                 </a-col>
+                <a-col :xs="24" :md="24" class="earnings-row">
+                  <div class="earnings-inline-compact">
+                    <div class="earnings-inline-label earnings-inline-label-with-tooltip">
+                      Historical APR
+                      <a-tooltip title="This APR is based on historical staking data and does not represent future earnings.">
+                        <question-circle-outlined class="earnings-info-icon" />
+                      </a-tooltip>
+                    </div>
+                    <div class="earnings-inline-value">{{ formatAprPercent(item.delegation_apr_12m) }}</div>
+                  </div>
+                </a-col>
                 <a-col :xs="24" :md="24" class="left-pane">
                   <div class="scores-section">
                     <a-row :gutter="[16, 16]" class="scores-grid" align="middle">
@@ -754,24 +772,25 @@ onUnmounted(() => {
                     <a-row :gutter="[4, 4]" class="staking-grid">
                       <a-col :xs="7" :sm="7" :md="7" :lg="6" :xl="6" :xxl="6">
                         <div class="kpi">
-                          <div class="kpi-value">{{ Math.round(Number(item.delegator_share || 0)) }} %</div>
-                          <div class="kpi-label">Delegator Share</div>
+                          <a-tooltip placement="top" title="Delegator Share">
+                            <div class="kpi-value">{{ Math.round(Number(item.delegator_share || 0)) }} %</div>
+                          </a-tooltip>
                         </div>
                       </a-col>
                       <a-col :xs="10" :sm="10" :md="10" :lg="12" :xl="12" :xxl="12">
                         <div class="kpi">
-                          <a-tooltip placement="top" :title="'Delegators / Operator'">
+                          <a-tooltip placement="top" title="Delegators Stake / Operator Stake">
                             <div class="kpi-value">
                               {{ formatBigInt18Compact(item.delegator_staking) }} / {{ formatBigInt18Compact(item.operator_staking) }}
                             </div>
                           </a-tooltip>
-                          <div class="kpi-label">CNX Stake</div>
                         </div>
                       </a-col>
                       <a-col :xs="7" :sm="7" :md="7" :lg="6" :xl="6" :xxl="6">
                         <div class="kpi">
-                          <div class="kpi-value">{{ formatIntegerWithThousands(item.delegators_num) }}</div>
-                          <div class="kpi-label">Delegators</div>
+                          <a-tooltip placement="top" title="Delegators">
+                            <div class="kpi-value">{{ formatIntegerWithThousands(item.delegators_num) }}</div>
+                          </a-tooltip>
                         </div>
                       </a-col>
                     </a-row>
@@ -1114,6 +1133,15 @@ onUnmounted(() => {
 .earnings-inline-label {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
+}
+.earnings-inline-label-with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.earnings-info-icon {
+  color: rgba(0, 0, 0, 0.45);
+  cursor: help;
 }
 .earnings-inline-value {
   font-size: 18px;
