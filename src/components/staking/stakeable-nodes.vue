@@ -696,14 +696,28 @@ onUnmounted(() => {
                   </div>
                 </a-col>
                 <a-col :xs="24" :md="24" class="earnings-row">
-                  <div class="earnings-inline-compact">
-                    <div class="earnings-inline-label earnings-inline-label-with-tooltip">
-                      Historical APR
-                      <a-tooltip title="This APR is based on historical staking data and does not represent future earnings.">
-                        <question-circle-outlined class="earnings-info-icon" />
+                  <div class="earnings-inline-compact apr-inline-compact">
+                    <div class="apr-inline-row">
+                      <div class="earnings-inline-label earnings-inline-label-with-tooltip">
+                        Historical APR
+                        <a-tooltip title="This APR is based on historical staking data and does not represent future earnings.">
+                          <question-circle-outlined class="earnings-info-icon" />
+                        </a-tooltip>
+                      </div>
+                      <div class="earnings-inline-value">{{ formatAprPercent(item.delegation_apr_12m) }}</div>
+                    </div>
+                    <div class="apr-inline-row apr-inline-row-small">
+                      <div class="earnings-inline-label">Est. APR for next staking</div>
+                      <a-tooltip title="10K / 100K / 1M">
+                        <div class="estimated-apr-values">
+                          <span>{{ formatAprPercent(item.estimated_next_10k_delegation_apr) }}</span>
+                          <span class="estimated-apr-separator">|</span>
+                          <span>{{ formatAprPercent(item.estimated_next_100k_delegation_apr) }}</span>
+                          <span class="estimated-apr-separator">|</span>
+                          <span>{{ formatAprPercent(item.estimated_next_1m_delegation_apr) }}</span>
+                        </div>
                       </a-tooltip>
                     </div>
-                    <div class="earnings-inline-value">{{ formatAprPercent(item.delegation_apr_12m) }}</div>
                   </div>
                 </a-col>
                 <a-col :xs="24" :md="24" class="left-pane">
@@ -1130,9 +1144,26 @@ onUnmounted(() => {
   align-items: baseline;
   justify-content: space-between;
 }
+.apr-inline-compact {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+}
+.apr-inline-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.apr-inline-row-small {
+  font-size: 11px;
+}
 .earnings-inline-label {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
+}
+.apr-inline-row-small .earnings-inline-label {
+  font-size: 11px;
 }
 .earnings-inline-label-with-tooltip {
   display: inline-flex;
@@ -1148,6 +1179,21 @@ onUnmounted(() => {
   font-weight: 800;
   color: #1890ff;
   line-height: 1;
+}
+.estimated-apr-values {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: help;
+}
+.estimated-apr-separator {
+  color: rgba(0, 0, 0, 0.25);
+  font-weight: 400;
 }
 .earnings-inline :deep(.ant-descriptions-item-label) {
   font-weight: 600;
