@@ -79,7 +79,7 @@ const formatWholeCnxAmount = (value) => {
 }
 
 const formatTaskFeeAmount = (value) => {
-  return formatBigInt18(value, 2)
+  return formatBigInt18(value, 4)
 }
 
 async function connect() {
