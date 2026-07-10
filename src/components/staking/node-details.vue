@@ -431,11 +431,6 @@ onMounted(async () => {
               <!-- Right Section: Delegators -->
               <a-col :xs="24" :xl="8" class="metrics-right">
                 <div class="delegator-rewards-section">
-                  <div class="delegator-num-box">
-                    <div class="delegator-num-value">{{ formatIntegerWithThousands(node.delegators_num) }}</div>
-                    <div class="delegator-num-label">Active Delegators</div>
-                  </div>
-
                   <div class="reward-highlight-box">
                     <div class="reward-highlight-value">
                       {{ formatWholeCnxAmount(node.estimated_upcoming_delegator_emission) }}
@@ -460,6 +455,19 @@ onMounted(async () => {
                         <question-circle-outlined class="reward-info-icon" />
                       </a-tooltip>
                     </div>
+                  </div>
+
+                  <div class="reward-highlight-box stake-apr">
+                    <a-tooltip title="10K / 100K / 1M">
+                      <div class="reward-highlight-value estimated-apr-values">
+                        <span>{{ formatAprPercent(node.estimated_next_10k_delegation_apr) }}</span>
+                        <span class="estimated-apr-separator">|</span>
+                        <span>{{ formatAprPercent(node.estimated_next_100k_delegation_apr) }}</span>
+                        <span class="estimated-apr-separator">|</span>
+                        <span>{{ formatAprPercent(node.estimated_next_1m_delegation_apr) }}</span>
+                      </div>
+                    </a-tooltip>
+                    <div class="reward-highlight-label">Est. Next Stake APR</div>
                   </div>
                 </div>
               </a-col>
@@ -779,28 +787,6 @@ onMounted(async () => {
   color: #1890ff;
 }
 
-/* Delegator Num Box */
-.delegator-num-box {
-  text-align: center;
-  padding: 12px 12px;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.delegator-num-value {
-  font-size: 28px;
-  font-weight: 800;
-  color: rgba(0, 0, 0, 0.85);
-  line-height: 1;
-}
-
-.delegator-num-label {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-  margin-top: 4px;
-}
-
 /* Metric Boxes */
 .metric-box {
   text-align: center;
@@ -960,6 +946,11 @@ onMounted(async () => {
   border-color: rgba(24, 144, 255, 0.1);
 }
 
+.reward-highlight-box.stake-apr {
+  background: linear-gradient(135deg, rgba(250, 173, 20, 0.08) 0%, rgba(250, 173, 20, 0.02) 100%);
+  border-color: rgba(250, 173, 20, 0.1);
+}
+
 .reward-highlight-value {
   font-size: 28px;
   font-weight: 800;
@@ -969,6 +960,22 @@ onMounted(async () => {
 
 .reward-highlight-box.total .reward-highlight-value {
   color: #52c41a;
+}
+
+.reward-highlight-value.estimated-apr-values {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #faad14;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.estimated-apr-separator {
+  color: rgba(250, 173, 20, 0.35);
+  font-weight: 400;
 }
 
 .reward-highlight-label {
