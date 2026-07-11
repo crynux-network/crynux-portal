@@ -5,6 +5,7 @@ import v1 from './api/v1/v1'
 import config from '@/config.json'
 import { useAuthStore } from '@/stores/auth'
 import { useWalletStore } from '@/stores/wallet'
+import { useWalletConnect } from '@/composables/use-wallet-connect'
 import { ethers } from 'ethers'
 import {
   message,
@@ -102,18 +103,11 @@ function promptReauth() {
   })
 }
 
+const { connect: connectWallet } = useWalletConnect()
+
 async function connect() {
-  const shouldOpenRelayAccount = router.currentRoute.value.name === 'netstats'
-  const result = await auth.authenticate()
-  if (!result.success) {
-    if (result.reason === 'no_provider') {
-      messageApi.error('Please install MetaMask in your browser.')
-    } else if (result.reason === 'auth_failed') {
-      messageApi.error('Authentication failed or was rejected')
-    }
-  } else if (shouldOpenRelayAccount) {
-    router.push({ name: 'relay-account' })
-  }
+  const redirect = router.currentRoute.value.name === 'netstats' ? { name: 'relay-account' } : null
+  const result = await connectWallet(redirect)
   reauthModalVisible = false
   return result
 }

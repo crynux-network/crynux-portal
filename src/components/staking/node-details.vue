@@ -1,6 +1,6 @@
 <script setup>
-import { useRoute } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   Card as ACard,
   Row as ARow,
@@ -13,6 +13,8 @@ import {
   TypographyText as ATypographyText,
   Table as ATable,
   Empty as AEmpty,
+  Result as AResult,
+  Button as AButton,
   message
 } from 'ant-design-vue'
 import {
@@ -22,9 +24,13 @@ import {
   FunnelPlotOutlined,
   ThunderboltOutlined,
   DollarOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  FileSearchOutlined
 } from '@ant-design/icons-vue'
 import v2DelegatedStakingAPI from '@/api/v2/delegated-staking'
+import ApiError from '@/api/api-error'
+import { useAuthStore } from '@/stores/auth'
+import { useWalletConnect } from '@/composables/use-wallet-connect'
 import { formatBigInt18, formatBigInt18Compact, toBigInt } from '@/services/token'
 import NetworkTag from '@/components/network-tag.vue'
 import { formatNetworkName as formatConfiguredNetworkName, getAddressExplorerUrl } from '@/services/network-config'
@@ -36,10 +42,22 @@ import NodeDelegatorsChart from '@/components/staking/node-delegators-chart.vue'
 import MyDelegation from '@/components/staking/my-delegation.vue'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const { connect } = useWalletConnect()
+
+const goToMyDelegatedStake = () => {
+  if (auth.isAuthenticated) {
+    router.push({ name: 'delegated-staking' })
+  } else {
+    connect({ name: 'delegated-staking' })
+  }
+}
 
 const nodeAddress = computed(() => route.params.address)
 const node = ref(null)
 const loading = ref(false)
+const notFound = ref(false)
 const delegations = ref([])
 const delegationsLoading = ref(false)
 const delegationsTotal = ref(0)
@@ -126,11 +144,16 @@ const totalStaking = computed(() => {
 
 const fetchData = async () => {
   loading.value = true
+  notFound.value = false
   try {
     const data = await v2DelegatedStakingAPI.getNodeDetails(nodeAddress.value)
     node.value = data
   } catch (e) {
-    message.error('Failed to load node details: ' + e.message)
+    if (e instanceof ApiError && e.type === ApiError.Type.NotFound) {
+      notFound.value = true
+    } else {
+      message.error('Failed to load node details: ' + e.message)
+    }
     console.error(e)
   } finally {
     loading.value = false
@@ -243,6 +266,16 @@ const handleStakingChanged = () => {
 }
 
 onMounted(async () => {
+  await fetchData()
+  fetchDelegations()
+})
+
+watch(nodeAddress, async (address) => {
+  if (!address) return
+  node.value = null
+  delegations.value = []
+  delegationsTotal.value = 0
+  delegationsPage.value = 1
   await fetchData()
   fetchDelegations()
 })
@@ -586,6 +619,30 @@ onMounted(async () => {
 
     <a-card v-else-if="loading" class="node-loading-card" :bordered="false" style="opacity: 0.9">
       <a-spin :spinning="loading" tip="Loading..." />
+    </a-card>
+
+    <a-card v-else-if="notFound" class="not-found-card" :bordered="false" style="opacity: 0.9">
+      <a-result title="Node Not Found">
+        <template #icon>
+          <file-search-outlined class="not-found-icon" />
+        </template>
+        <template #subTitle>
+          <div class="not-found-subtitle">
+            <p>This node does not exist, or it is not accepting delegated staking.</p>
+            <p class="not-found-hint">
+              If the node has turned off delegated staking and you still have a stake on it, you can
+              unstake from the
+              <a @click.prevent="goToMyDelegatedStake">My Delegated Stake</a>
+              page.
+            </p>
+          </div>
+        </template>
+        <template #extra>
+          <a-button type="primary" :loading="auth.isAuthenticating" @click="goToMyDelegatedStake">
+            Go to My Delegated Stake
+          </a-button>
+        </template>
+      </a-result>
     </a-card>
 
     <div v-else class="no-data">
@@ -1035,6 +1092,35 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   min-height: 240px;
+}
+
+/* Not Found State */
+.not-found-card {
+  background: #ffffff;
+  border-radius: 12px;
+}
+
+.not-found-subtitle p {
+  margin-bottom: 8px;
+}
+
+.not-found-hint {
+  max-width: 560px;
+  margin: 86px auto 0;
+  color: #d48806;
+}
+
+.not-found-icon {
+  font-size: 48px;
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.not-found-card :deep(.ant-result) {
+  padding: 86px 32px 48px;
+}
+
+.not-found-card :deep(.ant-result-icon) {
+  margin-bottom: 16px;
 }
 
 /* No Data State */
