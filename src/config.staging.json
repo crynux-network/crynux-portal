@@ -24,8 +24,6 @@
         }
     },
     "default_network": "crynux-on-base-sepolia",
-    "withdrawal_fee": 1,
-    "withdrawal_min": 100,
     "deposit_address": "0x7bB0A0582893c09ED48397BFACDdbbd478eB4839",
     "deposit_min": 1000,
     "social_links": {
