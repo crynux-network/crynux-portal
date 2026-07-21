@@ -30,7 +30,8 @@ import {
 import {
     fetchWithdrawConfigs,
     calculateWithdrawalFee,
-    calculateMaxWithdrawAmount
+    calculateMaxWithdrawAmount,
+    getFeeRatioForAmount
 } from '@/services/withdraw-config'
 
 const wallet = useWalletStore()
@@ -298,6 +299,50 @@ const formatAmount2 = (n) => {
 }
 
 const withdrawalFeeText = computed(() => formatAmount2(withdrawalFeeCNX.value))
+
+const formatRatioPercent = (ratio) => {
+    const percent = Number(ratio || 0) * 100
+    if (!Number.isFinite(percent)) return '0%'
+    const rounded = Math.round(percent * 100) / 100
+    try {
+        return `${rounded.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`
+    } catch {
+        return `${rounded}%`
+    }
+}
+
+const currentFeeRatio = computed(() => {
+    const amt = Number(withdrawModel.amount || 0)
+    return getFeeRatioForAmount(selectedWithdrawConfig.value, isNaN(amt) ? 0 : amt)
+})
+
+const feeFormulaText = computed(() => {
+    const config = selectedWithdrawConfig.value
+    if (!config) return ''
+    const amt = Number(withdrawModel.amount || 0)
+    const fixed = formatAmount2(config.withdrawal_fee)
+    const ratio = formatRatioPercent(currentFeeRatio.value)
+    return `Fee = ${fixed} (fixed) + ${formatInt(amt)} × ${ratio} (fee tier) = ${withdrawalFeeText.value} CNX`
+})
+
+const feeTierRows = computed(() => {
+    const tiers = selectedWithdrawConfig.value?.withdrawal_fee_tiers || []
+    const rows = []
+    if (tiers.length && tiers[0].min_amount > 0) {
+        rows.push({
+            range: `< ${formatInt(tiers[0].min_amount)} CNX`,
+            ratio: formatRatioPercent(0)
+        })
+    }
+    tiers.forEach((tier, i) => {
+        const next = tiers[i + 1]
+        const range = next
+            ? `${formatInt(tier.min_amount)} - ${formatInt(next.min_amount - 1)} CNX`
+            : `≥ ${formatInt(tier.min_amount)} CNX`
+        rows.push({ range, ratio: formatRatioPercent(tier.fee_ratio) })
+    })
+    return rows
+})
 
 const actualDeductionCNX = computed(() => {
     const amt = Number(withdrawModel.amount || 0)
@@ -1601,6 +1646,34 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 						<a-typography-text type="secondary" style="font-size: 12px; margin-left: 6px;">(includes fee {{ withdrawalFeeText }} CNX)</a-typography-text>
 					</template>
 				</a-statistic>
+				<div v-if="isAmountFieldValid && feeFormulaText" style="display: inline-flex; align-items: center; margin-top: 4px;">
+					<a-typography-text type="danger" style="font-size: 12px;">{{ feeFormulaText }}</a-typography-text>
+					<a-tooltip placement="right" :overlay-style="{ maxWidth: '420px' }">
+						<template #title>
+							<div>
+								<div>The withdrawal fee consists of two parts: a fixed fee of {{ formatAmount2(selectedWithdrawConfig?.withdrawal_fee) }} CNX, plus a percentage of the withdrawal amount determined by the fee tier the amount falls into.</div>
+								<div v-if="feeTierRows.length" style="margin-top: 8px;">
+									<div style="margin-bottom: 4px;">Fee tiers on {{ selectedFundingNetworkName }}:</div>
+									<table style="border-collapse: collapse; width: 100%;">
+										<thead>
+											<tr>
+												<th style="border: 1px solid #fff; padding: 4px 8px; text-align: left; font-weight: normal; white-space: nowrap;">Withdrawal Amount</th>
+												<th style="border: 1px solid #fff; padding: 4px 8px; text-align: left; font-weight: normal; white-space: nowrap;">Fee Ratio</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr v-for="tier in feeTierRows" :key="tier.range">
+												<td style="border: 1px solid #fff; padding: 4px 8px; white-space: nowrap;">{{ tier.range }}</td>
+												<td style="border: 1px solid #fff; padding: 4px 8px; white-space: nowrap;">{{ tier.ratio }}</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</template>
+						<QuestionCircleOutlined style="margin-left: 6px; color: #888; cursor: pointer; font-size: 12px;" />
+					</a-tooltip>
+				</div>
 			</a-descriptions-item>
 			<a-descriptions-item label="Network">
 				<NetworkTag :text="selectedFundingNetworkName" />
