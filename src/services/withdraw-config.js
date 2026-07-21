@@ -32,22 +32,24 @@ export const fetchWithdrawConfigs = async (forceRefresh = false) => {
   return pendingFetch
 }
 
-const feeRatioForAmount = (config, amount) => {
+// Ratio comes from the highest tier whose min_amount is not greater than the amount.
+export const getFeeRatioForAmount = (config, amount) => {
+  const amt = Number(amount || 0)
+  if (!Number.isFinite(amt) || amt <= 0) return 0
   let ratio = 0
   for (const tier of config?.withdrawal_fee_tiers || []) {
-    if (amount < tier.min_amount) break
+    if (amt < tier.min_amount) break
     ratio = tier.fee_ratio
   }
   return ratio
 }
 
-// Fee = fixed fee + amount * ratio, where the ratio comes from the highest tier
-// whose min_amount is not greater than the amount. Mirrors the relay-side rule.
+// Fee = fixed fee + amount * tier ratio. Mirrors the relay-side rule.
 export const calculateWithdrawalFee = (config, amount) => {
   if (!config) return 0
   const amt = Number(amount || 0)
   if (!Number.isFinite(amt) || amt <= 0) return config.withdrawal_fee
-  return config.withdrawal_fee + amt * feeRatioForAmount(config, amt)
+  return config.withdrawal_fee + amt * getFeeRatioForAmount(config, amt)
 }
 
 // Largest integer amount such that amount + fee(amount) <= balance, solved per tier.
