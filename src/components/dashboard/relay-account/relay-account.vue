@@ -27,6 +27,11 @@ import {
     getTransactionExplorerUrl,
     isSystemNetwork
 } from '@/services/network-config'
+import {
+    fetchWithdrawConfigs,
+    calculateWithdrawalFee,
+    calculateMaxWithdrawAmount
+} from '@/services/withdraw-config'
 
 const wallet = useWalletStore()
 const auth = useAuthStore()
@@ -181,6 +186,22 @@ const isWithdrawOpen = ref(false)
 const withdrawFormRef = ref()
 const withdrawModel = reactive({ amount: null })
 const isWithdrawSubmitting = ref(false)
+const withdrawConfigs = ref(null)
+
+const loadWithdrawConfigs = async () => {
+    try {
+        withdrawConfigs.value = await fetchWithdrawConfigs()
+        return true
+    } catch (e) {
+        console.error('Failed to fetch withdraw config from relay:', e)
+        message.error('Failed to load withdraw fee config. Please try again.')
+        return false
+    }
+}
+
+const selectedWithdrawConfig = computed(() => {
+    return withdrawConfigs.value?.[wallet.selectedDepositWithdrawNetworkKey]
+})
 
 // Deposit state
 const isDepositOpen = ref(false)
@@ -247,7 +268,7 @@ const withdrawRules = {
             validator: (_rule, value) => {
                 const amt = Number(value)
                 const min = Number(minWithdrawCNX.value || 0)
-                const max = Math.max(0, Math.floor((Number(relayBalance.value || 0)) - withdrawalFeeInt.value))
+                const max = maxWithdrawCNX.value
                 if (value === null || value === undefined || value === '') return Promise.reject('Enter amount')
                 if (!Number.isInteger(amt)) return Promise.reject('Amount must be an integer')
                 if (amt < min) return Promise.reject(`Minimum is ${min} CNX`)
@@ -260,13 +281,23 @@ const withdrawRules = {
 }
 
 const withdrawalFeeCNX = computed(() => {
-    const n = Number(selectedFundingNetwork.value?.withdrawal_fee ?? config.withdrawal_fee ?? 0)
-    return isNaN(n) ? 0 : n
+    const amt = Number(withdrawModel.amount || 0)
+    const fee = calculateWithdrawalFee(selectedWithdrawConfig.value, isNaN(amt) ? 0 : amt)
+    return isNaN(fee) ? 0 : fee
 })
 
-const withdrawalFeeInt = computed(() => {
-    return Math.round(withdrawalFeeCNX.value)
-})
+const formatAmount2 = (n) => {
+    const num = Number(n || 0)
+    if (!Number.isFinite(num)) return '0'
+    const rounded = Math.round(num * 100) / 100
+    try {
+        return rounded.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    } catch {
+        return String(rounded)
+    }
+}
+
+const withdrawalFeeText = computed(() => formatAmount2(withdrawalFeeCNX.value))
 
 const actualDeductionCNX = computed(() => {
     const amt = Number(withdrawModel.amount || 0)
@@ -275,20 +306,19 @@ const actualDeductionCNX = computed(() => {
     return amt + fee
 })
 
-const actualDeductionInt = computed(() => {
-    return Math.round(actualDeductionCNX.value)
+const actualDeductionPrecision = computed(() => {
+    const rounded = Math.round(actualDeductionCNX.value * 100) / 100
+    return Number.isInteger(rounded) ? 0 : 2
 })
 
 const minWithdrawCNX = computed(() => {
-    const n = Number(selectedFundingNetwork.value?.withdrawal_min ?? config.withdrawal_min ?? 0)
+    const n = Number(selectedWithdrawConfig.value?.withdrawal_min ?? 0)
     return isNaN(n) ? 0 : Math.floor(n)
 })
 const maxWithdrawCNX = computed(() => {
-    const bal = Number(relayBalance.value || 0)
-    const max = Math.floor(bal - withdrawalFeeInt.value)
-    return Math.max(0, max)
+    return calculateMaxWithdrawAmount(selectedWithdrawConfig.value, Number(relayBalance.value || 0))
 })
-const isAmountInputDisabled = computed(() => maxWithdrawCNX.value < minWithdrawCNX.value)
+const isAmountInputDisabled = computed(() => !selectedWithdrawConfig.value || maxWithdrawCNX.value < minWithdrawCNX.value)
 
 const formatInt = (n) => {
     const num = Number(n || 0)
@@ -585,7 +615,7 @@ const getWithdrawals = async (page = 1, pageSize = 10) => {
 			if (hasFee) {
 				try {
 					const feeNum = Number(ethers.formatEther(rawFee))
-					formattedFee = formatInt(Math.round(feeNum))
+					formattedFee = formatAmount2(feeNum)
 				} catch {
 					formattedFee = ''
 				}
@@ -1075,6 +1105,9 @@ const changeFundingNetwork = async () => {
 
 const withdrawRelay = async () => {
     withdrawModel.amount = null
+    if (!(await loadWithdrawConfigs())) {
+        return
+    }
     await fetchWithdrawBenefitAddress()
     isWithdrawOpen.value = true
 }
@@ -1223,6 +1256,7 @@ const handleForceUnstake = async () => {
 }
 
 onMounted(async () => {
+	loadWithdrawConfigs()
 	if (wallet.address) {
 		await wallet.fetchBalance()
 	}
@@ -1552,7 +1586,7 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 					<a-select-option v-for="n in fundingNetworkOptions" :key="n.key" :value="n.key">{{ n.name }}</a-select-option>
 				</a-select>
 			</a-form-item>
-			<a-form-item name="amount" :help="isAmountInputDisabled ? 'Insufficient balance to meet the minimum after fee.' : undefined" :validate-status="isAmountInputDisabled ? 'error' : undefined" :style="{ marginBottom: '32px' }">
+			<a-form-item name="amount" :help="isAmountInputDisabled ? (selectedWithdrawConfig ? 'Insufficient balance to meet the minimum after fee.' : 'Withdraw fee config is unavailable for this network.') : undefined" :validate-status="isAmountInputDisabled ? 'error' : undefined" :style="{ marginBottom: '32px' }">
 				<a-input-number v-model:value="withdrawModel.amount" :min="minWithdrawCNX" :step="1" :controls="false" :precision="0" style="width: 100%" placeholder="Enter amount" addon-before="CNX" :disabled="isAmountInputDisabled" />
 				<template #extra>
 					<a-typography-text type="secondary" style="font-size: 12px; display: block; margin-top: 12px; margin-bottom: 16px;">Min: {{ formatInt(minWithdrawCNX) }} CNX · Max: {{ formatInt(maxWithdrawCNX) }} CNX</a-typography-text>
@@ -1561,10 +1595,10 @@ watch(() => [wallet.address, wallet.selectedOnChainWalletNetworkKey, beneficialA
 		</a-form>
 		<a-descriptions :column="1" bordered :label-style="{ 'width': '180px' }" :style="{ marginTop: '32px' }">
 			<a-descriptions-item label="Actual Deduction">
-				<a-statistic :value="isAmountFieldValid ? actualDeductionInt : 0" :precision="0" :value-style="{ fontSize: '26px', color: '#1677ff' }">
+				<a-statistic :value="isAmountFieldValid ? actualDeductionCNX : 0" :precision="isAmountFieldValid ? actualDeductionPrecision : 0" :value-style="{ fontSize: '26px', color: '#1677ff' }">
 					<template #suffix>
 						<span style="font-size: 26px; color: #1677ff; margin-left: 4px;"> CNX</span>
-						<a-typography-text type="secondary" style="font-size: 12px; margin-left: 6px;">(includes fee {{ withdrawalFeeInt }} CNX)</a-typography-text>
+						<a-typography-text type="secondary" style="font-size: 12px; margin-left: 6px;">(includes fee {{ withdrawalFeeText }} CNX)</a-typography-text>
 					</template>
 				</a-statistic>
 			</a-descriptions-item>

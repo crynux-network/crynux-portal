@@ -17,6 +17,10 @@ class NetworkAPI extends BaseAPI {
     getAllTasksNumber() {
         return v1.get('/network/tasks/number')
     }
+
+    getWithdrawConfig() {
+        return v1.get('/network/withdraw_config')
+    }
 }
 
 const networkAPI = new NetworkAPI()

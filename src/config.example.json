@@ -21,8 +21,6 @@
                 "delegatedStaking": "0xAbCa3C0a800569c05e87E500306dFf9b8Ba21821",
                 "nodeStaking": "0x31609b6531399561c2B65b8673a17FE2575c1654"
             },
-            "withdrawal_fee": 10,
-            "withdrawal_min": 1000,
             "deposit_min": 1000,
             "logo": "/base-square.png",
             "color": "geekblue"
@@ -48,8 +46,6 @@
                 "tokenAddress": "0x9557DD9E241bc9636732623B672B4090AF519396"
             },
             "token_type": "erc20",
-            "withdrawal_fee": 50,
-            "withdrawal_min": 5000,
             "deposit_min": 1000,
             "logo": "/base-square.png",
             "color": "purple"

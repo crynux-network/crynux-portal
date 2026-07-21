@@ -25,8 +25,6 @@ export const getFundingNetworks = () => {
       {
         ...network,
         token_type: 'native',
-        withdrawal_fee: network.withdrawal_fee ?? config.withdrawal_fee ?? 0,
-        withdrawal_min: network.withdrawal_min ?? config.withdrawal_min ?? 0,
         deposit_min: network.deposit_min ?? config.deposit_min ?? 0,
         benefit_address: network.contracts?.beneficialAddress
       }
