@@ -40,7 +40,7 @@ const sortOptions = [
   { value: 'estimated_next_10k_delegation_apr', label: 'Est. APR for Next 10K Staking' },
   { value: 'estimated_next_100k_delegation_apr', label: 'Est. APR for Next 100K Staking' },
   { value: 'estimated_next_1m_delegation_apr', label: 'Est. APR for Next 1M Staking' },
-  { value: 'operator_staking', label: 'Operator Staking' },
+  { value: 'operator_staking', label: 'Effective Operator Stake' },
   { value: 'delegator_staking', label: 'Delegator Staking' },
   { value: 'total_staking', label: 'Total Staking' },
   { value: 'delegators_num', label: 'Delegators' },
@@ -796,7 +796,7 @@ onUnmounted(() => {
                       </a-col>
                       <a-col :xs="10" :sm="10" :md="10" :lg="12" :xl="12" :xxl="12">
                         <div class="kpi">
-                          <a-tooltip placement="top" title="Delegators Stake / Operator Stake">
+                          <a-tooltip placement="top" title="Delegators Stake / Effective Operator Stake" :overlay-style="{ maxWidth: '320px' }">
                             <div class="kpi-value">
                               {{ formatBigInt18Compact(item.delegator_staking) }} / {{ formatBigInt18Compact(item.operator_staking) }}
                             </div>

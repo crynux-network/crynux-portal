@@ -48,7 +48,7 @@ const columns = [
         key: 'prob_weight'
     },
     {
-        title: 'Stake',
+        title: 'Effective Stake',
         dataIndex: 'staking',
         key: 'staking'
     },
@@ -108,8 +108,8 @@ const fetchData = async () => {
         <template #headerCell="{ column }">
             <template v-if="column.key === 'staking'">
                 <span class="stake-title">
-                    Stake
-                    <a-tooltip title="Stake is the sum of Delegated Stake, Operator Stake, and Locked Emission.">
+                    Effective Stake
+                    <a-tooltip title="Effective Stake = Operator Stake + Delegated Stake + Locked Emission * 0.4 + Relay Account Balance.">
                         <question-circle-outlined class="stake-title-icon" />
                     </a-tooltip>
                 </span>

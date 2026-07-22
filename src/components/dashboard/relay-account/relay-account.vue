@@ -8,6 +8,7 @@ import beneficialAbi from '@/abi/beneficial-address.json'
 import { QuestionCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { walletAPI } from '@/api/v1/wallet'
+import ApiError from '@/api/api-error'
 import v2RelayAccountAPI from '@/api/v2/relay-account'
 import RelayAccountIncomeChart from '@/components/relay-account-income-chart.vue'
 import RelayAccountEmissionChart from '@/components/relay-account-emission-chart.vue'
@@ -1200,6 +1201,8 @@ const submitWithdraw = async () => {
         console.error('Withdraw error:', e)
         if (isUserRejectedError(e)) {
             message.error('User rejected')
+        } else if (e instanceof ApiError && e.type === ApiError.Type.Validation && typeof e.data === 'string' && e.data) {
+            message.error(e.data)
         } else {
             message.error('Withdraw failed')
         }

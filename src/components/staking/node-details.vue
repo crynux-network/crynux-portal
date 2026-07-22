@@ -133,13 +133,37 @@ const osTag = computed(() => {
   return null
 })
 
-const totalStaking = computed(() => {
+const lockedEmissionCoefficientNumerator = 4n
+const lockedEmissionCoefficientDenominator = 10n
+
+const weightedLockedEmission = computed(() => {
+  if (!node.value) return 0n
+  return (toBigInt(node.value.locked_emission) * lockedEmissionCoefficientNumerator) / lockedEmissionCoefficientDenominator
+})
+
+const relayAccountBalance = computed(() => {
+  if (!node.value) return 0n
+  return toBigInt(node.value.relay_account_balance)
+})
+
+const effectiveStake = computed(() => {
   if (!node.value) return 0n
   return (
     toBigInt(node.value.operator_staking) +
     toBigInt(node.value.delegator_staking) +
-    toBigInt(node.value.locked_emission)
+    weightedLockedEmission.value +
+    relayAccountBalance.value
   )
+})
+
+const effectiveStakeParts = computed(() => {
+  if (!node.value) return []
+  return [
+    { key: 'operator', label: 'Operator Stake', value: toBigInt(node.value.operator_staking) },
+    { key: 'delegators', label: 'Delegators Stake', value: toBigInt(node.value.delegator_staking) },
+    { key: 'locked', label: 'Locked Emission', value: toBigInt(node.value.locked_emission) },
+    { key: 'relay', label: 'Relay Account', value: relayAccountBalance.value }
+  ]
 })
 
 const fetchData = async () => {
@@ -397,32 +421,27 @@ watch(nodeAddress, async (address) => {
 
                 <!-- Staking Stats -->
                 <div class="metrics-section">
-                  <a-row :gutter="[16, 16]">
-                    <a-col :xs="6">
-                      <div class="metric-box">
-                        <div class="metric-value">{{ formatBigInt18Compact(totalStaking) }}</div>
-                        <div class="metric-label">Total Stake</div>
+                  <div class="effective-stake-card">
+                    <div class="effective-stake-summary">
+                      <div>
+                        <div class="effective-stake-label">
+                          Effective Stake
+                          <a-tooltip title="Effective Stake = Operator Stake + Delegators Stake + Locked Emission * 0.4 + Relay Account Balance.">
+                            <question-circle-outlined class="reward-info-icon" />
+                          </a-tooltip>
+                        </div>
+                        <div class="effective-stake-value">{{ formatBigInt18Compact(effectiveStake) }}</div>
                       </div>
-                    </a-col>
-                    <a-col :xs="6">
-                      <div class="metric-box">
-                        <div class="metric-value">{{ formatBigInt18Compact(node.operator_staking) }}</div>
-                        <div class="metric-label">Operator Stake</div>
-                      </div>
-                    </a-col>
-                    <a-col :xs="6">
-                      <div class="metric-box">
-                        <div class="metric-value">{{ formatBigInt18Compact(node.delegator_staking) }}</div>
-                        <div class="metric-label">Delegators Stake</div>
-                      </div>
-                    </a-col>
-                    <a-col :xs="6">
-                      <div class="metric-box">
-                        <div class="metric-value">{{ formatBigInt18Compact(node.locked_emission) }}</div>
-                        <div class="metric-label">Locked Emission</div>
-                      </div>
-                    </a-col>
-                  </a-row>
+                    </div>
+                    <div class="effective-stake-formula">
+                      <template v-for="(part, index) in effectiveStakeParts" :key="part.key">
+                        <div class="stake-part">
+                          <div class="stake-part-value">{{ formatBigInt18Compact(part.value) }}</div>
+                          <div class="stake-part-label">{{ part.label }}</div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="rewards-summary-row">
@@ -555,7 +574,7 @@ watch(nodeAddress, async (address) => {
           </a-card>
         </a-col>
         <a-col :xs="24" :lg="12">
-          <a-card class="chart-card" title="Node Stake" :bordered="false" style="opacity: 0.9">
+          <a-card class="chart-card" title="Node Effective Stake" :bordered="false" style="opacity: 0.9">
             <NodeStakingChart :address="nodeAddress" />
           </a-card>
         </a-col>
@@ -803,7 +822,7 @@ watch(nodeAddress, async (address) => {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 24px;
+  gap: 16px;
 }
 
 .metrics-right {
@@ -844,30 +863,76 @@ watch(nodeAddress, async (address) => {
   color: #1890ff;
 }
 
-/* Metric Boxes */
-.metric-box {
+/* Effective Stake Card */
+.effective-stake-card {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+}
+
+.effective-stake-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 12px 8px;
-  background: rgba(0, 0, 0, 0.02);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.effective-stake-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.effective-stake-value {
+  margin-top: 4px;
+  font-size: 30px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.75);
+  line-height: 1.1;
+}
+
+.effective-stake-formula {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stake-part {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 8px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.72);
   border-radius: 8px;
 }
 
-.metric-value {
-  font-size: 24px;
+.stake-part-value {
+  font-size: 17px;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.85);
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.metric-label {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
+.stake-part-label {
   margin-top: 4px;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1.25;
 }
 
 /* Score Boxes */
 .scores-section-top {
-  margin-bottom: 28px;
+  margin-bottom: 0;
 }
 
 .score-box {
@@ -1268,6 +1333,10 @@ watch(nodeAddress, async (address) => {
     grid-template-columns: 1fr;
     gap: 12px;
   }
+
+  .stake-part {
+    flex-basis: calc(50% - 4px);
+  }
 }
 
 @media (max-width: 768px) {
@@ -1296,8 +1365,12 @@ watch(nodeAddress, async (address) => {
     min-width: 0;
   }
 
-  .metric-value {
-    font-size: 20px;
+  .effective-stake-value {
+    font-size: 26px;
+  }
+
+  .stake-part-value {
+    font-size: 16px;
   }
 
   .reward-highlight-value {
@@ -1347,11 +1420,15 @@ watch(nodeAddress, async (address) => {
     font-size: 16px;
   }
 
-  .metric-value {
-    font-size: 18px;
+  .effective-stake-card {
+    padding: 12px;
   }
 
-  .metric-label {
+  .effective-stake-value {
+    font-size: 24px;
+  }
+
+  .stake-part-label {
     font-size: 11px;
   }
 

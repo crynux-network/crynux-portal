@@ -89,7 +89,7 @@ const options = {
             },
             title: {
                 display: true,
-                text: 'Stake (CNX)'
+                text: 'Effective Stake (CNX)'
             }
         }
     }
@@ -137,7 +137,7 @@ const fetchData = async () => {
             }),
             datasets: [
                 {
-                    label: 'Operator Stake',
+                    label: 'Effective Operator Stake',
                     backgroundColor: 'rgba(82, 196, 26, 0.6)',
                     borderColor: 'rgba(82, 196, 26, 1)',
                     data: resp.operator_stakings.map(formatBigIntValue),
