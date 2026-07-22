@@ -103,7 +103,8 @@ class V1Client {
 
   processErrorStatus(status, errorData) {
     if (status === 400) {
-      return Promise.reject(new ApiError(ApiError.Type.Validation, errorData.detail))
+      const detail = errorData?.data?.message || errorData?.detail
+      return Promise.reject(new ApiError(ApiError.Type.Validation, detail))
     } else if (status === 422) {
       return Promise.reject(new ApiError(ApiError.Type.Validation, errorData.detail[0].msg))
     } else if (status === 401) {
