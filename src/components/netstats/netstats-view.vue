@@ -5,11 +5,16 @@ import {Grid, message} from 'ant-design-vue'
 import cnxAPI from '@/api/cnx'
 import networkAPI from '@/api/v1/network'
 import v2NetworkAPI from '@/api/v2/network'
-import {formatBigInt18} from '@/services/token'
+import {formatBigInt18, formatBigInt18Compact} from '@/services/token'
+import {formatNetworkName, getAddressExplorerUrl} from '@/services/network-config'
 
 import NetworkIncentivesLineChart from "./network-incentives-line-chart.vue";
 import TaskNumberLineChart from "./task-number-line-chart.vue";
+import TaskSuccessRateLineChart from "./task-success-rate-line-chart.vue";
+import TaskDurationHistogram from "./task-duration-histogram.vue";
 import NodeIncentivesChart from "./node-incentives-chart.vue";
+import TopStakeableNodes from "./top-stakeable-nodes.vue";
+import DelegationIncentivesChart from "./delegation-incentives-chart.vue";
 
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
@@ -20,7 +25,8 @@ import {
     DollarCircleOutlined,
     CheckCircleOutlined,
     ClockCircleOutlined,
-    PlayCircleOutlined
+    PlayCircleOutlined,
+    RightOutlined
 } from '@ant-design/icons-vue'
 
 const useBreakpoint = Grid.useBreakpoint
@@ -123,6 +129,7 @@ const nodeList = ref([]);
 const nodeListPageSize = 100;
 const nodeListCurrentPage = ref(1);
 const totalComputingPower = ref(0);
+const defaultNodeListNetwork = 'crynux-on-base'
 
 const loadNetworkInfo = async () => {
 
@@ -160,36 +167,26 @@ const loadNodeList = async (page, pageSize) => {
     }
 };
 
-const nodeListColumns = [
-    {
-        title: 'Address',
-        key: 'address',
-    },
-    {
-        title: 'Card Model',
-        key: 'card_model',
-    },
-    {
-        title: 'VRAM',
-        key: 'v_ram',
-    },
-    {
-        title: 'Operator Stake',
-        key: 'staking'
-    }
-];
+const formatNodeCardName = (cardModel) => String(cardModel || '').split('+')[0] || 'Unknown Card'
 
-const toEtherValue = (bigNum) => {
-    if (bigNum === 0) return 0
-
-    const decimals = (bigNum / BigInt(1e18)).toString()
-
-    let fractions = ((bigNum / BigInt(1e16)) % 100n).toString()
-
-    if (fractions.length === 1) fractions += '0'
-
-    return decimals + '.' + fractions
+const getNodePlatformTag = (cardModel) => {
+    const value = String(cardModel || '')
+    if (value.includes('+docker')) return 'Docker'
+    if (value.includes('+Windows')) return 'Windows'
+    if (value.includes('+Darwin')) return 'Mac'
+    if (value.includes('+Linux')) return 'Linux'
+    return ''
 }
+
+const shortenNodeAddress = (address) => {
+    const value = String(address || '')
+    if (value.length <= 12) return value
+    return `${value.substring(0, 6)}...${value.substring(value.length - 6)}`
+}
+
+const getNodeListNetwork = (record) => record.network || defaultNodeListNetwork
+
+const getNodeExplorerUrl = (record) => getAddressExplorerUrl(getNodeListNetwork(record), record.address)
 
 const circulation = ref('0')
 
@@ -301,6 +298,23 @@ onMounted(async () => {
     </a-row>
 
     <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="24">
+            <a-card title="Top Stakeable Nodes" :bordered="false" style="height: 100%; opacity: 0.9">
+                <template #extra>
+                    <router-link to="/staking" class="more-link">More <right-outlined class="more-link-icon" /></router-link>
+                </template>
+                <top-stakeable-nodes></top-stakeable-nodes>
+            </a-card>
+        </a-col>
+    </a-row>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :span="24">
+            <a-card title="Top Stakes by Task Fee" :bordered="false" style="height: 100%; opacity: 0.9">
+                <delegation-incentives-chart></delegation-incentives-chart>
+            </a-card>
+        </a-col>
+    </a-row>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
         <a-col :xs="24" :lg="12">
             <a-card title="Task Count" :bordered="false" style="height: 100%; opacity: 0.9">
                 <task-number-line-chart></task-number-line-chart>
@@ -309,6 +323,18 @@ onMounted(async () => {
         <a-col :xs="24" :lg="12">
             <a-card title="Total Task Fee" :bordered="false" style="height: 100%; opacity: 0.9">
                 <network-incentives-line-chart></network-incentives-line-chart>
+            </a-card>
+        </a-col>
+    </a-row>
+    <a-row :gutter="[16, 16]" style="margin-top: 16px">
+        <a-col :xs="24" :lg="12">
+            <a-card title="Task Success Rate" :bordered="false" style="height: 100%; opacity: 0.9">
+                <task-success-rate-line-chart></task-success-rate-line-chart>
+            </a-card>
+        </a-col>
+        <a-col :xs="24" :lg="12">
+            <a-card title="Task Duration" :bordered="false" style="height: 100%; opacity: 0.9">
+                <task-duration-histogram></task-duration-histogram>
             </a-card>
         </a-col>
     </a-row>
@@ -330,26 +356,44 @@ onMounted(async () => {
                     :style="{'width': '100%'}"
                     size="large"
                 >
-                    <a-table
-                        :columns="nodeListColumns"
-                        :data-source="nodeList"
-                        :pagination="false"
-                        :scroll="{ x: 800 }">
-                        <template #bodyCell="{ column, record }">
-                            <template v-if="column.key === 'address'">
-                                    {{ record.address }}
-                            </template>
-                            <template v-else-if="column.key === 'card_model'">
-                                <span>{{ record.card_model.split('+')[0] }}</span>
-                            </template>
-                            <template v-else-if="column.key === 'v_ram'">
-                                <span>{{ record.v_ram }} GB</span>
-                            </template>
-                            <template v-else-if="column.key === 'staking'">
-                                    CNX {{ toEtherValue(BigInt(record.staking)) }}
-                            </template>
-                        </template>
-                    </a-table>
+                    <div class="compact-node-list">
+                        <div
+                            v-for="record in nodeList"
+                            :key="record.address"
+                            class="compact-node-item"
+                        >
+                            <a
+                                v-if="getNodeExplorerUrl(record)"
+                                class="compact-node-link"
+                                :href="getNodeExplorerUrl(record)"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <div class="compact-node-title">
+                                    <span class="compact-node-card">{{ formatNodeCardName(record.card_model) }}</span>
+                                    <a-tag v-if="getNodePlatformTag(record.card_model)" class="compact-node-tag">{{ getNodePlatformTag(record.card_model) }}</a-tag>
+                                    <a-tag v-if="record.v_ram" class="compact-node-tag">{{ record.v_ram }}GB</a-tag>
+                                    <a-tag class="compact-node-tag">{{ formatNetworkName(getNodeListNetwork(record)) }}</a-tag>
+                                </div>
+                                <div class="compact-node-meta">
+                                    <span>{{ shortenNodeAddress(record.address) }}</span>
+                                    <span>CNX {{ formatBigInt18Compact(record.staking) }}</span>
+                                </div>
+                            </a>
+                            <div v-else class="compact-node-link">
+                                <div class="compact-node-title">
+                                    <span class="compact-node-card">{{ formatNodeCardName(record.card_model) }}</span>
+                                    <a-tag v-if="getNodePlatformTag(record.card_model)" class="compact-node-tag">{{ getNodePlatformTag(record.card_model) }}</a-tag>
+                                    <a-tag v-if="record.v_ram" class="compact-node-tag">{{ record.v_ram }}GB</a-tag>
+                                    <a-tag class="compact-node-tag">{{ formatNetworkName(getNodeListNetwork(record)) }}</a-tag>
+                                </div>
+                                <div class="compact-node-meta">
+                                    <span>{{ shortenNodeAddress(record.address) }}</span>
+                                    <span>CNX {{ formatBigInt18Compact(record.staking) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <a-pagination
                         :hide-on-single-page="true"
                         v-model:current="nodeListCurrentPage"
@@ -370,6 +414,16 @@ onMounted(async () => {
 <style scoped lang="stylus">
 .top-spacer
     height 20px
+
+.more-link
+    color rgba(0, 0, 0, 0.45)
+
+.more-link:hover
+    color rgba(0, 0, 0, 0.65)
+    text-decoration underline
+
+.more-link-icon
+    font-size 10px
 
 .total-power-card
     display flex
@@ -470,4 +524,74 @@ onMounted(async () => {
     border-top 1px solid var(--ant-border-color-split, #f0f0f0)
 ::v-deep(.nodes-tasks-card.cols-2 .ant-card-body > .ant-card-grid:nth-child(n+3))
     border-top 1px solid var(--ant-border-color-split, #f0f0f0)
+
+.compact-node-list
+    display grid
+    grid-template-columns repeat(3, minmax(0, 1fr))
+    gap 8px
+
+.compact-node-item
+    min-width 0
+    border 1px solid rgba(0, 0, 0, 0.08)
+    border-radius 6px
+    background rgba(255, 255, 255, 0.72)
+
+.compact-node-item:hover
+    border-color rgba(0, 0, 0, 0.18)
+
+.compact-node-link
+    display block
+    padding 9px 10px
+    color inherit
+    text-decoration none
+
+.compact-node-link:hover
+    color inherit
+    text-decoration none
+
+.compact-node-title
+    display flex
+    align-items center
+    gap 6px
+    min-width 0
+
+.compact-node-card
+    flex 1 1 auto
+    min-width 0
+    font-size 12px
+    font-weight 600
+    color rgba(0, 0, 0, 0.72)
+    white-space nowrap
+    overflow hidden
+    text-overflow ellipsis
+
+.compact-node-tag
+    flex none
+    margin 0
+    font-size 10px
+    line-height 17px
+    color rgba(0, 0, 0, 0.48)
+    background rgba(0, 0, 0, 0.025)
+    border-color rgba(0, 0, 0, 0.08)
+
+.compact-node-meta
+    display flex
+    align-items center
+    justify-content space-between
+    gap 8px
+    margin-top 7px
+    font-size 11px
+    color rgba(0, 0, 0, 0.42)
+    white-space nowrap
+
+@media (max-width: 991.98px)
+    .compact-node-list
+        grid-template-columns repeat(2, minmax(0, 1fr))
+
+@media (max-width: 575.98px)
+    .compact-node-list
+        grid-template-columns 1fr
+
+    .compact-node-meta
+        justify-content flex-start
 </style>

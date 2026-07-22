@@ -2,8 +2,11 @@ import BaseAPI from '../base-api'
 import v2 from './v2'
 
 class V2IncentivesAPI extends BaseAPI {
-    getNodes(period) {
-        return v2.get('/incentive/nodes?period=' + period)
+    getNodes() {
+        return v2.get('/incentive/nodes')
+    }
+    getTopDelegations() {
+        return v2.get('/incentive/delegations')
     }
 }
 
