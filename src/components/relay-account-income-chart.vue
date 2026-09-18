@@ -32,6 +32,7 @@ import { onMounted, ref, watch } from "vue";
 import { walletAPI } from "@/api/v1/wallet";
 import moment from "moment";
 import { Chart as ChartJS, registerables } from 'chart.js'
+import { useAuthStore } from '@/stores/auth'
 
 ChartJS.register(...registerables)
 
@@ -42,6 +43,7 @@ const props = defineProps({
     }
 })
 
+const auth = useAuthStore()
 const loading = ref(true);
 
 const data = ref({
@@ -169,10 +171,17 @@ const buildEmptyDatasets = () => {
     }
 }
 
+const canFetch = () => {
+    if (!props.address || !auth.isAuthenticated) return false
+    const sessionAddr = auth.sessionAddress || null
+    if (sessionAddr && sessionAddr.toLowerCase() !== String(props.address).toLowerCase()) return false
+    return true
+}
+
 const fetchData = async () => {
     loading.value = true
     try {
-        if (!props.address) {
+        if (!canFetch()) {
             data.value = buildEmptyDatasets()
             return
         }
@@ -224,7 +233,7 @@ const fetchData = async () => {
     }
 }
 
-watch(() => props.address, async () => {
+watch(() => [props.address, auth.sessionToken, auth.sessionAddress], async () => {
     await fetchData()
 })
 
