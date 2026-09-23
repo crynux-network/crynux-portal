@@ -97,6 +97,12 @@ export const useWalletStore = defineStore('wallet', {
 				return false
 			}
 		},
+		async requireNetworkOnWallet(targetKey) {
+			const switched = await this.ensureNetworkOnWallet(targetKey)
+			if (!switched) {
+				throw new Error(`Wallet could not switch to ${targetKey}`)
+			}
+		},
 		async fetchBalance() {
 			const provider = window.ethereum
 			if (!provider || !this.address) return '0x0'

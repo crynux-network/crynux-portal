@@ -33,10 +33,7 @@ function getReadContracts(networkKey, legacyContracts) {
 
 async function getWriteContracts(networkKey, legacyContracts) {
   const wallet = useWalletStore()
-  const switched = await wallet.ensureNetworkOnWallet(networkKey)
-  if (!switched) {
-    throw new Error(`Wallet could not switch to ${networkKey}`)
-  }
+  await wallet.requireNetworkOnWallet(networkKey)
   return getContracts(networkKey, legacyContracts, await createBrowserSigner())
 }
 
