@@ -6,7 +6,6 @@ import config from '@/config.json'
 import { useAuthStore } from '@/stores/auth'
 import { useWalletStore } from '@/stores/wallet'
 import { useWalletConnect } from '@/composables/use-wallet-connect'
-import { getLegacyStakingNetworks } from '@/services/network-config'
 import { ethers } from 'ethers'
 import {
   message,
@@ -26,7 +25,7 @@ import {
   MenuDivider as AMenuDivider,
   Input as AInput
 } from 'ant-design-vue'
-import { SearchOutlined, MenuOutlined, WalletOutlined, DollarOutlined, LogoutOutlined, ExperimentOutlined, HistoryOutlined } from '@ant-design/icons-vue'
+import { SearchOutlined, MenuOutlined, WalletOutlined, DollarOutlined, LogoutOutlined, ExperimentOutlined } from '@ant-design/icons-vue'
 import { onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import GithubButton from 'vue-github-button'
 
@@ -82,7 +81,6 @@ function reauthWithFocusAndDelay() {
 
 const isDashboard = computed(() => router.currentRoute.value?.path?.startsWith('/dashboard'))
 const isStakingNavActive = computed(() => router.currentRoute.value?.path?.startsWith('/staking'))
-const hasLegacyStaking = computed(() => Object.keys(getLegacyStakingNetworks()).length > 0)
 
 async function refreshAccountAndBalance() {
   const result = await wallet.refreshAccountAndBalance()
@@ -218,10 +216,6 @@ onMounted(async () => {
                                 <template #icon><ExperimentOutlined /></template>
                                 QoS Diagnostics
                               </a-menu-item>
-                              <a-menu-item v-if="hasLegacyStaking" key="legacy-staking" @click="router.push({ name: 'legacy-staking' })">
-                                <template #icon><HistoryOutlined /></template>
-                                Legacy Staking
-                              </a-menu-item>
                               <a-menu-divider style="margin: 10px 0" />
                               <a-menu-item key="signout" @click="confirmSignOut">
                                 <template #icon><LogoutOutlined /></template>
@@ -305,14 +299,6 @@ onMounted(async () => {
                 :class="{ active: router.currentRoute.value.name === 'qos-diagnose' }"
                 @click="router.push({ name: 'qos-diagnose' }); mobileMenuOpen = false"
               >QoS Diagnostics</a-button>
-              <a-button
-                v-if="hasLegacyStaking"
-                type="text"
-                block
-                class="drawer-nav-btn"
-                :class="{ active: router.currentRoute.value.name === 'legacy-staking' }"
-                @click="router.push({ name: 'legacy-staking' }); mobileMenuOpen = false"
-              >Legacy Staking</a-button>
             </template>
             <div class="drawer-separator"></div>
             <template v-if="auth.isAuthenticated">
