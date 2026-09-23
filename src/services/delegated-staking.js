@@ -60,7 +60,7 @@ async function validateDelegatedStakingContract(networkKey, provider) {
  */
 async function getWriteContract(networkKey) {
   const wallet = useWalletStore()
-  await wallet.ensureNetworkOnWallet(networkKey)
+  await wallet.requireNetworkOnWallet(networkKey)
   const provider = createReadProvider(networkKey)
   const address = await validateDelegatedStakingContract(networkKey, provider)
   const signer = await createBrowserSigner()

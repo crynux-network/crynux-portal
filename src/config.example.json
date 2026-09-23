@@ -29,6 +29,29 @@
             "deposit_min": 1000,
             "logo": "/base-square.png",
             "color": "geekblue"
+        },
+        "crynux-on-rh": {
+            "chainId": "18896215",
+            "chainName": "Crynux on Robinhood",
+            "rpcUrls": [
+                "https://json-rpc.rh.crynux.io"
+            ],
+            "nativeCurrency": {
+                "name": "Crynux",
+                "symbol": "CNX",
+                "decimals": 18
+            },
+            "blockExplorerUrls": [
+                "https://cnxscan.rh.crynux.io"
+            ],
+            "contracts": {
+                "beneficialAddress": "0xd2EA1749399B1d9D12B03B5443F3B9Bd059DFfDE",
+                "delegatedStaking": "0x19d8A7584830fbbB163E25e5691dc84c58467C2f",
+                "nodeStaking": "0xFc80e019d00f0d06CbebdE648990A89c5a25B425"
+            },
+            "deposit_min": 1000,
+            "logo": "/rh-square.png",
+            "color": "green"
         }
     },
     "deposit_withdraw_networks": {
@@ -54,6 +77,29 @@
             "deposit_min": 1000,
             "logo": "/base-square.png",
             "color": "purple"
+        },
+        "robinhood": {
+            "chainId": "4663",
+            "chainName": "Robinhood Chain",
+            "rpcUrls": [
+                "https://rpc.mainnet.chain.robinhood.com"
+            ],
+            "nativeCurrency": {
+                "name": "Ether",
+                "symbol": "ETH",
+                "decimals": 18
+            },
+            "blockExplorerUrls": [
+                "https://robinscan.io"
+            ],
+            "contracts": {
+                "beneficialAddress": "0x273bAB72600947ff07367d12fAfd1EAFC2ba2079",
+                "tokenAddress": "0x0A020A1B61b4315df6E1338BE93b7d986147729E"
+            },
+            "token_type": "erc20",
+            "deposit_min": 1000,
+            "logo": "/rh-square.png",
+            "color": "cyan"
         }
     },
     "default_network": "crynux-on-base",

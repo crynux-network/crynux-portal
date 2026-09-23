@@ -27,7 +27,7 @@ function getReadContract(networkKey) {
  */
 async function getWriteContract(networkKey) {
   const wallet = useWalletStore()
-  await wallet.ensureNetworkOnWallet(networkKey)
+  await wallet.requireNetworkOnWallet(networkKey)
   const address = getContractAddress(networkKey, 'nodeStaking')
   const signer = await createBrowserSigner()
   return new ethers.Contract(address, nodeStakingAbi, signer)

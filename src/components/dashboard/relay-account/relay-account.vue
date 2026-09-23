@@ -1117,7 +1117,7 @@ const submitSetBenefit = async () => {
 	}
 	isSubmitting.value = true
 	try {
-		await wallet.ensureNetworkOnWallet(wallet.selectedOnChainWalletNetworkKey)
+		await wallet.requireNetworkOnWallet(wallet.selectedOnChainWalletNetworkKey)
 		const provider = new ethers.BrowserProvider(window.ethereum)
 		const signer = await provider.getSigner()
 		const contract = new ethers.Contract(beneficialAddressContractAddress.value, abi, signer)
@@ -1174,7 +1174,7 @@ const submitWithdraw = async () => {
 
     isWithdrawSubmitting.value = true
     try {
-        await wallet.ensureNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
+        await wallet.requireNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
         const provider = window.ethereum
         const timestamp = Math.floor(Date.now() / 1000)
         const action = `Withdraw ${amountWeiStr} from ${wallet.address} to ${benefitToSend} on ${wallet.selectedDepositWithdrawNetworkKey}`
@@ -1229,7 +1229,7 @@ const submitDeposit = async () => {
     }
     isDepositSubmitting.value = true
     try {
-        await wallet.ensureNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
+        await wallet.requireNetworkOnWallet(wallet.selectedDepositWithdrawNetworkKey)
         const provider = new ethers.BrowserProvider(window.ethereum)
         const signer = await provider.getSigner()
         let tx
