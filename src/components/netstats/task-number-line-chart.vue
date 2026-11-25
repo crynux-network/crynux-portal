@@ -1,8 +1,7 @@
 <template>
-    <div style="height:40px">
-        <div style="float: left">
-            <a-segmented v-model:value="periodSelected" :options="periodOptions" size="small"/>
-        </div>
+    <div class="chart-toolbar">
+        <a-segmented v-model:value="periodSelected" :options="periodOptions" size="small"/>
+        <a-segmented v-model:value="taskTypeSelected" :options="taskTypeOptions" size="small" />
     </div>
     <div class="loading" v-if="loading">
         <loading-outlined />
@@ -10,6 +9,14 @@
   <Line :data="data" :options="options" />
 </template>
 <style scoped>
+.chart-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
 .loading {
     position: absolute;
     left: 0;
@@ -28,7 +35,7 @@
 import { Line } from 'vue-chartjs'
 import { LoadingOutlined } from "@ant-design/icons-vue";
 import {onMounted, reactive, ref, watch} from "vue";
-import statsAPI from "@/api/v1/stats";
+import statsAPI, { TASK_TYPE_OPTIONS } from "@/api/v1/stats";
 import moment from "moment";
 
 
@@ -38,7 +45,7 @@ const loading = ref(true);
 const periodOptions = reactive(['Hour', "Day", "Week"]);
 const periodSelected = ref(periodOptions[0]);
 
-const taskTypeOptions = reactive(['All', 'Image', 'Text'])
+const taskTypeOptions = reactive([...TASK_TYPE_OPTIONS])
 const taskTypeSelected = ref(taskTypeOptions[0]);
 
 const data = ref({
